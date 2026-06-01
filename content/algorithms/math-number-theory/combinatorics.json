@@ -1,0 +1,61 @@
+{
+  "slug": "combinatorics",
+  "categoryId": "math-number-theory",
+  "order": 5,
+  "title": "Combinatorics Basics",
+  "tagline": "Counting with permutations, combinations, and Pascal — plus nCr mod p at scale.",
+  "estMinutes": 18,
+  "simulator": null,
+  "complexity": { "time": "O(n) precompute, O(1) per query", "space": "O(n)" },
+  "tags": ["counting", "binomial", "factorials"],
+  "intuition": {
+    "analogy": "Choosing a 3-person committee from 10 people: order doesn't matter, so you count arrangements (10·9·8) then divide out the orderings of the chosen 3 (3!). That's exactly C(10,3).",
+    "paragraphs": [
+      "Combinatorics is the art of counting without enumerating. The two pillars are permutations P(n,k)=n!/(n−k)! (order matters) and combinations C(n,k)=n!/(k!(n−k)!) (order doesn't).",
+      "Pascal's rule C(n,k)=C(n−1,k−1)+C(n−1,k) builds the triangle and underlies many DP recurrences (paths in a grid, subsets of a size). Recognising a problem as 'choose k of n' often collapses it instantly.",
+      "For large n under a prime modulus, precompute factorials and inverse factorials once, then C(n,k)=fact[n]·invfact[k]·invfact[n−k] mod p answers each query in O(1) — the standard competitive-programming setup."
+    ],
+    "keyIdea": "Permutations count ordered choices, combinations unordered; precompute factorials + inverses for O(1) nCr mod p."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Permutations vs combinations", "detail": "P(n,k)=n!/(n−k)!; C(n,k)=P(n,k)/k!. Decide whether order matters." },
+      { "title": "Pascal's triangle", "detail": "C(n,k)=C(n−1,k−1)+C(n−1,k); useful for small n or DP transitions." },
+      { "title": "nCr mod p", "detail": "Precompute fact[] and invfact[] (invfact[n]=power(fact[n], p−2)); then C(n,k)=fact[n]·invfact[k]·invfact[n−k] mod p." }
+    ],
+    "code": {
+      "language": "cpp",
+      "title": "ncr_mod.cpp",
+      "source": "const long long MOD = 1e9+7;\nlong long fact[N], invf[N];\nlong long power(long long a,long long n){ long long r=1;a%=MOD;\n    while(n){ if(n&1) r=r*a%MOD; a=a*a%MOD; n>>=1; } return r; }\nvoid init(){\n    fact[0]=1;\n    for(int i=1;i<N;++i) fact[i]=fact[i-1]*i%MOD;\n    invf[N-1]=power(fact[N-1], MOD-2);\n    for(int i=N-2;i>=0;--i) invf[i]=invf[i+1]*(i+1)%MOD;\n}\nlong long C(int n,int k){\n    if(k<0||k>n) return 0;\n    return fact[n]*invf[k]%MOD*invf[n-k]%MOD;\n}"
+    },
+    "complexity": {
+      "time": "O(n) precompute, O(1) per nCr",
+      "timeReason": "Factorials and one inverse computed once; each query is constant.",
+      "space": "O(n)",
+      "spaceReason": "Factorial and inverse-factorial tables."
+    },
+    "pitfalls": [
+      "Compute invfact in reverse from a single inverse to avoid n log p inversions.",
+      "C(n,k)=0 when k<0 or k>n — guard the bounds.",
+      "Watch overflow: reduce mod after every multiplication."
+    ]
+  },
+  "dryRun": {
+    "input": "C(5, 2)",
+    "columns": ["Step", "Computation", "Value"],
+    "rows": [
+      ["arrangements", "5 · 4", "20"],
+      ["remove order", "÷ 2!", "20 / 2"],
+      ["result", "—", "10"],
+      ["check Pascal", "C(4,1)+C(4,2)=4+6", "10 ✓"]
+    ],
+    "clickMoment": "Both routes agree on 10: the formula 5·4/2! and Pascal's C(4,1)+C(4,2). Seeing them match cements why 'choose' divides out the orderings."
+  },
+  "problems": [
+    { "id": "cb1", "title": "Unique Paths", "difficulty": "Medium", "statement": "Count grid paths moving only right/down.", "hint": "C(m+n−2, m−1).", "tests": "Combinations as paths.", "link": "https://leetcode.com/problems/unique-paths/" },
+    { "id": "cb2", "title": "Pascal's Triangle", "difficulty": "Easy", "statement": "Generate the first n rows.", "hint": "Pascal's rule.", "tests": "Pascal recurrence.", "link": "https://leetcode.com/problems/pascals-triangle/" },
+    { "id": "cb3", "title": "Binomial Coefficients mod p", "difficulty": "Medium", "statement": "Answer many nCr mod p queries.", "hint": "Factorial + inverse-factorial precompute.", "tests": "nCr at scale.", "link": "https://cses.fi/problemset/task/1079" },
+    { "id": "cb4", "title": "Number of Ways to Reorder Array (same BST)", "difficulty": "Hard", "statement": "Count orderings giving an identical BST.", "hint": "Multiply binomials across subtrees, mod p.", "tests": "Combinatorial DP.", "link": "https://leetcode.com/problems/number-of-ways-to-reorder-array-to-get-same-bst/" },
+    { "id": "cb5", "title": "Distinct Subsequences", "difficulty": "Hard", "statement": "Count distinct subsequences equal to a target.", "hint": "Counting DP closely tied to combinatorial choices.", "tests": "Counting via DP.", "link": "https://leetcode.com/problems/distinct-subsequences/" }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QuantWala Algorithm Lesson",
+  "description": "Schema for every algorithm content file under content/algorithms/<categoryId>/<slug>.json",
+  "type": "object",
+  "required": ["slug", "categoryId", "order", "title", "intuition", "logic", "problems"],
+  "properties": {
+    "slug": { "type": "string", "description": "URL-safe id; also the filename." },
+    "categoryId": {
+      "type": "string",
+      "enum": [
+        "sorting-searching",
+        "arrays-two-pointers",
+        "linked-lists",
+        "stacks-queues",
+        "trees",
+        "graphs",
+        "dynamic-programming",
+        "greedy",
+        "backtracking",
+        "segment-trees-bit",
+        "strings",
+        "math-number-theory"
+      ]
+    },
+    "order": { "type": "integer", "description": "Position within the category roadmap (1-based)." },
+    "title": { "type": "string" },
+    "tagline": { "type": "string" },
+    "estMinutes": { "type": "integer" },
+    "simulator": {
+      "type": ["string", "null"],
+      "description": "Key into the frontend simulator registry, or null if no simulator yet."
+    },
+    "complexity": {
+      "type": "object",
+      "properties": { "time": { "type": "string" }, "space": { "type": "string" } }
+    },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "intuition": {
+      "type": "object",
+      "required": ["paragraphs"],
+      "properties": {
+        "analogy": { "type": "string" },
+        "paragraphs": { "type": "array", "items": { "type": "string" } },
+        "keyIdea": { "type": "string" }
+      }
+    },
+    "logic": {
+      "type": "object",
+      "required": ["steps"],
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["title", "detail"],
+            "properties": { "title": { "type": "string" }, "detail": { "type": "string" } }
+          }
+        },
+        "code": {
+          "type": "object",
+          "properties": {
+            "language": { "type": "string", "enum": ["cpp", "python"] },
+            "title": { "type": "string" },
+            "source": { "type": "string" }
+          }
+        },
+        "complexity": {
+          "type": "object",
+          "properties": {
+            "time": { "type": "string" },
+            "timeReason": { "type": "string" },
+            "space": { "type": "string" },
+            "spaceReason": { "type": "string" }
+          }
+        },
+        "pitfalls": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "dryRun": {
+      "type": "object",
+      "properties": {
+        "input": { "type": "string" },
+        "columns": { "type": "array", "items": { "type": "string" } },
+        "rows": { "type": "array", "items": { "type": "array", "items": { "type": "string" } } },
+        "clickMoment": { "type": "string" }
+      }
+    },
+    "problems": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "difficulty", "statement"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "difficulty": { "type": "string", "enum": ["Easy", "Medium", "Hard", "Variation"] },
+          "statement": { "type": "string" },
+          "hint": { "type": "string" },
+          "tests": { "type": "string", "description": "Which part of the algorithm the problem exercises." },
+          "link": { "type": "string", "description": "URL to the problem (LeetCode/Codeforces/CSES/etc.)." }
+        }
+      }
+    }
+  }
+}

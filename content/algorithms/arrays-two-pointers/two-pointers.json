@@ -1,0 +1,62 @@
+{
+  "slug": "two-pointers",
+  "categoryId": "arrays-two-pointers",
+  "order": 1,
+  "title": "Two Pointers",
+  "tagline": "Two indices walking an array turn many O(n²) scans into a single O(n) sweep.",
+  "estMinutes": 18,
+  "simulator": "two-pointers",
+  "complexity": { "time": "O(n)", "space": "O(1)" },
+  "tags": ["pointers", "sorted", "in-place"],
+  "intuition": {
+    "analogy": "Two people search a sorted bookshelf for a pair of books whose page counts add to a target. One starts at the thin end, the other at the thick end. If the pair is too thin, the left person steps right; too thick, the right person steps left. They converge without ever backtracking.",
+    "paragraphs": [
+      "The two-pointer pattern keeps two indices that move toward each other (or in the same direction) based on a condition, so the array is processed in a single pass instead of nested loops.",
+      "On a sorted array, the opposite-ends variant exploits monotonicity: moving the left pointer can only increase a sum, moving the right can only decrease it. That gives a deterministic rule for which pointer to advance, guaranteeing every useful pair is considered.",
+      "The same-direction variant (slow/fast) is used for in-place rewriting: the slow pointer marks where the next kept element goes, the fast pointer scans ahead. It's the backbone of dedupe, partition, and compaction problems."
+    ],
+    "keyIdea": "Use the structure (sorted order or a keep/skip rule) to decide which pointer to move, so each element is visited once."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Place the pointers", "detail": "Opposite ends (l=0, r=n-1) for pair/partition problems; both at the start (slow=fast=0) for compaction problems." },
+      { "title": "Evaluate the condition", "detail": "Compute the quantity of interest (e.g. a[l] + a[r]). Compare against the target to decide the move." },
+      { "title": "Advance the correct pointer", "detail": "If the sum is too small, l++ (need bigger); too big, r-- (need smaller); equal → record/return. They never move backward, so total moves ≤ n." }
+    ],
+    "code": {
+      "language": "cpp",
+      "title": "two_sum_sorted.cpp",
+      "source": "pair<int,int> twoSumSorted(vector<int>& a, int target) {\n    int l = 0, r = a.size() - 1;\n    while (l < r) {\n        int s = a[l] + a[r];\n        if (s == target) return {l, r};\n        else if (s < target) ++l;\n        else --r;\n    }\n    return {-1, -1};\n}"
+    },
+    "complexity": {
+      "time": "O(n)",
+      "timeReason": "Each pointer moves only inward and never resets, so the total number of moves is bounded by n.",
+      "space": "O(1)",
+      "spaceReason": "Only two index variables."
+    },
+    "pitfalls": [
+      "The opposite-ends trick needs a sorted array — sort first if the problem allows it.",
+      "For duplicates, remember to skip equal neighbours to avoid repeated answers (e.g. 3Sum).",
+      "Mixing up which pointer to move flips the logic; tie it to the monotonic effect on your quantity."
+    ]
+  },
+  "dryRun": {
+    "input": "a = [1, 2, 4, 6, 8, 9, 14, 15], target = 13",
+    "columns": ["Step", "l, r", "a[l]+a[r] → action"],
+    "rows": [
+      ["1", "0, 7", "1+15=16 > 13 → r--"],
+      ["2", "0, 6", "1+14=15 > 13 → r--"],
+      ["3", "0, 5", "1+9=10 < 13 → l++"],
+      ["4", "1, 5", "2+9=11 < 13 → l++"],
+      ["5", "2, 5", "4+9=13 → found (indices 2, 5)"]
+    ],
+    "clickMoment": "Each comparison eliminates an entire row/column of the implicit pair matrix. Instead of checking all ~28 pairs, five steps suffice."
+  },
+  "problems": [
+    { "id": "tp1", "title": "Two Sum II (sorted)", "difficulty": "Easy", "statement": "Return indices of two numbers in a sorted array that add to target.", "hint": "Opposite-ends pointers; move based on the sum.", "tests": "Core opposite-ends pattern.", "link": "https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/" },
+    { "id": "tp2", "title": "Valid Palindrome", "difficulty": "Easy", "statement": "Check if a string is a palindrome considering only alphanumerics.", "hint": "Pointers from both ends, skip non-alphanumerics, compare.", "tests": "Converging pointers on strings.", "link": "https://leetcode.com/problems/valid-palindrome/" },
+    { "id": "tp3", "title": "3Sum", "difficulty": "Medium", "statement": "Find all unique triplets that sum to zero.", "hint": "Fix one element, two-pointer the rest; skip duplicates carefully.", "tests": "Two pointers nested inside a loop + dedup.", "link": "https://leetcode.com/problems/3sum/" },
+    { "id": "tp4", "title": "Container With Most Water", "difficulty": "Medium", "statement": "Pick two lines forming a container holding the most water.", "hint": "Move the shorter wall inward — it's the limiting factor.", "tests": "Greedy pointer movement.", "link": "https://leetcode.com/problems/container-with-most-water/" },
+    { "id": "tp5", "title": "Trapping Rain Water", "difficulty": "Hard", "statement": "Compute trapped rainwater given an elevation map.", "hint": "Two pointers with running left-max and right-max; process the smaller side.", "tests": "Two pointers with auxiliary maxima.", "link": "https://leetcode.com/problems/trapping-rain-water/" }
+  ]
+}

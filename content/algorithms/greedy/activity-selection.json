@@ -1,0 +1,61 @@
+{
+  "slug": "activity-selection",
+  "categoryId": "greedy",
+  "order": 1,
+  "title": "Activity Selection (Interval Scheduling)",
+  "tagline": "Always pick the earliest-finishing compatible activity — the canonical greedy proof.",
+  "estMinutes": 16,
+  "simulator": null,
+  "complexity": { "time": "O(n log n)", "space": "O(1)" },
+  "tags": ["greedy", "intervals", "scheduling"],
+  "intuition": {
+    "analogy": "Booking the most meetings in one room: each time, choose the meeting that ENDS soonest among those that don't clash. Finishing early frees the room as quickly as possible, leaving maximum room for the rest.",
+    "paragraphs": [
+      "Interval scheduling asks for the maximum number of mutually non-overlapping intervals. The greedy rule is beautifully simple: sort by finish time and repeatedly take the next interval whose start is ≥ the last chosen finish.",
+      "Why earliest finish and not, say, shortest or earliest start? Because the earliest-finishing activity leaves the most remaining time for everything else — and any optimal solution can be 'exchanged' to start with it without losing count (the exchange argument).",
+      "This is the textbook example of when greedy is provably optimal, and it generalises to room allocation, CPU scheduling, and many 'maximise non-conflicting choices' problems."
+    ],
+    "keyIdea": "Sort by finish time; greedily take each activity that starts after the last one finishes."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Sort by finish time", "detail": "Ascending end times so the soonest-finishing activity is always considered first." },
+      { "title": "Greedily select", "detail": "Track lastEnd = −∞. For each activity in order, if its start ≥ lastEnd, select it and update lastEnd to its finish." },
+      { "title": "Count / collect", "detail": "The number selected is the maximum possible non-overlapping set." }
+    ],
+    "code": {
+      "language": "python",
+      "title": "activity_selection.py",
+      "source": "def max_activities(intervals):\n    intervals.sort(key=lambda x: x[1])     # by finish time\n    count, last_end = 0, float('-inf')\n    for start, end in intervals:\n        if start >= last_end:\n            count += 1\n            last_end = end\n    return count"
+    },
+    "complexity": {
+      "time": "O(n log n)",
+      "timeReason": "Dominated by sorting; the scan is linear.",
+      "space": "O(1)",
+      "spaceReason": "Constant extra space beyond the sort."
+    },
+    "pitfalls": [
+      "Sorting by start time (or duration) does NOT give the optimum — finish time is the correct key.",
+      "Define overlap consistently: does touching (start == end) count as a conflict? Adjust the ≥ vs >.",
+      "For weighted intervals, greedy fails — that needs DP."
+    ]
+  },
+  "dryRun": {
+    "input": "intervals = [(1,3),(2,5),(4,7),(1,8),(5,9),(8,10)]",
+    "columns": ["Sorted by end", "Start ≥ lastEnd?", "Action"],
+    "rows": [
+      ["(1,3)", "1 ≥ −∞", "take, lastEnd=3"],
+      ["(2,5)", "2 < 3", "skip"],
+      ["(4,7)", "4 ≥ 3", "take, lastEnd=7"],
+      ["(8,10)", "8 ≥ 7", "take → 3 activities"]
+    ],
+    "clickMoment": "Picking (1,3) over the overlapping (1,8) is the crux — the short-but-early-finishing choice leaves room for (4,7) and (8,10), beating any greedy that grabbed the long interval."
+  },
+  "problems": [
+    { "id": "as1", "title": "Non-overlapping Intervals", "difficulty": "Medium", "statement": "Min intervals to remove so the rest don't overlap.", "hint": "Total − (max non-overlapping by finish time).", "tests": "Interval scheduling.", "link": "https://leetcode.com/problems/non-overlapping-intervals/" },
+    { "id": "as2", "title": "Minimum Arrows to Burst Balloons", "difficulty": "Medium", "statement": "Fewest arrows to pop all balloons (intervals).", "hint": "Greedy by end coordinate; shoot at each chosen end.", "tests": "Interval point-cover greedy.", "link": "https://leetcode.com/problems/minimum-number-of-arrows-to-burst-balloons/" },
+    { "id": "as3", "title": "Meeting Rooms II", "difficulty": "Medium", "statement": "Minimum meeting rooms needed.", "hint": "Sort starts and ends; sweep to find max overlap (a different greedy).", "tests": "Resource-counting greedy.", "link": "https://leetcode.com/problems/meeting-rooms-ii/" },
+    { "id": "as4", "title": "Maximum Length of Pair Chain", "difficulty": "Medium", "statement": "Longest chain of pairs where each follows the last.", "hint": "Sort by second element; greedy select.", "tests": "Direct activity selection.", "link": "https://leetcode.com/problems/maximum-length-of-pair-chain/" },
+    { "id": "as5", "title": "Course Schedule III", "difficulty": "Hard", "statement": "Max courses takeable before deadlines.", "hint": "Greedy by deadline with a max-heap to drop the longest course when over budget.", "tests": "Greedy + heap exchange.", "link": "https://leetcode.com/problems/course-schedule-iii/" }
+  ]
+}

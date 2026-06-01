@@ -1,0 +1,60 @@
+{
+  "slug": "floyd-warshall",
+  "categoryId": "graphs",
+  "order": 5,
+  "title": "Floyd-Warshall",
+  "tagline": "All-pairs shortest paths in three tidy loops — O(V³) dynamic programming.",
+  "estMinutes": 14,
+  "simulator": null,
+  "complexity": { "time": "O(V³)", "space": "O(V²)" },
+  "tags": ["all-pairs", "dp", "transitive closure"],
+  "intuition": {
+    "analogy": "Planning road trips between every pair of cities, you ask: 'does routing through city k ever beat my current best?' You consider each possible intermediate city one at a time, and your distance table only improves.",
+    "paragraphs": [
+      "Floyd-Warshall computes shortest distances between every pair of nodes. Its elegance is in the DP formulation: allow intermediate vertices 1..k and ask whether going through vertex k shortens any path.",
+      "The recurrence dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j]), looped with k on the outside, fills the whole table in O(V³). It handles negative edges (but not negative cycles).",
+      "It's the go-to when V is small (≤ ~400) and you need all pairs — far simpler to code than running Dijkstra V times, and it also computes transitive closure and detects negative cycles (negative on the diagonal)."
+    ],
+    "keyIdea": "For each intermediate k, relax every pair (i, j) through k. k must be the outermost loop."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Initialise the matrix", "detail": "dist[i][j] = edge weight, 0 on the diagonal, ∞ where no edge exists." },
+      { "title": "Triple loop with k outermost", "detail": "for k, for i, for j: dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])." },
+      { "title": "Read results", "detail": "After all k, dist[i][j] is the shortest path. A negative value on dist[i][i] flags a negative cycle." }
+    ],
+    "code": {
+      "language": "cpp",
+      "title": "floyd_warshall.cpp",
+      "source": "for (int k = 0; k < n; ++k)\n  for (int i = 0; i < n; ++i)\n    for (int j = 0; j < n; ++j)\n      if (dist[i][k] + dist[k][j] < dist[i][j])\n        dist[i][j] = dist[i][k] + dist[k][j];"
+    },
+    "complexity": {
+      "time": "O(V³)",
+      "timeReason": "Three nested loops over all vertices.",
+      "space": "O(V²)",
+      "spaceReason": "The full distance matrix."
+    },
+    "pitfalls": [
+      "k MUST be the outer loop — swapping loop order gives wrong answers.",
+      "Guard against overflow (∞ + ∞) by using a sentinel and skipping unreachable pairs.",
+      "Impractical for large V because of the cubic time and quadratic memory."
+    ]
+  },
+  "dryRun": {
+    "input": "3 nodes: A→B(4), A→C(1), C→B(1)",
+    "columns": ["k", "Improved pair", "New dist"],
+    "rows": [
+      ["init", "—", "A→B=4, A→C=1, C→B=1"],
+      ["k=C", "A→B via C", "1+1=2 < 4 → A→B=2"],
+      ["done", "—", "A→B=2"]
+    ],
+    "clickMoment": "Considering C as an intermediate instantly fixes A→B from 4 to 2. Each k pass lets every pair benefit from one more allowed waypoint."
+  },
+  "problems": [
+    { "id": "fw1", "title": "Find the City", "difficulty": "Medium", "statement": "City with fewest reachable neighbours within a threshold.", "hint": "Floyd-Warshall, then count reachable nodes per city.", "tests": "All-pairs distances.", "link": "https://leetcode.com/problems/find-the-city-with-the-smallest-number-of-neighbors-at-a-threshold-distance/" },
+    { "id": "fw2", "title": "Course Schedule IV", "difficulty": "Medium", "statement": "Answer reachability (prerequisite) queries.", "hint": "Transitive closure via Floyd-Warshall on booleans.", "tests": "Transitive closure.", "link": "https://leetcode.com/problems/course-schedule-iv/" },
+    { "id": "fw3", "title": "Evaluate Division", "difficulty": "Medium", "statement": "Answer a/b queries from given ratios.", "hint": "All-pairs products via a Floyd-Warshall-like propagation.", "tests": "Weighted closure.", "link": "https://leetcode.com/problems/evaluate-division/" },
+    { "id": "fw4", "title": "Minimum Cost to Convert String I", "difficulty": "Medium", "statement": "Cheapest per-character conversion cost.", "hint": "Floyd-Warshall over the 26-letter graph.", "tests": "Small all-pairs graph.", "link": "https://leetcode.com/problems/minimum-cost-to-convert-string-i/" },
+    { "id": "fw5", "title": "Network Distances", "difficulty": "Medium", "statement": "Answer many pairwise distance queries on a small graph.", "hint": "Precompute all pairs once.", "tests": "All-pairs precomputation.", "link": "https://cses.fi/problemset/task/1672" }
+  ]
+}

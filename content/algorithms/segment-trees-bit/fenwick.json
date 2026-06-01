@@ -1,0 +1,61 @@
+{
+  "slug": "fenwick",
+  "categoryId": "segment-trees-bit",
+  "order": 1,
+  "title": "Fenwick Tree (BIT)",
+  "tagline": "Prefix sums with updates in O(log n) — using the lowbit trick on a flat array.",
+  "estMinutes": 20,
+  "simulator": "fenwick",
+  "complexity": { "time": "O(log n) per op", "space": "O(n)" },
+  "tags": ["prefix sum", "bit trick", "point update"],
+  "intuition": {
+    "analogy": "Think of measuring distance with a clever ruler whose marks cover 1, 2, 4, 8… units. Any length is the sum of a few such marks — so you reach any point in a handful of jumps rather than counting every unit.",
+    "paragraphs": [
+      "A Fenwick tree (Binary Indexed Tree) supports two operations in O(log n): update a single position and query a prefix sum. Plain prefix arrays give O(1) queries but O(n) updates; a Fenwick balances both.",
+      "Each index i is responsible for a range of size lowbit(i) = i & (−i) — the value of its lowest set bit. Index 12 (1100₂) covers 4 elements; index 8 (1000₂) covers 8. This partition lets any prefix be assembled from O(log n) responsible nodes.",
+      "Update walks UP by adding lowbit (i += i & −i), touching every node whose range includes i. Query walks DOWN by subtracting lowbit (i −= i & −i), summing each responsible block. The bit magic makes both paths short."
+    ],
+    "keyIdea": "Node i covers lowbit(i) elements; query and update each touch only O(log n) nodes via the lowbit jump."
+  },
+  "logic": {
+    "steps": [
+      { "title": "1-indexed array tree[]", "detail": "tree[i] stores the sum of the lowbit(i) elements ending at index i." },
+      { "title": "update(i, delta)", "detail": "Add delta at i, then move i += i & (−i) until past n — updating every node responsible for i." },
+      { "title": "query(i)", "detail": "Sum tree[i], then move i −= i & (−i) until 0 — accumulating the responsible blocks that tile [1, i]." },
+      { "title": "Range sum", "detail": "sum(l, r) = query(r) − query(l−1)." }
+    ],
+    "code": {
+      "language": "cpp",
+      "title": "fenwick.cpp",
+      "source": "int tree[N + 1];\nvoid update(int i, int delta) {\n    for (; i <= N; i += i & (-i)) tree[i] += delta;\n}\nint query(int i) {            // prefix sum [1..i]\n    int s = 0;\n    for (; i > 0; i -= i & (-i)) s += tree[i];\n    return s;\n}"
+    },
+    "complexity": {
+      "time": "O(log n) per update/query",
+      "timeReason": "Each step flips off or adds the lowest set bit, so at most log n steps.",
+      "space": "O(n)",
+      "spaceReason": "A single array of size n+1."
+    },
+    "pitfalls": [
+      "Fenwick trees are 1-indexed — index 0 is unused and would loop forever.",
+      "lowbit relies on two's complement; i & (−i) isolates the lowest set bit.",
+      "Range updates need either two BITs or a difference-array variant."
+    ]
+  },
+  "dryRun": {
+    "input": "query(6) on a built tree (6 = 110₂)",
+    "columns": ["i", "lowbit", "Action"],
+    "rows": [
+      ["6", "2", "add tree[6] (covers indices 5–6)"],
+      ["4", "4", "add tree[4] (covers indices 1–4)"],
+      ["0", "—", "stop → prefix sum of 1..6"]
+    ],
+    "clickMoment": "Index 6 splits into block [5,6] (tree[6]) plus block [1,4] (tree[4]) — exactly two nodes cover six elements. The binary representation of 6 dictates which blocks to add."
+  },
+  "problems": [
+    { "id": "fw1", "title": "Range Sum Query - Mutable", "difficulty": "Medium", "statement": "Support point updates and range-sum queries.", "hint": "Fenwick with update + prefix query.", "tests": "Core BIT.", "link": "https://leetcode.com/problems/range-sum-query-mutable/" },
+    { "id": "fw2", "title": "Count of Smaller Numbers After Self", "difficulty": "Hard", "statement": "Count smaller elements to the right.", "hint": "Coordinate-compress values; BIT over value frequencies, processed right to left.", "tests": "BIT for inversions.", "link": "https://leetcode.com/problems/count-of-smaller-numbers-after-self/" },
+    { "id": "fw3", "title": "Reverse Pairs", "difficulty": "Hard", "statement": "Count pairs with a[i] > 2·a[j], i < j.", "hint": "BIT over compressed values with the 2x condition.", "tests": "BIT counting variant.", "link": "https://leetcode.com/problems/reverse-pairs/" },
+    { "id": "fw4", "title": "Range Sum Query 2D - Mutable", "difficulty": "Hard", "statement": "2D point updates and submatrix sums.", "hint": "2D Fenwick tree.", "tests": "Multi-dim BIT.", "link": "https://leetcode.com/problems/range-sum-query-2d-mutable/" },
+    { "id": "fw5", "title": "Number of Longest Increasing Subsequence (BIT)", "difficulty": "Hard", "statement": "LIS length and count via a BIT keyed on value.", "hint": "BIT storing (best length, count) prefix maxima.", "tests": "BIT with custom merge.", "link": "https://cses.fi/problemset/task/1145" }
+  ]
+}

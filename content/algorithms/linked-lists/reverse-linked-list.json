@@ -1,0 +1,61 @@
+{
+  "slug": "reverse-linked-list",
+  "categoryId": "linked-lists",
+  "order": 2,
+  "title": "Reverse a Linked List",
+  "tagline": "Flip every 'next' pointer in one pass — the building block of dozens of list problems.",
+  "estMinutes": 14,
+  "simulator": null,
+  "complexity": { "time": "O(n)", "space": "O(1)" },
+  "tags": ["pointers", "in-place", "fundamental"],
+  "intuition": {
+    "analogy": "Picture a line of people each pointing at the person ahead. To reverse the line, you walk down it and ask each person to instead point at whoever was behind them. You just need to remember who was behind before you change the arrow.",
+    "paragraphs": [
+      "Reversing a singly linked list means making each node point to its predecessor instead of its successor. The catch: once you flip a node's 'next', you've lost the path forward — so you must save the next node before rewiring.",
+      "Three pointers do the job: prev (the part already reversed), cur (the node being rewired), and a temporary next. Each iteration: stash next, point cur back to prev, then slide prev and cur forward.",
+      "This iterative version uses O(1) space. A recursive version reverses the tail first, then fixes the local link — elegant, but it costs O(n) stack. Reversal also underpins palindrome checks, reversing in k-groups, and reordering."
+    ],
+    "keyIdea": "Save the next node, flip cur→prev, then advance — repeat until cur is null and prev is the new head."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Track three pointers", "detail": "prev = null, cur = head. prev holds the growing reversed portion." },
+      { "title": "Rewire and advance", "detail": "next = cur.next; cur.next = prev; prev = cur; cur = next. The save-before-flip order is essential." },
+      { "title": "Return the new head", "detail": "When cur is null, prev points to the old tail, which is the new head." }
+    ],
+    "code": {
+      "language": "cpp",
+      "title": "reverse_list.cpp",
+      "source": "ListNode* reverse(ListNode* head) {\n    ListNode* prev = nullptr;\n    ListNode* cur = head;\n    while (cur) {\n        ListNode* next = cur->next;\n        cur->next = prev;\n        prev = cur;\n        cur = next;\n    }\n    return prev;\n}"
+    },
+    "complexity": {
+      "time": "O(n)",
+      "timeReason": "Each node is visited and rewired exactly once.",
+      "space": "O(1)",
+      "spaceReason": "Iterative with three pointers; the recursive form uses O(n) stack."
+    },
+    "pitfalls": [
+      "Forgetting to save cur.next before overwriting it severs the rest of the list.",
+      "Returning head instead of prev — head is now the tail.",
+      "For range reversals, carefully reconnect the boundaries to the untouched parts."
+    ]
+  },
+  "dryRun": {
+    "input": "1 → 2 → 3 → null",
+    "columns": ["Step", "prev, cur", "List so far"],
+    "rows": [
+      ["start", "null, 1", "1→2→3"],
+      ["1", "1, 2", "1→null, prev=1"],
+      ["2", "2, 3", "2→1→null"],
+      ["3", "3, null", "3→2→1→null (done)"]
+    ],
+    "clickMoment": "Watch prev grow into the reversed list one node at a time, while cur marches forward through what's left. The reversal is really just relocating the boundary between 'done' and 'todo'."
+  },
+  "problems": [
+    { "id": "rl1", "title": "Reverse Linked List", "difficulty": "Easy", "statement": "Reverse a singly linked list.", "hint": "The three-pointer template.", "tests": "Core reversal.", "link": "https://leetcode.com/problems/reverse-linked-list/" },
+    { "id": "rl2", "title": "Reverse Linked List II", "difficulty": "Medium", "statement": "Reverse the nodes between positions left and right.", "hint": "Walk to position left-1, reverse the sublist, then reconnect both ends.", "tests": "Partial reversal with boundary stitching.", "link": "https://leetcode.com/problems/reverse-linked-list-ii/" },
+    { "id": "rl3", "title": "Palindrome Linked List", "difficulty": "Easy", "statement": "Check if a linked list reads the same forwards and backwards.", "hint": "Find the middle, reverse the second half, compare.", "tests": "Reversal + midpoint.", "link": "https://leetcode.com/problems/palindrome-linked-list/" },
+    { "id": "rl4", "title": "Reverse Nodes in k-Group", "difficulty": "Hard", "statement": "Reverse the list in groups of k nodes.", "hint": "Reverse each block of k, then link blocks together; leave a trailing remainder untouched.", "tests": "Block-wise reversal.", "link": "https://leetcode.com/problems/reverse-nodes-in-k-group/" },
+    { "id": "rl5", "title": "Add Two Numbers II", "difficulty": "Medium", "statement": "Add two numbers stored as linked lists, most-significant digit first.", "hint": "Reverse both lists (or use stacks) so you can add from the least-significant end.", "tests": "Reversal to align digit order.", "link": "https://leetcode.com/problems/add-two-numbers-ii/" }
+  ]
+}

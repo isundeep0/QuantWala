@@ -1,0 +1,61 @@
+{
+  "slug": "sudoku",
+  "categoryId": "backtracking",
+  "order": 4,
+  "title": "Sudoku Solver",
+  "tagline": "Fill empty cells with constraint-checked guesses, backtracking on contradictions.",
+  "estMinutes": 16,
+  "simulator": null,
+  "complexity": { "time": "exponential (pruned)", "space": "O(1)" },
+  "tags": ["backtracking", "constraints", "pruning"],
+  "intuition": {
+    "analogy": "Solving a Sudoku by hand: you pencil a candidate into an empty cell, continue solving, and if you hit an impossible cell you erase back to your last guess and try a different number.",
+    "paragraphs": [
+      "Sudoku is constraint satisfaction: each empty cell needs a digit 1–9 such that its row, column, and 3×3 box stay free of duplicates. Backtracking tries candidates and recurses, undoing choices that lead to dead ends.",
+      "Efficiency comes from constant-time validity checks. Maintain bitmasks (or sets) of used digits per row, per column, and per box, so testing a candidate is O(1) instead of scanning 27 cells.",
+      "Smart move ordering — always fill the empty cell with the fewest legal candidates first (the 'most constrained variable' heuristic) — slashes the search dramatically, often solving puzzles almost instantly."
+    ],
+    "keyIdea": "Guess a digit, check row/col/box constraints in O(1), recurse, and erase on contradiction."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Find an empty cell", "detail": "Optionally choose the one with the fewest candidates (most-constrained-variable heuristic)." },
+      { "title": "Try candidates", "detail": "For each digit not in the cell's row, column, or box, place it, update the masks, and recurse." },
+      { "title": "Backtrack", "detail": "If recursion fails, remove the digit and clear the masks, then try the next candidate. Success when no empty cells remain." }
+    ],
+    "code": {
+      "language": "cpp",
+      "title": "sudoku.cpp",
+      "source": "bool solve(vector<vector<char>>& b) {\n    for (int r = 0; r < 9; ++r)\n      for (int c = 0; c < 9; ++c)\n        if (b[r][c] == '.') {\n          for (char d = '1'; d <= '9'; ++d)\n            if (valid(b, r, c, d)) {\n              b[r][c] = d;\n              if (solve(b)) return true;\n              b[r][c] = '.';          // backtrack\n            }\n          return false;                // no digit fits\n        }\n    return true;                       // board full\n}"
+    },
+    "complexity": {
+      "time": "Exponential worst case, fast with pruning",
+      "timeReason": "The branching is bounded by candidates per cell; good heuristics keep it tiny in practice.",
+      "space": "O(1)",
+      "spaceReason": "Fixed 9×9 board plus recursion depth ≤ 81."
+    },
+    "pitfalls": [
+      "O(1) validity via row/col/box masks is the key optimisation — naive rescanning is slow.",
+      "Don't forget to clear the cell (and masks) when backtracking.",
+      "Box index is (r/3)*3 + c/3 — a common off-by-one source."
+    ]
+  },
+  "dryRun": {
+    "input": "An empty cell with candidates {3, 7}",
+    "columns": ["Action", "State", "Outcome"],
+    "rows": [
+      ["try 3", "place 3, recurse", "later contradiction"],
+      ["erase 3", "backtrack", "try next candidate"],
+      ["try 7", "place 7, recurse", "completes the board"],
+      ["done", "no empties left", "solved"]
+    ],
+    "clickMoment": "The first guess (3) cascades into an impossible cell deeper down; backtracking rewinds exactly to this decision and the alternative (7) succeeds. The recursion remembers the choice point for you."
+  },
+  "problems": [
+    { "id": "sd1", "title": "Sudoku Solver", "difficulty": "Hard", "statement": "Fill the board to satisfy Sudoku rules.", "hint": "Backtracking with row/col/box checks.", "tests": "Core constraint backtracking.", "link": "https://leetcode.com/problems/sudoku-solver/" },
+    { "id": "sd2", "title": "Valid Sudoku", "difficulty": "Medium", "statement": "Check whether a board configuration is valid.", "hint": "Single pass with row/col/box sets.", "tests": "Constraint checking only.", "link": "https://leetcode.com/problems/valid-sudoku/" },
+    { "id": "sd3", "title": "N-Queens", "difficulty": "Hard", "statement": "Place non-attacking queens.", "hint": "Same assign/check/backtrack skeleton.", "tests": "Sibling constraint problem.", "link": "https://leetcode.com/problems/n-queens/" },
+    { "id": "sd4", "title": "Word Search II", "difficulty": "Hard", "statement": "Find all dictionary words on a board.", "hint": "Backtracking DFS over a trie of words.", "tests": "Backtracking + pruning with a trie.", "link": "https://leetcode.com/problems/word-search-ii/" },
+    { "id": "sd5", "title": "Graph Coloring (m-coloring)", "difficulty": "Medium", "statement": "Color a graph with m colors, no adjacent clash.", "hint": "Assign colors with constraint checks, backtrack on conflict.", "tests": "General CSP backtracking.", "link": "https://www.geeksforgeeks.org/m-coloring-problem/" }
+  ]
+}

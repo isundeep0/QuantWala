@@ -1,0 +1,61 @@
+{
+  "slug": "lcs",
+  "categoryId": "dynamic-programming",
+  "order": 1,
+  "title": "Longest Common Subsequence",
+  "tagline": "The 2D-DP archetype — match or skip, building a table from smaller subproblems.",
+  "estMinutes": 20,
+  "simulator": "lcs",
+  "complexity": { "time": "O(n·m)", "space": "O(n·m)" },
+  "tags": ["dp", "2d", "strings"],
+  "intuition": {
+    "analogy": "Comparing two students' essays for shared phrases that appear in the same order (but not necessarily adjacent). You scan both, and whenever the current words match you extend the shared run; otherwise you try dropping a word from one side or the other.",
+    "paragraphs": [
+      "A subsequence keeps order but allows gaps. The LCS of two strings is the longest sequence appearing in both. It's the quintessential 2D dynamic program and the model for edit distance, diff tools, and DNA alignment.",
+      "Define dp[i][j] = LCS length of the first i characters of A and first j of B. If the current characters match, the answer extends the diagonal: dp[i-1][j-1] + 1. If they differ, you take the better of ignoring one character from either string: max(dp[i-1][j], dp[i][j-1]).",
+      "The table fills row by row, each cell depending only on three already-computed neighbours. The bottom-right corner holds the answer; backtracking through the table reconstructs the actual subsequence."
+    ],
+    "keyIdea": "Match → take the diagonal + 1; mismatch → take the best of dropping one character from either string."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Define the state", "detail": "dp[i][j] = length of the LCS of A[0..i-1] and B[0..j-1]. Row 0 and column 0 are 0 (empty prefix)." },
+      { "title": "Transition", "detail": "If A[i-1] == B[j-1]: dp[i][j] = dp[i-1][j-1] + 1. Else dp[i][j] = max(dp[i-1][j], dp[i][j-1])." },
+      { "title": "Answer & reconstruct", "detail": "dp[n][m] is the length. Walk backwards: on a match step diagonally and emit the character; otherwise move toward the larger neighbour." }
+    ],
+    "code": {
+      "language": "python",
+      "title": "lcs.py",
+      "source": "def lcs(A, B):\n    n, m = len(A), len(B)\n    dp = [[0]*(m+1) for _ in range(n+1)]\n    for i in range(1, n+1):\n        for j in range(1, m+1):\n            if A[i-1] == B[j-1]:\n                dp[i][j] = dp[i-1][j-1] + 1\n            else:\n                dp[i][j] = max(dp[i-1][j], dp[i][j-1])\n    return dp[n][m]"
+    },
+    "complexity": {
+      "time": "O(n·m)",
+      "timeReason": "Each of the n·m table cells is computed in O(1).",
+      "space": "O(n·m)",
+      "spaceReason": "The full table; can be reduced to O(min(n,m)) with rolling rows if you only need the length."
+    },
+    "pitfalls": [
+      "Confusing subsequence (gaps allowed) with substring (contiguous).",
+      "Index off-by-one between 1-indexed dp and 0-indexed strings.",
+      "If you need the actual subsequence, you must keep the full table (or recompute) to backtrack."
+    ]
+  },
+  "dryRun": {
+    "input": "A = \"AGCAT\", B = \"GAC\"",
+    "columns": ["Cell", "Chars", "Value"],
+    "rows": [
+      ["dp[1][1]", "A vs G (differ)", "max(0,0)=0"],
+      ["dp[2][1]", "G vs G (match)", "diag+1 = 1"],
+      ["dp[3][2]", "C vs A (differ)", "max(up,left)=1"],
+      ["dp[5][3]", "final", "LCS length = 2 (e.g. \"GA\" or \"AC\")"]
+    ],
+    "clickMoment": "Watch the diagonal jumps: every '+1' happens exactly on a character match. The whole table is just a bookkeeping of 'how many matches can I line up so far?'"
+  },
+  "problems": [
+    { "id": "lcs1", "title": "Longest Common Subsequence", "difficulty": "Medium", "statement": "Return the length of the LCS of two strings.", "hint": "The match/skip table.", "tests": "Core 2D DP.", "link": "https://leetcode.com/problems/longest-common-subsequence/" },
+    { "id": "lcs2", "title": "Edit Distance", "difficulty": "Medium", "statement": "Min insert/delete/replace operations to convert one string to another.", "hint": "Same table shape; three transitions for the three operations.", "tests": "LCS-style 2D DP variant.", "link": "https://leetcode.com/problems/edit-distance/" },
+    { "id": "lcs3", "title": "Longest Palindromic Subsequence", "difficulty": "Medium", "statement": "Longest subsequence that is a palindrome.", "hint": "LCS of the string with its reverse.", "tests": "Clever LCS reduction.", "link": "https://leetcode.com/problems/longest-palindromic-subsequence/" },
+    { "id": "lcs4", "title": "Delete Operation for Two Strings", "difficulty": "Medium", "statement": "Min deletions to make two strings equal.", "hint": "n + m − 2·LCS.", "tests": "Deriving from LCS.", "link": "https://leetcode.com/problems/delete-operation-for-two-strings/" },
+    { "id": "lcs5", "title": "Shortest Common Supersequence", "difficulty": "Hard", "statement": "Shortest string containing both as subsequences.", "hint": "Build the LCS table, then backtrack merging both strings.", "tests": "LCS reconstruction + merge.", "link": "https://leetcode.com/problems/shortest-common-supersequence/" }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "slug": "union-find",
+  "categoryId": "graphs",
+  "order": 8,
+  "title": "Union-Find (DSU)",
+  "tagline": "Track connected components with near-constant union and find via path compression + union by rank.",
+  "estMinutes": 18,
+  "simulator": "union-find",
+  "complexity": { "time": "O(α(n)) per op", "space": "O(n)" },
+  "tags": ["dsu", "connectivity", "kruskal"],
+  "intuition": {
+    "analogy": "Friend groups at a party: each group has a 'representative'. To check if two people are in the same group, you trace each up to their representative. To merge two groups, you point one representative at the other.",
+    "paragraphs": [
+      "The Disjoint Set Union (DSU) data structure maintains a collection of disjoint sets and answers two questions blazingly fast: 'are these two elements in the same set?' (find) and 'merge these two sets' (union).",
+      "Each set is a tree where every node points to a parent, and the root is the set's representative. Find walks to the root; union links one root under another.",
+      "Two optimisations make it nearly O(1): path compression flattens trees during find (point nodes straight at the root), and union by rank/size always attaches the smaller tree under the larger. Together they give the inverse-Ackermann α(n) — effectively constant."
+    ],
+    "keyIdea": "Represent sets as rooted trees; path compression + union by rank keep them flat for near-constant operations."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Initialise", "detail": "parent[i] = i for all elements (each its own set), rank/size = 0/1." },
+      { "title": "Find with compression", "detail": "Follow parents to the root, and re-point visited nodes directly at the root so future finds are instant." },
+      { "title": "Union by rank", "detail": "Find both roots; if different, attach the lower-rank tree under the higher; bump rank on a tie." }
+    ],
+    "code": {
+      "language": "cpp",
+      "title": "dsu.cpp",
+      "source": "int parent[N], rnk[N];\nint find(int x) {\n    while (parent[x] != x) {\n        parent[x] = parent[parent[x]];  // path halving\n        x = parent[x];\n    }\n    return x;\n}\nvoid unite(int a, int b) {\n    a = find(a); b = find(b);\n    if (a == b) return;\n    if (rnk[a] < rnk[b]) swap(a, b);\n    parent[b] = a;\n    if (rnk[a] == rnk[b]) ++rnk[a];\n}"
+    },
+    "complexity": {
+      "time": "O(α(n)) amortised per operation",
+      "timeReason": "Path compression + union by rank give the inverse-Ackermann bound, effectively constant.",
+      "space": "O(n)",
+      "spaceReason": "Parent and rank arrays."
+    },
+    "pitfalls": [
+      "Forgetting either optimisation degrades to O(n) per op on adversarial inputs.",
+      "Union without find-ing roots first corrupts the structure.",
+      "DSU handles merging well but not splitting — it's a one-way data structure."
+    ]
+  },
+  "dryRun": {
+    "input": "n=7; union(0,1), union(2,3), union(1,3), find(0)",
+    "columns": ["Op", "Effect", "Components"],
+    "rows": [
+      ["union(0,1)", "1→0", "{0,1} {2} {3} ..."],
+      ["union(2,3)", "3→2", "{0,1} {2,3} ..."],
+      ["union(1,3)", "roots 0,2 merge", "{0,1,2,3} ..."],
+      ["find(0)", "returns root 0", "compresses path"]
+    ],
+    "clickMoment": "union(1,3) doesn't touch 1 or 3 directly — it finds their roots (0 and 2) and links them. All four elements become one component through a single root link."
+  },
+  "problems": [
+    { "id": "uf1", "title": "Number of Provinces", "difficulty": "Medium", "statement": "Count connected components.", "hint": "Union all connected pairs; count distinct roots.", "tests": "Core DSU connectivity.", "link": "https://leetcode.com/problems/number-of-provinces/" },
+    { "id": "uf2", "title": "Redundant Connection", "difficulty": "Medium", "statement": "Find the edge that creates a cycle in a tree-plus-one-edge graph.", "hint": "The first edge whose endpoints already share a root is the answer.", "tests": "Cycle detection via DSU.", "link": "https://leetcode.com/problems/redundant-connection/" },
+    { "id": "uf3", "title": "Accounts Merge", "difficulty": "Medium", "statement": "Merge accounts sharing any email.", "hint": "Union accounts by shared emails; group by root.", "tests": "DSU for grouping.", "link": "https://leetcode.com/problems/accounts-merge/" },
+    { "id": "uf4", "title": "Number of Operations to Make Network Connected", "difficulty": "Medium", "statement": "Min cable moves to connect all computers.", "hint": "Components − 1 cables needed if you have enough spare edges.", "tests": "Counting components.", "link": "https://leetcode.com/problems/number-of-operations-to-make-network-connected/" },
+    { "id": "uf5", "title": "Smallest String With Swaps", "difficulty": "Medium", "statement": "Lexicographically smallest string given swap pairs.", "hint": "Union swap-connected indices; sort characters within each group.", "tests": "DSU components + sorting.", "link": "https://leetcode.com/problems/smallest-string-with-swaps/" }
+  ]
+}

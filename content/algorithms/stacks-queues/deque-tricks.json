@@ -1,0 +1,62 @@
+{
+  "slug": "deque-tricks",
+  "categoryId": "stacks-queues",
+  "order": 2,
+  "title": "Deque Tricks (Sliding Window Max)",
+  "tagline": "A double-ended queue keeps a window's maximum available in O(1) amortised.",
+  "estMinutes": 16,
+  "simulator": null,
+  "complexity": { "time": "O(n)", "space": "O(k)" },
+  "tags": ["deque", "monotonic", "window"],
+  "intuition": {
+    "analogy": "A bouncer keeping a VIP list ordered by status: when a higher-status guest arrives, everyone behind who's lower-status is dropped — they can never be 'the most important' while the new guest stands ahead of them. The front of the list is always the current VIP.",
+    "paragraphs": [
+      "The sliding-window-maximum problem asks for the max of every length-k window. A heap gives O(n log k); a monotonic deque gives O(n) by maintaining a queue of indices whose values are strictly decreasing.",
+      "Two operations keep it tidy. Before adding a new index, pop smaller values from the back (they're dominated by the newcomer and will never be the max while it's present). And pop from the front if it has slid out of the window.",
+      "The front of the deque is always the index of the current window's maximum. Each index enters and leaves the deque once, so the whole sweep is linear."
+    ],
+    "keyIdea": "Keep window indices in a deque with decreasing values; the front is always the maximum, updated in O(1) amortised."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Evict the stale front", "detail": "If the front index is ≤ i − k, it's outside the window — pop it from the front." },
+      { "title": "Maintain monotonicity at the back", "detail": "While the back's value ≤ a[i], pop it; those values can't be a maximum while a[i] is in the window." },
+      { "title": "Push and read", "detail": "Push i at the back. Once the first window is formed (i ≥ k−1), the front index gives the current window's maximum." }
+    ],
+    "code": {
+      "language": "python",
+      "title": "sliding_window_max.py",
+      "source": "from collections import deque\ndef max_sliding_window(a, k):\n    dq, out = deque(), []\n    for i, x in enumerate(a):\n        if dq and dq[0] <= i - k:\n            dq.popleft()\n        while dq and a[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if i >= k - 1:\n            out.append(a[dq[0]])\n    return out"
+    },
+    "complexity": {
+      "time": "O(n)",
+      "timeReason": "Each index is appended once and removed once across the whole pass.",
+      "space": "O(k)",
+      "spaceReason": "The deque holds at most k indices."
+    },
+    "pitfalls": [
+      "Storing values instead of indices makes window-eviction impossible.",
+      "Use ≤ when popping the back to handle duplicates correctly.",
+      "Only start emitting answers once the first full window exists (i ≥ k−1)."
+    ]
+  },
+  "dryRun": {
+    "input": "a = [1, 3, -1, -3, 5], k = 3",
+    "columns": ["i", "Deque (vals)", "Window max"],
+    "rows": [
+      ["0", "[1]", "—"],
+      ["1", "[3]", "—"],
+      ["2", "[3,-1]", "3"],
+      ["3", "[3,-1,-3]", "3"],
+      ["4", "[5]", "5"]
+    ],
+    "clickMoment": "When 5 arrives, every smaller value is purged from the back at once — the deque collapses to just [5]. The dominated candidates vanish the moment they become irrelevant."
+  },
+  "problems": [
+    { "id": "dq1", "title": "Sliding Window Maximum", "difficulty": "Hard", "statement": "Return the max of each length-k window.", "hint": "Monotonic decreasing deque of indices.", "tests": "Core deque trick.", "link": "https://leetcode.com/problems/sliding-window-maximum/" },
+    { "id": "dq2", "title": "Shortest Subarray with Sum at Least K", "difficulty": "Hard", "statement": "Shortest subarray with sum ≥ K (negatives allowed).", "hint": "Monotonic deque over prefix sums.", "tests": "Deque on prefix sums.", "link": "https://leetcode.com/problems/shortest-subarray-with-sum-at-least-k/" },
+    { "id": "dq3", "title": "Constrained Subsequence Sum", "difficulty": "Hard", "statement": "Max subsequence sum where chosen indices are within k of each other.", "hint": "DP with a sliding-window-max deque over the dp array.", "tests": "Deque to optimise a DP transition.", "link": "https://leetcode.com/problems/constrained-subsequence-sum/" },
+    { "id": "dq4", "title": "Jump Game VI", "difficulty": "Medium", "statement": "Maximise score jumping up to k steps at a time.", "hint": "dp[i] = a[i] + max(dp[i-k..i-1]); maintain that max with a deque.", "tests": "Windowed DP maximum.", "link": "https://leetcode.com/problems/jump-game-vi/" },
+    { "id": "dq5", "title": "Sliding Window Median", "difficulty": "Hard", "statement": "Median of each length-k window.", "hint": "Two heaps (or multiset); contrast with the deque approach for max.", "tests": "Window aggregate beyond max.", "link": "https://leetcode.com/problems/sliding-window-median/" }
+  ]
+}

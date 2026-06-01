@@ -1,0 +1,61 @@
+{
+  "slug": "trie",
+  "categoryId": "strings",
+  "order": 4,
+  "title": "Trie (Prefix Tree)",
+  "tagline": "A tree of characters for O(L) insert/search and lightning-fast prefix queries.",
+  "estMinutes": 18,
+  "simulator": null,
+  "complexity": { "time": "O(L) per op", "space": "O(total chars)" },
+  "tags": ["tree", "prefix", "dictionary"],
+  "intuition": {
+    "analogy": "A physical index where words sharing a prefix share a path: all words starting 'ca' branch off the same 'c→a' corridor. To check if 'cat' exists, you just walk c→a→t.",
+    "paragraphs": [
+      "A trie stores strings as paths in a tree where each edge is a character. Words with common prefixes share the upper part of their paths, making prefix operations extremely natural and fast.",
+      "Insertion and lookup take O(L) where L is the word length — independent of how many words are stored. A boolean flag at a node marks the end of a complete word.",
+      "Tries power autocomplete, spell-checkers, IP routing, and 'maximum XOR' problems (a binary trie over bits). They trade memory for speed: storing all prefixes explicitly enables instant prefix matching."
+    ],
+    "keyIdea": "Shared prefixes share paths; walking L edges inserts or finds a word regardless of dictionary size."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Node structure", "detail": "Each node has child pointers (one per alphabet symbol) and an isEnd flag." },
+      { "title": "Insert", "detail": "Walk down character by character, creating missing child nodes; mark isEnd at the final node." },
+      { "title": "Search / startsWith", "detail": "Walk the path; search succeeds if the final node has isEnd, prefix-check succeeds if the path merely exists." }
+    ],
+    "code": {
+      "language": "cpp",
+      "title": "trie.cpp",
+      "source": "struct Trie {\n    Trie* child[26] = {};\n    bool end = false;\n    void insert(const string& w) {\n        Trie* node = this;\n        for (char c : w) {\n            int k = c - 'a';\n            if (!node->child[k]) node->child[k] = new Trie();\n            node = node->child[k];\n        }\n        node->end = true;\n    }\n    bool search(const string& w, bool prefix=false) {\n        Trie* node = this;\n        for (char c : w) {\n            int k = c - 'a';\n            if (!node->child[k]) return false;\n            node = node->child[k];\n        }\n        return prefix || node->end;\n    }\n};"
+    },
+    "complexity": {
+      "time": "O(L) per insert/search",
+      "timeReason": "One step per character of the word.",
+      "space": "O(total characters · alphabet)",
+      "spaceReason": "Each node may hold an array of child pointers."
+    },
+    "pitfalls": [
+      "Array-of-26 children wastes memory for sparse alphabets — use a hash map for large/unicode alphabets.",
+      "Distinguish 'word exists' (isEnd) from 'prefix exists' (path exists).",
+      "Remember to free nodes (C++) or you leak memory."
+    ]
+  },
+  "dryRun": {
+    "input": "insert \"car\", \"card\", \"cat\"; search \"ca\" (prefix)",
+    "columns": ["Step", "Path", "Note"],
+    "rows": [
+      ["insert car", "c→a→r*", "* marks word end"],
+      ["insert card", "c→a→r→d*", "reuses c→a→r"],
+      ["insert cat", "c→a→t*", "branches at 'a'"],
+      ["startsWith ca", "c→a exists", "true (3 words share it)"]
+    ],
+    "clickMoment": "'car' and 'card' share the entire c→a→r path — only the final 'd' is new. The trie automatically deduplicates shared prefixes, which is exactly what makes prefix queries instant."
+  },
+  "problems": [
+    { "id": "tr1", "title": "Implement Trie", "difficulty": "Medium", "statement": "Support insert, search, startsWith.", "hint": "Children array + end flag.", "tests": "Core trie.", "link": "https://leetcode.com/problems/implement-trie-prefix-tree/" },
+    { "id": "tr2", "title": "Word Search II", "difficulty": "Hard", "statement": "Find all dictionary words on a board.", "hint": "Build a trie of words, DFS the board with pruning.", "tests": "Trie + backtracking.", "link": "https://leetcode.com/problems/word-search-ii/" },
+    { "id": "tr3", "title": "Add and Search Word", "difficulty": "Medium", "statement": "Support '.' wildcard searches.", "hint": "Trie with branching DFS on wildcards.", "tests": "Trie with wildcards.", "link": "https://leetcode.com/problems/design-add-and-search-words-data-structure/" },
+    { "id": "tr4", "title": "Maximum XOR of Two Numbers", "difficulty": "Medium", "statement": "Max XOR pair in an array.", "hint": "Binary trie over bits; greedily pick opposite bits.", "tests": "Bitwise trie.", "link": "https://leetcode.com/problems/maximum-xor-of-two-numbers-in-an-array/" },
+    { "id": "tr5", "title": "Replace Words", "difficulty": "Medium", "statement": "Replace words by their shortest dictionary root.", "hint": "Trie of roots; match the shortest prefix.", "tests": "Prefix replacement.", "link": "https://leetcode.com/problems/replace-words/" }
+  ]
+}

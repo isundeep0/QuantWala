@@ -1,0 +1,63 @@
+{
+  "slug": "monotonic-stack",
+  "categoryId": "stacks-queues",
+  "order": 1,
+  "title": "Monotonic Stack",
+  "tagline": "A stack kept sorted answers 'next greater/smaller element' questions in O(n).",
+  "estMinutes": 18,
+  "simulator": "monotonic-stack",
+  "complexity": { "time": "O(n)", "space": "O(n)" },
+  "tags": ["stack", "next greater", "amortised"],
+  "intuition": {
+    "analogy": "Imagine people of different heights standing in line, each wanting to know the first taller person ahead of them. A shorter person who's still waiting gets 'resolved' the instant a taller person walks up — at which point they no longer matter and can leave the line.",
+    "paragraphs": [
+      "A monotonic stack maintains its elements in sorted order (all increasing or all decreasing). When a new element would break that order, you pop the violators — and each pop is exactly the moment an earlier element finds its answer.",
+      "For 'next greater element', keep a decreasing stack of indices. When the current value exceeds the value at the stack top, that top element has just found its next greater element (the current one), so you pop and record it.",
+      "Although there's a nested 'while pop' loop, each element is pushed once and popped at most once across the whole run, so the total work is O(n) — a classic amortised-analysis result that surprises people the first time."
+    ],
+    "keyIdea": "Each element is pushed and popped at most once; a pop is the event 'this element just found its answer'."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Decide the monotonic direction", "detail": "Next greater → decreasing stack. Next smaller → increasing stack. Store indices so you can compute distances too." },
+      { "title": "Pop while the invariant breaks", "detail": "Before pushing index i, pop every index whose value is smaller (for next-greater); those popped elements have i as their answer." },
+      { "title": "Push the current index", "detail": "After resolving, push i. Anything still on the stack has no answer yet." },
+      { "title": "Handle leftovers", "detail": "Indices remaining at the end have no next greater element → assign -1 (or n for distance problems)." }
+    ],
+    "code": {
+      "language": "cpp",
+      "title": "next_greater.cpp",
+      "source": "vector<int> nextGreater(vector<int>& a) {\n    int n = a.size();\n    vector<int> ans(n, -1);\n    stack<int> st;                 // indices, values decreasing\n    for (int i = 0; i < n; ++i) {\n        while (!st.empty() && a[st.top()] < a[i]) {\n            ans[st.top()] = a[i];\n            st.pop();\n        }\n        st.push(i);\n    }\n    return ans;\n}"
+    },
+    "complexity": {
+      "time": "O(n)",
+      "timeReason": "Every index is pushed once and popped once; total push+pop operations are bounded by 2n.",
+      "space": "O(n)",
+      "spaceReason": "The stack can hold up to n indices (e.g. a strictly decreasing input)."
+    },
+    "pitfalls": [
+      "Choosing the wrong monotonic direction for the question (greater vs smaller).",
+      "Storing values instead of indices when the problem needs positions/distances.",
+      "Strict vs non-strict comparison (< vs <=) matters for handling equal elements."
+    ]
+  },
+  "dryRun": {
+    "input": "a = [2, 1, 2, 4, 3, 1] (next greater)",
+    "columns": ["i, a[i]", "Stack (vals)", "Resolved"],
+    "rows": [
+      ["0, 2", "[2]", "—"],
+      ["1, 1", "[2,1]", "—"],
+      ["2, 2", "[2,2]", "popped 1 → ans=2"],
+      ["3, 4", "[4]", "popped 2,2 → ans=4,4"],
+      ["4, 3", "[4,3]", "—"]
+    ],
+    "clickMoment": "When 4 arrives, it resolves everything smaller below it in one burst. Those elements waited precisely until the first larger value appeared — the stack remembered them in the perfect order."
+  },
+  "problems": [
+    { "id": "mst1", "title": "Next Greater Element I", "difficulty": "Easy", "statement": "For each element of nums1, find its next greater element in nums2.", "hint": "Monotonic stack over nums2 builds a map of answers.", "tests": "Core next-greater.", "link": "https://leetcode.com/problems/next-greater-element-i/" },
+    { "id": "mst2", "title": "Daily Temperatures", "difficulty": "Medium", "statement": "For each day, how many days until a warmer temperature?", "hint": "Decreasing stack of indices; on a pop, the distance is i − poppedIndex.", "tests": "Next-greater with distances.", "link": "https://leetcode.com/problems/daily-temperatures/" },
+    { "id": "mst3", "title": "Largest Rectangle in Histogram", "difficulty": "Hard", "statement": "Largest rectangle area in a bar histogram.", "hint": "Increasing stack; when a shorter bar appears, pop and compute areas using width gaps.", "tests": "Monotonic stack for spans.", "link": "https://leetcode.com/problems/largest-rectangle-in-histogram/" },
+    { "id": "mst4", "title": "Trapping Rain Water", "difficulty": "Hard", "statement": "Water trapped between bars.", "hint": "Decreasing stack; each pop forms a basin bounded by the new bar and the new top.", "tests": "Monotonic stack basins.", "link": "https://leetcode.com/problems/trapping-rain-water/" },
+    { "id": "mst5", "title": "Remove K Digits", "difficulty": "Medium", "statement": "Remove k digits to make the smallest possible number.", "hint": "Increasing stack: pop larger leading digits while you still have removals left.", "tests": "Greedy monotonic stack on digits.", "link": "https://leetcode.com/problems/remove-k-digits/" }
+  ]
+}

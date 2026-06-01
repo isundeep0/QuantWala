@@ -1,0 +1,60 @@
+{
+  "slug": "modular-arithmetic",
+  "categoryId": "math-number-theory",
+  "order": 4,
+  "title": "Modular Arithmetic",
+  "tagline": "Keep numbers small under a modulus — addition, multiplication, and division (inverses).",
+  "estMinutes": 16,
+  "simulator": null,
+  "complexity": { "time": "O(1) – O(log m)", "space": "O(1)" },
+  "tags": ["modular", "inverse", "number theory"],
+  "intuition": {
+    "analogy": "A 12-hour clock: 10 o'clock plus 5 hours is 3, not 15. Arithmetic 'wraps around' a fixed size. Modular arithmetic is clock math with any modulus, used to keep huge intermediate results from overflowing.",
+    "paragraphs": [
+      "When counts explode (combinatorics, DP), problems ask for the answer modulo a prime like 1e9+7. The reason: addition and multiplication play nicely with mod — (a+b) mod m and (a·b) mod m can be taken at every step, keeping numbers bounded.",
+      "Subtraction needs care: (a−b) mod m can go negative, so add m back: ((a−b) % m + m) % m. Division is the subtle one — you can't just divide; you multiply by the modular inverse.",
+      "Under a prime modulus, the inverse of a is a^(m−2) (Fermat's little theorem) or comes from the extended Euclidean algorithm. With inverses you can compute binomial coefficients and probabilities mod p."
+    ],
+    "keyIdea": "Reduce at every step for +,−,×; for division, multiply by the modular inverse (Fermat or extended gcd)."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Add / multiply mod", "detail": "(a + b) % m and (a * b) % m. Use 64-bit (or __int128) so the product fits before reducing." },
+      { "title": "Safe subtraction", "detail": "((a − b) % m + m) % m keeps the result in [0, m)." },
+      { "title": "Division via inverse", "detail": "a / b mod m = a · b⁻¹ mod m, where b⁻¹ = b^(m−2) mod m for prime m." }
+    ],
+    "code": {
+      "language": "cpp",
+      "title": "modmath.cpp",
+      "source": "const long long MOD = 1e9 + 7;\nlong long add(long long a,long long b){ return (a+b)%MOD; }\nlong long sub(long long a,long long b){ return ((a-b)%MOD+MOD)%MOD; }\nlong long mul(long long a,long long b){ return a%MOD*(b%MOD)%MOD; }\nlong long power(long long a,long long n){ long long r=1;a%=MOD;\n    while(n){ if(n&1) r=r*a%MOD; a=a*a%MOD; n>>=1; } return r; }\nlong long inv(long long a){ return power(a, MOD-2); }  // prime MOD"
+    },
+    "complexity": {
+      "time": "O(1) for +,−,×; O(log m) for inverse",
+      "timeReason": "Basic ops are constant; the inverse uses fast exponentiation.",
+      "space": "O(1)",
+      "spaceReason": "Scalar arithmetic." 
+    },
+    "pitfalls": [
+      "Multiplying two ints near 1e9 overflows 32-bit — cast to 64-bit first.",
+      "Negative results after subtraction must be normalised by adding m.",
+      "Fermat-inverse requires a prime modulus and a not divisible by m."
+    ]
+  },
+  "dryRun": {
+    "input": "Compute (7 / 3) mod 11",
+    "columns": ["Step", "Computation", "Value"],
+    "rows": [
+      ["inverse of 3", "3^(11−2) mod 11", "3⁹ mod 11 = 4"],
+      ["multiply", "7 · 4 mod 11", "28 mod 11 = 6"],
+      ["check", "6 · 3 mod 11", "18 mod 11 = 7 ✓"]
+    ],
+    "clickMoment": "Division became multiplication by 4 — because 3·4 ≡ 1 (mod 11), 4 is '1/3' in this world. The verification 6·3 ≡ 7 confirms the inverse really undoes the multiply."
+  },
+  "problems": [
+    { "id": "ma1", "title": "Modular Inverse", "difficulty": "Medium", "statement": "Compute inverses under a prime modulus.", "hint": "Fermat's little theorem via fast power.", "tests": "Inverse computation.", "link": "https://cses.fi/problemset/task/1712" },
+    { "id": "ma2", "title": "Binomial Coefficients", "difficulty": "Medium", "statement": "Compute nCr mod p for many queries.", "hint": "Precompute factorials and inverse factorials.", "tests": "Inverse factorials.", "link": "https://cses.fi/problemset/task/1079" },
+    { "id": "ma3", "title": "Count Good Numbers", "difficulty": "Medium", "statement": "Count digit strings under modular rules.", "hint": "Modular fast power on a closed form.", "tests": "Modular exponent in counting.", "link": "https://leetcode.com/problems/count-good-numbers/" },
+    { "id": "ma4", "title": "Fancy Sequence", "difficulty": "Hard", "statement": "Apply affine transforms with modular inverses.", "hint": "Track (a, b) so value = a·x + b mod p; invert on getIndex.", "tests": "Modular inverse in design.", "link": "https://leetcode.com/problems/fancy-sequence/" },
+    { "id": "ma5", "title": "Number of Ways to Reorder Array to Get Same BST", "difficulty": "Hard", "statement": "Count orderings producing the same BST, mod p.", "hint": "Combinatorics with modular inverse factorials.", "tests": "nCr mod p in practice.", "link": "https://leetcode.com/problems/number-of-ways-to-reorder-array-to-get-same-bst/" }
+  ]
+}

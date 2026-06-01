@@ -1,0 +1,61 @@
+{
+  "slug": "kmp",
+  "categoryId": "strings",
+  "order": 1,
+  "title": "KMP String Matching",
+  "tagline": "Find a pattern in O(n+m) by never re-examining text — the prefix function does the bookkeeping.",
+  "estMinutes": 24,
+  "simulator": "kmp",
+  "complexity": { "time": "O(n + m)", "space": "O(m)" },
+  "tags": ["string matching", "prefix function", "automaton"],
+  "intuition": {
+    "analogy": "When matching a pattern fails partway, naive search throws away everything and slides the pattern one step. KMP is smarter: it remembers that the part already matched contains repeats, so it can slide the pattern several steps and resume mid-pattern — like remembering you've already memorised a phrase's beginning.",
+    "paragraphs": [
+      "Naive substring search re-checks characters after every mismatch, giving O(n·m). KMP achieves O(n+m) by precomputing how much of the pattern's prefix is also a suffix at each position — the 'failure' or lps (longest prefix-suffix) array.",
+      "On a mismatch at pattern position j, instead of restarting, KMP jumps j back to lps[j−1]: the longest prefix that's still matched by the recent text. The text pointer never moves backward, which is the key to linear time.",
+      "The lps array is itself built by matching the pattern against itself. Once you have it, matching is a tight loop that powers grep, DNA search, and many string-periodicity problems."
+    ],
+    "keyIdea": "Precompute the longest prefix-that-is-also-suffix; on mismatch, slide the pattern there instead of restarting."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Build lps[]", "detail": "lps[i] = length of the longest proper prefix of pattern[0..i] that is also a suffix. Computed by matching the pattern with itself." },
+      { "title": "Scan the text", "detail": "Advance i (text) and j (pattern) on matches. On a mismatch with j > 0, set j = lps[j−1] (slide); with j == 0, advance i." },
+      { "title": "Report matches", "detail": "When j reaches m, a full match ends at i−1. Set j = lps[j−1] to continue finding overlapping matches." }
+    ],
+    "code": {
+      "language": "cpp",
+      "title": "kmp.cpp",
+      "source": "vector<int> buildLps(const string& p) {\n    vector<int> lps(p.size(), 0);\n    int len = 0;\n    for (int i = 1; i < (int)p.size();) {\n        if (p[i] == p[len]) lps[i++] = ++len;\n        else if (len) len = lps[len-1];\n        else lps[i++] = 0;\n    }\n    return lps;\n}\nint kmp(const string& t, const string& p) {\n    auto lps = buildLps(p); int j = 0;\n    for (int i = 0; i < (int)t.size(); ++i) {\n        while (j && t[i] != p[j]) j = lps[j-1];\n        if (t[i] == p[j]) ++j;\n        if (j == (int)p.size()) return i - j + 1;  // match start\n    }\n    return -1;\n}"
+    },
+    "complexity": {
+      "time": "O(n + m)",
+      "timeReason": "Building lps is O(m); scanning the text is O(n) since the text pointer never retreats.",
+      "space": "O(m)",
+      "spaceReason": "The lps array for the pattern."
+    },
+    "pitfalls": [
+      "Building lps incorrectly (the 'else len = lps[len−1]' fallback) is the classic bug.",
+      "lps stores PROPER prefixes (excluding the whole string).",
+      "For all matches (not just the first), reset j = lps[m−1] after each hit."
+    ]
+  },
+  "dryRun": {
+    "input": "pattern = \"ABABC\", build lps",
+    "columns": ["i", "compare", "lps[i]"],
+    "rows": [
+      ["1 (B)", "B vs A", "0"],
+      ["2 (A)", "A vs A", "1"],
+      ["3 (B)", "B vs B", "2"],
+      ["4 (C)", "C vs A (fail→0)", "0"]
+    ],
+    "clickMoment": "lps[3]=2 means after matching 'ABAB' then failing on the next char, KMP already knows the trailing 'AB' is a valid prefix — so it resumes from pattern index 2 instead of 0, skipping redundant comparisons."
+  },
+  "problems": [
+    { "id": "kmp1", "title": "Implement strStr()", "difficulty": "Easy", "statement": "Find the first occurrence of a needle in a haystack.", "hint": "Direct KMP (or Z-algorithm).", "tests": "Core pattern matching.", "link": "https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/" },
+    { "id": "kmp2", "title": "Repeated String Match", "difficulty": "Medium", "statement": "Fewest repeats of A so that B is a substring.", "hint": "KMP search of B in repeated A.", "tests": "KMP on a built text.", "link": "https://leetcode.com/problems/repeated-string-match/" },
+    { "id": "kmp3", "title": "Shortest Palindrome", "difficulty": "Hard", "statement": "Prepend characters to make the shortest palindrome.", "hint": "lps of s + '#' + reverse(s) gives the longest palindromic prefix.", "tests": "Prefix-function trick.", "link": "https://leetcode.com/problems/shortest-palindrome/" },
+    { "id": "kmp4", "title": "Longest Happy Prefix", "difficulty": "Hard", "statement": "Longest non-trivial prefix that is also a suffix.", "hint": "It's simply lps[n−1].", "tests": "Direct lps application.", "link": "https://leetcode.com/problems/longest-happy-prefix/" },
+    { "id": "kmp5", "title": "Find All Anagrams (compare with KMP)", "difficulty": "Medium", "statement": "Find anagram start indices.", "hint": "Sliding window of counts (contrast with exact KMP matching).", "tests": "Matching vs anagram distinction.", "link": "https://leetcode.com/problems/find-all-anagrams-in-a-string/" }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "slug": "tree-diameter",
+  "categoryId": "trees",
+  "order": 3,
+  "title": "Tree Diameter",
+  "tagline": "The longest path between any two nodes — found in a single post-order pass.",
+  "estMinutes": 14,
+  "simulator": null,
+  "complexity": { "time": "O(n)", "space": "O(h)" },
+  "tags": ["dfs", "post-order", "path"],
+  "intuition": {
+    "analogy": "To find the two most distant rooms in a building, stand in each room and note the two longest hallways leading away from it. The longest such 'through path' over all rooms is the building's diameter.",
+    "paragraphs": [
+      "The diameter is the longest path (counted in edges or nodes) between any two nodes. The key realisation: the longest path that passes through a particular node is the sum of the two deepest downward paths from that node.",
+      "So as you compute each node's height with a post-order DFS, you also combine its two tallest child heights to form a candidate 'through' path, and keep the global maximum. Heights flow up; the answer is a side effect.",
+      "For general (unrooted) trees there's also the elegant two-BFS trick: BFS from any node to find the farthest node u, then BFS from u to find the farthest node v; the distance u→v is the diameter."
+    ],
+    "keyIdea": "The longest path through a node = its two largest child depths combined; track the max while computing heights."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Post-order height", "detail": "height(node) = 1 + max(height(left), height(right)); returns the longest downward path from this node." },
+      { "title": "Combine the best two", "detail": "At each node, candidate diameter = height(left) + height(right) (in edges). Update a global best." },
+      { "title": "Return upward", "detail": "Each call returns only its own height so the parent can use it; the diameter is accumulated globally." }
+    ],
+    "code": {
+      "language": "python",
+      "title": "diameter.py",
+      "source": "def diameter(root):\n    best = 0\n    def height(node):\n        nonlocal best\n        if not node: return 0\n        l = height(node.left)\n        r = height(node.right)\n        best = max(best, l + r)   # path through node (edges)\n        return 1 + max(l, r)\n    height(root)\n    return best"
+    },
+    "complexity": {
+      "time": "O(n)",
+      "timeReason": "Single DFS visiting each node once.",
+      "space": "O(h)",
+      "spaceReason": "Recursion stack proportional to tree height."
+    },
+    "pitfalls": [
+      "Confusing edge-count vs node-count diameter (off by one).",
+      "Returning the candidate path instead of the height from the recursion.",
+      "For unrooted/general trees, use the two-BFS method (only valid on trees, not graphs with cycles)."
+    ]
+  },
+  "dryRun": {
+    "input": "Tree: 1-(2-(4,5)) and 1-3",
+    "columns": ["Node", "child heights", "through-path"],
+    "rows": [
+      ["4", "0,0", "0"],
+      ["2", "1,1", "2 (4→2→5)"],
+      ["1", "2,1", "3 (4→2→1→3)"],
+      ["answer", "—", "diameter = 3 edges"]
+    ],
+    "clickMoment": "At node 2 the two equal child heights combine into a length-2 path; at the root the deeper left subtree plus the right child give the true longest path. The maximum is captured exactly when DFS sits at the path's apex."
+  },
+  "problems": [
+    { "id": "td1", "title": "Diameter of Binary Tree", "difficulty": "Easy", "statement": "Return the length of the longest path between two nodes.", "hint": "Track height; update best = l + r.", "tests": "Core diameter.", "link": "https://leetcode.com/problems/diameter-of-binary-tree/" },
+    { "id": "td2", "title": "Binary Tree Maximum Path Sum", "difficulty": "Hard", "statement": "Max path sum where a path is any node-to-node route.", "hint": "Like diameter but with values; clamp negative child contributions to 0.", "tests": "Through-path with values.", "link": "https://leetcode.com/problems/binary-tree-maximum-path-sum/" },
+    { "id": "td3", "title": "Longest Univalue Path", "difficulty": "Medium", "statement": "Longest path where all nodes share the same value.", "hint": "Extend a child's length only if its value matches.", "tests": "Conditional through-path.", "link": "https://leetcode.com/problems/longest-univalue-path/" },
+    { "id": "td4", "title": "Tree Diameter (general tree)", "difficulty": "Medium", "statement": "Diameter of an undirected tree given as edges.", "hint": "Two BFS passes: farthest from any node, then farthest from that.", "tests": "Two-BFS method.", "link": "https://leetcode.com/problems/tree-diameter/" },
+    { "id": "td5", "title": "Minimum Height Trees", "difficulty": "Medium", "statement": "Find roots that minimise tree height.", "hint": "Peel leaves layer by layer; the last 1–2 nodes are the centroids.", "tests": "Related centre/diameter intuition.", "link": "https://leetcode.com/problems/minimum-height-trees/" }
+  ]
+}

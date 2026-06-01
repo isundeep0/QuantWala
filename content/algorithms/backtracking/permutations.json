@@ -1,0 +1,61 @@
+{
+  "slug": "permutations",
+  "categoryId": "backtracking",
+  "order": 2,
+  "title": "Permutations",
+  "tagline": "Place each unused element in turn — generate all n! orderings.",
+  "estMinutes": 14,
+  "simulator": "permutations",
+  "complexity": { "time": "O(n · n!)", "space": "O(n)" },
+  "tags": ["backtracking", "recursion", "ordering"],
+  "intuition": {
+    "analogy": "Seating n guests in a row: choose anyone for seat 1, then anyone remaining for seat 2, and so on. The number of ways is n × (n−1) × … × 1 = n!.",
+    "paragraphs": [
+      "A permutation is an ordering of all elements. Backtracking builds one position at a time: for the current slot, try every element not yet used, recurse, then mark it unused again (backtrack).",
+      "A 'used' boolean array (or in-place swapping) prevents reusing an element. When the current arrangement has length n, it's a complete permutation to record.",
+      "Unlike subsets (binary choices), permutations branch n-ways at the top, (n−1)-ways next, etc., yielding the factorial explosion — so they're only practical for small n."
+    ],
+    "keyIdea": "Fill positions left to right, trying each unused element; backtrack by freeing the element after recursing."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Track usage", "detail": "Maintain a used[] flag (or swap elements into place) so each element appears once per permutation." },
+      { "title": "Choose and recurse", "detail": "For each unused element, mark it used, append to current, recurse; then unmark and pop (backtrack)." },
+      { "title": "Record full-length arrangements", "detail": "When current has n elements, store a copy." }
+    ],
+    "code": {
+      "language": "python",
+      "title": "permutations.py",
+      "source": "def permute(a):\n    res, cur = [], []\n    used = [False] * len(a)\n    def dfs():\n        if len(cur) == len(a):\n            res.append(cur[:]); return\n        for i, x in enumerate(a):\n            if used[i]:\n                continue\n            used[i] = True; cur.append(x)\n            dfs()\n            used[i] = False; cur.pop()      # backtrack\n    dfs()\n    return res"
+    },
+    "complexity": {
+      "time": "O(n · n!)",
+      "timeReason": "n! permutations, each O(n) to build/copy.",
+      "space": "O(n)",
+      "spaceReason": "Recursion depth and the used/current arrays."
+    },
+    "pitfalls": [
+      "Skipping the 'unmark used' step leaks state across branches.",
+      "For duplicates, sort and skip equal unused siblings to avoid repeats.",
+      "Copy the current arrangement when recording, not the live reference."
+    ]
+  },
+  "dryRun": {
+    "input": "a = [1, 2, 3]",
+    "columns": ["Slot 1", "Slot 2", "Slot 3"],
+    "rows": [
+      ["1", "2", "3 → [1,2,3]"],
+      ["1", "3", "2 → [1,3,2]"],
+      ["2", "1/3", "→ [2,1,3], [2,3,1]"],
+      ["3", "1/2", "→ [3,1,2], [3,2,1]"]
+    ],
+    "clickMoment": "The branching factor shrinks each level: 3 choices, then 2, then 1 — exactly the n! count. Backtracking systematically reuses freed elements down each new branch."
+  },
+  "problems": [
+    { "id": "pm1", "title": "Permutations", "difficulty": "Medium", "statement": "All permutations of distinct integers.", "hint": "used[] + backtracking.", "tests": "Core permutations.", "link": "https://leetcode.com/problems/permutations/" },
+    { "id": "pm2", "title": "Permutations II", "difficulty": "Medium", "statement": "Permutations with duplicates, unique results.", "hint": "Sort; skip a duplicate if its identical predecessor is unused.", "tests": "Dedup permutations.", "link": "https://leetcode.com/problems/permutations-ii/" },
+    { "id": "pm3", "title": "Next Permutation", "difficulty": "Medium", "statement": "Rearrange to the next lexicographic permutation in place.", "hint": "Find the pivot, swap with the next larger suffix element, reverse the suffix.", "tests": "Permutation ordering (no recursion).", "link": "https://leetcode.com/problems/next-permutation/" },
+    { "id": "pm4", "title": "Beautiful Arrangement", "difficulty": "Medium", "statement": "Count permutations meeting a divisibility rule.", "hint": "Backtrack placing positions, pruning invalid choices.", "tests": "Constrained permutations.", "link": "https://leetcode.com/problems/beautiful-arrangement/" },
+    { "id": "pm5", "title": "Letter Tile Possibilities", "difficulty": "Medium", "statement": "Count distinct non-empty sequences from tiles.", "hint": "Backtrack over counts of each letter.", "tests": "Counting arrangements with multiplicity.", "link": "https://leetcode.com/problems/letter-tile-possibilities/" }
+  ]
+}

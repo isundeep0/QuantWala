@@ -1,0 +1,62 @@
+{
+  "slug": "lis",
+  "categoryId": "dynamic-programming",
+  "order": 2,
+  "title": "Longest Increasing Subsequence",
+  "tagline": "From O(n²) DP to an elegant O(n log n) patience-sorting trick.",
+  "estMinutes": 20,
+  "simulator": "lis",
+  "complexity": { "time": "O(n log n)", "space": "O(n)" },
+  "tags": ["dp", "binary search", "greedy"],
+  "intuition": {
+    "analogy": "Playing solitaire 'patience': deal cards onto piles where each new card goes on the leftmost pile whose top is ≥ it (or starts a new pile). The number of piles equals the length of the longest increasing run you could form.",
+    "paragraphs": [
+      "The LIS is the longest subsequence whose values strictly increase. The simple DP defines dp[i] = longest increasing subsequence ending at i, computed by scanning all earlier smaller elements — that's O(n²).",
+      "The faster method keeps an array 'tails', where tails[k] is the smallest possible tail value of any increasing subsequence of length k+1. For each value you binary-search the first tail ≥ it: if none, you extend (a longer LIS is possible); otherwise you overwrite that tail with the smaller value, keeping options open for the future.",
+      "tails is always sorted, so binary search applies, giving O(n log n). Its length is the LIS length (though tails itself is not necessarily a valid subsequence)."
+    ],
+    "keyIdea": "Keep the smallest tail for each achievable length; binary-search where each new value fits — extend or improve."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Maintain tails", "detail": "tails[k] = minimum tail of an increasing subsequence of length k+1. Initially empty." },
+      { "title": "Binary search each element", "detail": "For value x, find the first index in tails with value ≥ x (lower_bound)." },
+      { "title": "Extend or replace", "detail": "If x is larger than all tails, append it (LIS grew). Otherwise overwrite tails[pos] = x to keep tails minimal." },
+      { "title": "Answer", "detail": "The length of tails is the LIS length." }
+    ],
+    "code": {
+      "language": "cpp",
+      "title": "lis.cpp",
+      "source": "int lengthOfLIS(vector<int>& a) {\n    vector<int> tails;\n    for (int x : a) {\n        auto it = lower_bound(tails.begin(), tails.end(), x);\n        if (it == tails.end()) tails.push_back(x);\n        else *it = x;\n    }\n    return tails.size();\n}"
+    },
+    "complexity": {
+      "time": "O(n log n)",
+      "timeReason": "Each element triggers one binary search over the tails array.",
+      "space": "O(n)",
+      "spaceReason": "The tails array, at most length n."
+    },
+    "pitfalls": [
+      "Strictly vs non-decreasing: use lower_bound for strictly increasing, upper_bound to allow equal values.",
+      "tails is not the actual subsequence — reconstructing it needs extra parent tracking.",
+      "Don't confuse with longest increasing SUBARRAY (contiguous), which is a trivial linear scan."
+    ]
+  },
+  "dryRun": {
+    "input": "a = [10, 9, 2, 5, 3, 7, 101, 18]",
+    "columns": ["x", "tails after", "Note"],
+    "rows": [
+      ["10,9,2", "[2]", "each replaces the single tail with smaller"],
+      ["5", "[2,5]", "extend"],
+      ["3", "[2,3]", "3 replaces 5 (smaller tail)"],
+      ["7,101,18", "[2,3,7,18]", "LIS length = 4"]
+    ],
+    "clickMoment": "When 3 overwrites 5, the LIS length doesn't change — but the tail becomes smaller, leaving more room for future values like 7 to extend. That 'keep tails minimal' instinct is the whole trick."
+  },
+  "problems": [
+    { "id": "lis1", "title": "Longest Increasing Subsequence", "difficulty": "Medium", "statement": "Return the LIS length.", "hint": "tails + lower_bound.", "tests": "Core O(n log n) LIS.", "link": "https://leetcode.com/problems/longest-increasing-subsequence/" },
+    { "id": "lis2", "title": "Russian Doll Envelopes", "difficulty": "Hard", "statement": "Max envelopes you can nest.", "hint": "Sort by width asc, height desc; LIS on heights.", "tests": "2D LIS via sorting.", "link": "https://leetcode.com/problems/russian-doll-envelopes/" },
+    { "id": "lis3", "title": "Number of LIS", "difficulty": "Medium", "statement": "Count how many longest increasing subsequences exist.", "hint": "O(n²) DP tracking both length and count.", "tests": "Counting variant.", "link": "https://leetcode.com/problems/number-of-longest-increasing-subsequence/" },
+    { "id": "lis4", "title": "Longest String Chain", "difficulty": "Medium", "statement": "Longest chain where each word adds one letter.", "hint": "Sort by length; DP like LIS over predecessor words.", "tests": "LIS-style chaining.", "link": "https://leetcode.com/problems/longest-string-chain/" },
+    { "id": "lis5", "title": "Maximum Height by Stacking Cuboids", "difficulty": "Hard", "statement": "Max stack height under dimension constraints.", "hint": "Sort dimensions, then a LIS-like DP.", "tests": "Multi-dimensional LIS.", "link": "https://leetcode.com/problems/maximum-height-by-stacking-cuboids/" }
+  ]
+}

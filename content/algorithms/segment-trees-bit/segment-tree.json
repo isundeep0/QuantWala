@@ -1,0 +1,61 @@
+{
+  "slug": "segment-tree",
+  "categoryId": "segment-trees-bit",
+  "order": 2,
+  "title": "Segment Tree",
+  "tagline": "A binary tree over array ranges — flexible range queries and point updates in O(log n).",
+  "estMinutes": 22,
+  "simulator": null,
+  "complexity": { "time": "O(log n) per op, O(n) build", "space": "O(n)" },
+  "tags": ["range query", "tree", "divide & conquer"],
+  "intuition": {
+    "analogy": "An org chart where each manager reports a summary (sum, min, max) of their whole team. Ask any manager and you instantly get their subtree's stat; change one employee and only their chain of managers needs updating.",
+    "paragraphs": [
+      "A segment tree stores aggregate information about array ranges in a binary tree. The root covers [0, n−1]; each node splits its range in half between two children, down to single elements at the leaves.",
+      "A range query decomposes the queried interval into O(log n) canonical node ranges and combines their stored aggregates. A point update changes one leaf and re-merges along the path to the root — also O(log n).",
+      "Unlike a Fenwick tree, it handles any associative operation (sum, min, max, gcd, …) and supports range updates with lazy propagation. It's the Swiss-army knife of range data structures."
+    ],
+    "keyIdea": "Each node aggregates a range; queries combine O(log n) covering nodes, updates fix the path to the root."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Build recursively", "detail": "Each node merges its two children's aggregates; leaves hold single elements. Build is O(n)." },
+      { "title": "Query a range", "detail": "If a node's range is fully inside the query, return its value; if disjoint, return the identity; else recurse into both children and merge." },
+      { "title": "Point update", "detail": "Descend to the target leaf, change it, and re-merge on the way back up." }
+    ],
+    "code": {
+      "language": "cpp",
+      "title": "segment_tree.cpp",
+      "source": "int seg[4*N];\nvoid update(int node, int lo, int hi, int idx, int val) {\n    if (lo == hi) { seg[node] = val; return; }\n    int mid = (lo + hi) / 2;\n    if (idx <= mid) update(2*node, lo, mid, idx, val);\n    else            update(2*node+1, mid+1, hi, idx, val);\n    seg[node] = seg[2*node] + seg[2*node+1];   // merge\n}\nint query(int node, int lo, int hi, int l, int r) {\n    if (r < lo || hi < l) return 0;            // disjoint\n    if (l <= lo && hi <= r) return seg[node];  // full cover\n    int mid = (lo + hi) / 2;\n    return query(2*node, lo, mid, l, r)\n         + query(2*node+1, mid+1, hi, l, r);\n}"
+    },
+    "complexity": {
+      "time": "O(log n) per query/update, O(n) build",
+      "timeReason": "A range splits into O(log n) covering nodes; updates touch one root-to-leaf path.",
+      "space": "O(n)",
+      "spaceReason": "About 2n–4n nodes for an array of size n."
+    },
+    "pitfalls": [
+      "Allocate ~4n nodes to be safe with the recursive indexing.",
+      "Use the correct identity for the operation (0 for sum, +∞ for min, −∞ for max).",
+      "Off-by-one in the disjoint/full-cover conditions is the most common bug."
+    ]
+  },
+  "dryRun": {
+    "input": "Sum query [1,3] on array of size 4",
+    "columns": ["Node range", "Relation", "Contribution"],
+    "rows": [
+      ["[0,3]", "partial", "recurse"],
+      ["[0,1]", "partial → [1,1]", "a[1]"],
+      ["[2,3]", "full cover", "a[2]+a[3]"],
+      ["combine", "—", "a[1]+a[2]+a[3]"]
+    ],
+    "clickMoment": "The query [1,3] is served by just two canonical nodes ([1,1] and [2,3]) instead of touching three leaves separately — the tree pre-aggregated [2,3] for you."
+  },
+  "problems": [
+    { "id": "st1", "title": "Range Sum Query - Mutable", "difficulty": "Medium", "statement": "Point updates + range sums.", "hint": "Segment tree (or BIT).", "tests": "Core segment tree.", "link": "https://leetcode.com/problems/range-sum-query-mutable/" },
+    { "id": "st2", "title": "Range Minimum Query", "difficulty": "Medium", "statement": "Range min with updates.", "hint": "Merge = min; identity = +∞.", "tests": "Different merge operation.", "link": "https://cses.fi/problemset/task/1649" },
+    { "id": "st3", "title": "Count of Range Sum", "difficulty": "Hard", "statement": "Count subarray sums within [lower, upper].", "hint": "Segment tree / BIT over prefix sums.", "tests": "Segment tree on prefix values.", "link": "https://leetcode.com/problems/count-of-range-sum/" },
+    { "id": "st4", "title": "The Skyline Problem", "difficulty": "Hard", "statement": "Compute the skyline of buildings.", "hint": "Segment tree on heights, or a sweep with a heap.", "tests": "Range-max structure.", "link": "https://leetcode.com/problems/the-skyline-problem/" },
+    { "id": "st5", "title": "Falling Squares", "difficulty": "Hard", "statement": "Track max stack height as squares land.", "hint": "Coordinate-compressed segment tree with range-max + range-assign.", "tests": "Segment tree with assignment.", "link": "https://leetcode.com/problems/falling-squares/" }
+  ]
+}

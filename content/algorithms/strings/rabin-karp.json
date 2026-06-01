@@ -1,0 +1,60 @@
+{
+  "slug": "rabin-karp",
+  "categoryId": "strings",
+  "order": 3,
+  "title": "Rabin-Karp (Rolling Hash)",
+  "tagline": "Match by comparing hashes, sliding the window in O(1) per step with a rolling hash.",
+  "estMinutes": 18,
+  "simulator": null,
+  "complexity": { "time": "O(n + m) average", "space": "O(1)" },
+  "tags": ["hashing", "rolling hash", "string matching"],
+  "intuition": {
+    "analogy": "Instead of comparing two long documents word-by-word, you compare their 'fingerprints' (a hash). If fingerprints differ, the documents differ. If they match, you do a quick full check to rule out the rare coincidence.",
+    "paragraphs": [
+      "Rabin-Karp matches a pattern by hashing it and comparing against the hash of each window of the text. The breakthrough is the rolling hash: when the window slides one character, you update the hash in O(1) by removing the outgoing character and adding the incoming one.",
+      "Treat the string as a number in some base (e.g. 256 or 31) modulo a large prime. Sliding multiplies by the base, subtracts the leaving character's contribution, and adds the new character.",
+      "Hash collisions are possible, so on a hash match you verify the actual characters. With a good modulus, collisions are rare and the average run is linear — and the rolling-hash idea generalises to substring comparison, deduplication, and 2D matching."
+    ],
+    "keyIdea": "Compare cheap rolling hashes; only do a full character check when hashes collide."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Hash the pattern and first window", "detail": "Compute polynomial hashes of the pattern and the text's first m characters under a base and large prime modulus." },
+      { "title": "Roll the window", "detail": "Slide by one: hash = (hash − leaving·base^{m−1})·base + entering, all mod p." },
+      { "title": "Verify on match", "detail": "When window hash == pattern hash, compare characters directly to confirm (guarding against collisions)." }
+    ],
+    "code": {
+      "language": "python",
+      "title": "rabin_karp.py",
+      "source": "def rabin_karp(t, p, base=257, mod=(1<<61)-1):\n    n, m = len(t), len(p)\n    if m > n: return -1\n    ph = wh = 0; power = 1\n    for i in range(m):\n        ph = (ph*base + ord(p[i])) % mod\n        wh = (wh*base + ord(t[i])) % mod\n        if i: power = (power*base) % mod\n    for i in range(n - m + 1):\n        if wh == ph and t[i:i+m] == p:\n            return i\n        if i < n - m:\n            wh = ((wh - ord(t[i])*power) * base + ord(t[i+m])) % mod\n    return -1"
+    },
+    "complexity": {
+      "time": "O(n + m) average, O(n·m) worst (many collisions)",
+      "timeReason": "Each slide is O(1); verification is rare with a good hash.",
+      "space": "O(1)",
+      "spaceReason": "A few hash accumulators."
+    },
+    "pitfalls": [
+      "Always verify on a hash match — never trust the hash alone.",
+      "Use a large prime modulus (and possibly double hashing) to avoid anti-hash adversarial inputs.",
+      "Mind modular arithmetic: keep values non-negative after subtraction."
+    ]
+  },
+  "dryRun": {
+    "input": "text = \"abcabc\", pattern = \"cab\" (base arithmetic)",
+    "columns": ["Window", "hash vs pattern", "Action"],
+    "rows": [
+      ["abc", "differs", "roll"],
+      ["bca", "differs", "roll"],
+      ["cab", "equal", "verify → match at index 2"]
+    ],
+    "clickMoment": "Each window's hash was derived from the previous one in O(1) — no re-hashing of all m characters. The expensive character comparison happened only once, on the true match."
+  },
+  "problems": [
+    { "id": "rk1", "title": "Implement strStr()", "difficulty": "Easy", "statement": "Find a substring's first index.", "hint": "Rolling hash with verification.", "tests": "Core Rabin-Karp.", "link": "https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/" },
+    { "id": "rk2", "title": "Longest Duplicate Substring", "difficulty": "Hard", "statement": "Longest substring occurring more than once.", "hint": "Binary search the length + rolling-hash set membership.", "tests": "Hashing + binary search.", "link": "https://leetcode.com/problems/longest-duplicate-substring/" },
+    { "id": "rk3", "title": "Repeated DNA Sequences", "difficulty": "Medium", "statement": "Find 10-letter sequences that repeat.", "hint": "Rolling hash over fixed-length windows.", "tests": "Fixed-window hashing.", "link": "https://leetcode.com/problems/repeated-dna-sequences/" },
+    { "id": "rk4", "title": "Distinct Echo Substrings", "difficulty": "Hard", "statement": "Count substrings of the form t+t.", "hint": "Hash substrings to compare halves in O(1).", "tests": "Substring hash comparison.", "link": "https://leetcode.com/problems/distinct-echo-substrings/" },
+    { "id": "rk5", "title": "Longest Common Subpath", "difficulty": "Hard", "statement": "Longest path common to all sequences.", "hint": "Binary search length + rolling-hash intersection.", "tests": "Multi-string hashing.", "link": "https://leetcode.com/problems/longest-common-subpath/" }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "slug": "exchange-argument",
+  "categoryId": "greedy",
+  "order": 2,
+  "title": "Exchange Argument Proofs",
+  "tagline": "How to PROVE a greedy choice is optimal — the technique that separates guessing from knowing.",
+  "estMinutes": 16,
+  "simulator": null,
+  "complexity": { "time": "—", "space": "—" },
+  "tags": ["greedy", "proof", "correctness"],
+  "intuition": {
+    "analogy": "You claim your queue order is fastest. A skeptic shows any 'optimal' order. You point to two adjacent people who are out of your preferred order, swap them, and prove the total wait didn't get worse. Keep swapping and the optimal order becomes yours — so yours was optimal too.",
+    "paragraphs": [
+      "Greedy algorithms are easy to write but easy to get wrong. The exchange argument is the standard way to prove a greedy rule yields an optimal solution, so you can trust it in interviews and contests.",
+      "The structure: take any optimal solution that differs from the greedy one. Find the first place they differ. Show you can 'exchange' an element of the optimal solution for the greedy choice without making the solution worse (and without violating constraints). Repeat until the optimal solution equals the greedy one — proving greedy is at least as good.",
+      "A classic application is 'schedule jobs to minimise total weighted completion time': the optimal order sorts by ratio (processing time / weight). If two adjacent jobs violate that order, swapping them lowers (or ties) the cost — so the sorted order must be optimal."
+    ],
+    "keyIdea": "Transform any optimal solution into the greedy one via local swaps that never worsen it — hence greedy is optimal."
+  },
+  "logic": {
+    "steps": [
+      { "title": "State the greedy rule precisely", "detail": "e.g. 'process jobs in increasing order of pᵢ/wᵢ' or 'pick the earliest-finishing interval'." },
+      { "title": "Assume an optimal differs", "detail": "Take an optimal solution OPT and locate the first decision where it diverges from greedy." },
+      { "title": "Exchange", "detail": "Swap the diverging element in OPT toward the greedy choice; prove the objective does not increase (for minimisation) and constraints still hold." },
+      { "title": "Induct", "detail": "Each exchange reduces the difference. After finitely many, OPT becomes greedy with no worse cost — so greedy is optimal." }
+    ],
+    "code": {
+      "language": "python",
+      "title": "weighted_completion.py",
+      "source": "# Minimise sum of weighted completion times:\n# proven optimal by an adjacent-swap exchange argument.\ndef schedule(jobs):                 # jobs = [(p, w)]\n    jobs.sort(key=lambda j: j[0] / j[1])   # by p/w ratio\n    t, cost = 0, 0\n    for p, w in jobs:\n        t += p\n        cost += w * t               # completion time * weight\n    return cost"
+    },
+    "complexity": {
+      "time": "Proof technique (no runtime)",
+      "timeReason": "It's a correctness argument, not an algorithm; the resulting greedy usually runs in O(n log n).",
+      "space": "—",
+      "spaceReason": "—"
+    },
+    "pitfalls": [
+      "Showing greedy works on examples is NOT a proof — you must argue every optimal can be exchanged.",
+      "The swap must preserve feasibility, not just the objective.",
+      "Greedy is optimal only for problems with the right structure (matroids, exchange property); many problems need DP instead."
+    ]
+  },
+  "dryRun": {
+    "input": "Jobs (p,w): A(3,1), B(1,2) — minimise weighted completion",
+    "columns": ["Order", "Completion times", "Weighted cost"],
+    "rows": [
+      ["A then B", "A:3, B:4", "1·3 + 2·4 = 11"],
+      ["B then A", "B:1, A:4", "2·1 + 1·4 = 6"],
+      ["ratios", "A:3/1=3, B:1/2=0.5", "B first (lower ratio)"],
+      ["conclusion", "—", "swap improved 11 → 6"]
+    ],
+    "clickMoment": "A single adjacent swap dropped the cost from 11 to 6 — and it matched the p/w ordering. That swap-never-hurts property, applied repeatedly, IS the proof."
+  },
+  "problems": [
+    { "id": "ea1", "title": "Queue Reconstruction by Height", "difficulty": "Medium", "statement": "Rebuild a queue from (height, count) pairs.", "hint": "Greedy insertion order justified by an exchange argument.", "tests": "Greedy ordering proof.", "link": "https://leetcode.com/problems/queue-reconstruction-by-height/" },
+    { "id": "ea2", "title": "Minimum Cost to Connect Sticks", "difficulty": "Medium", "statement": "Min cost to combine sticks (Huffman-like).", "hint": "Always merge the two smallest — exchange argument / Huffman.", "tests": "Greedy merge optimality.", "link": "https://leetcode.com/problems/minimum-cost-to-connect-sticks/" },
+    { "id": "ea3", "title": "Task Scheduler", "difficulty": "Medium", "statement": "Min intervals to run tasks with cooldown.", "hint": "Greedy by frequency; argue the most-frequent task sets the skeleton.", "tests": "Greedy structure argument.", "link": "https://leetcode.com/problems/task-scheduler/" },
+    { "id": "ea4", "title": "Assign Cookies", "difficulty": "Easy", "statement": "Maximise content children with cookies.", "hint": "Sort both; greedily match smallest sufficient cookie.", "tests": "Sorting + exchange.", "link": "https://leetcode.com/problems/assign-cookies/" },
+    { "id": "ea5", "title": "Boats to Save People", "difficulty": "Medium", "statement": "Min boats with weight limit, two per boat.", "hint": "Pair lightest with heaviest; prove via exchange.", "tests": "Two-pointer greedy proof.", "link": "https://leetcode.com/problems/boats-to-save-people/" }
+  ]
+}

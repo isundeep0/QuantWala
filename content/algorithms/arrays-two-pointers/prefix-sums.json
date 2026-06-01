@@ -1,0 +1,60 @@
+{
+  "slug": "prefix-sums",
+  "categoryId": "arrays-two-pointers",
+  "order": 3,
+  "title": "Prefix Sums",
+  "tagline": "Precompute running totals once; answer any range-sum query in O(1).",
+  "estMinutes": 16,
+  "simulator": "prefix-sums",
+  "complexity": { "time": "O(n) build, O(1) query", "space": "O(n)" },
+  "tags": ["preprocessing", "range query", "hashing"],
+  "intuition": {
+    "analogy": "A bank statement lists your running balance after every transaction. To know how much you spent between Tuesday and Friday, you don't re-add every purchase — you subtract Tuesday's balance from Friday's. The running balance is a prefix sum.",
+    "paragraphs": [
+      "If you'll be asked many 'sum of elements from i to j' questions, recomputing each from scratch is O(n) per query. Prefix sums pay O(n) once to precompute cumulative totals, after which any range sum is a single subtraction.",
+      "Define pre[k] = a[0] + a[1] + … + a[k-1] (with pre[0] = 0). Then the sum of a[l..r] equals pre[r+1] - pre[l]. The off-by-one is tamed by the extra leading zero.",
+      "The idea generalises: prefix XOR, prefix products, 2D prefix sums for submatrix queries, and — most powerfully — combining prefix sums with a hash map to count subarrays whose sum equals a target in O(n)."
+    ],
+    "keyIdea": "Range sum [l, r] = pre[r+1] − pre[l]. Precompute once, query forever in O(1)."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Build the prefix array", "detail": "pre[0] = 0; for i from 1 to n, pre[i] = pre[i-1] + a[i-1]. The leading zero makes range math clean." },
+      { "title": "Answer queries", "detail": "Sum of a[l..r] = pre[r+1] − pre[l]. Constant time per query." },
+      { "title": "Hash-map extension", "detail": "To count subarrays with sum = k, walk prefix sums and look up how many earlier prefixes equal current − k." }
+    ],
+    "code": {
+      "language": "python",
+      "title": "subarray_sum_equals_k.py",
+      "source": "def subarray_sum(nums, k):\n    count = 0\n    prefix = 0\n    seen = {0: 1}                 # empty prefix\n    for x in nums:\n        prefix += x\n        count += seen.get(prefix - k, 0)\n        seen[prefix] = seen.get(prefix, 0) + 1\n    return count"
+    },
+    "complexity": {
+      "time": "O(n) build, O(1) per range query",
+      "timeReason": "One linear pass builds the array; each query is one subtraction.",
+      "space": "O(n)",
+      "spaceReason": "Stores the prefix array (or hash map of seen prefixes)."
+    },
+    "pitfalls": [
+      "Off-by-one: with pre[0]=0, the range [l, r] uses pre[r+1] − pre[l], not pre[r] − pre[l].",
+      "For the hash-map count trick, seed the map with {0: 1} to count subarrays starting at index 0.",
+      "Watch for integer overflow with large arrays — use 64-bit sums."
+    ]
+  },
+  "dryRun": {
+    "input": "a = [3, 1, 4, 1, 5, 9, 2, 6], query [2, 5]",
+    "columns": ["Step", "State", "Note"],
+    "rows": [
+      ["build", "pre = [0,3,4,8,9,14,23,25,31]", "Cumulative totals with leading 0"],
+      ["query", "pre[6] − pre[2]", "Range [2,5] uses indices r+1=6 and l=2"],
+      ["result", "23 − 4 = 19", "Sum of a[2..5] = 4+1+5+9 = 19"]
+    ],
+    "clickMoment": "The single subtraction pre[6] − pre[2] replaced summing four elements. With a thousand queries, that's the difference between O(1000·n) and O(n + 1000)."
+  },
+  "problems": [
+    { "id": "ps1", "title": "Range Sum Query - Immutable", "difficulty": "Easy", "statement": "Answer many range-sum queries on a fixed array.", "hint": "Build a prefix array in the constructor; query in O(1).", "tests": "Core prefix-sum array.", "link": "https://leetcode.com/problems/range-sum-query-immutable/" },
+    { "id": "ps2", "title": "Subarray Sum Equals K", "difficulty": "Medium", "statement": "Count subarrays summing exactly to k.", "hint": "Prefix sum + hash map of seen prefix counts.", "tests": "Prefix sums combined with hashing.", "link": "https://leetcode.com/problems/subarray-sum-equals-k/" },
+    { "id": "ps3", "title": "Contiguous Array", "difficulty": "Medium", "statement": "Longest subarray with equal 0s and 1s.", "hint": "Treat 0 as -1; equal counts means equal prefix sums — store first occurrence.", "tests": "Prefix transform + first-seen map.", "link": "https://leetcode.com/problems/contiguous-array/" },
+    { "id": "ps4", "title": "Range Sum Query 2D - Immutable", "difficulty": "Medium", "statement": "Submatrix sum queries on a fixed matrix.", "hint": "2D prefix sums; inclusion-exclusion of four corners.", "tests": "2D prefix sums.", "link": "https://leetcode.com/problems/range-sum-query-2d-immutable/" },
+    { "id": "ps5", "title": "Maximum Size Subarray Sum Equals k", "difficulty": "Medium", "statement": "Longest subarray with sum exactly k.", "hint": "Store the earliest index for each prefix value; maximise length.", "tests": "Prefix sums for longest range.", "link": "https://leetcode.com/problems/maximum-size-subarray-sum-equals-k/" }
+  ]
+}

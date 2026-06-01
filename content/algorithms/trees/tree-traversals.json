@@ -1,0 +1,61 @@
+{
+  "slug": "tree-traversals",
+  "categoryId": "trees",
+  "order": 1,
+  "title": "Tree Traversals (DFS & BFS)",
+  "tagline": "Pre/in/post-order DFS and level-order BFS — the four ways to visit every node.",
+  "estMinutes": 18,
+  "simulator": "tree-traversal",
+  "complexity": { "time": "O(n)", "space": "O(h) – O(n)" },
+  "tags": ["dfs", "bfs", "recursion"],
+  "intuition": {
+    "analogy": "Exploring a building: DFS is one person walking as deep as possible down a corridor before backtracking; BFS is sweeping floor by floor, checking every room on a level before going downstairs.",
+    "paragraphs": [
+      "Every tree algorithm starts with traversal — a systematic way to visit all nodes. Depth-first search (DFS) plunges down one branch fully before exploring siblings; breadth-first search (BFS) fans out level by level.",
+      "DFS has three flavours that differ only in WHEN you 'visit' the current node relative to its children: pre-order (node, then children), in-order (left, node, right — which yields sorted order in a BST), and post-order (children, then node — needed when a node's result depends on its subtrees).",
+      "BFS uses a queue and naturally computes shortest distances in terms of edges, making it the tool for 'level' problems, minimum depth, and width."
+    ],
+    "keyIdea": "DFS = recursion/stack (depth first); BFS = queue (level by level). The visit timing defines pre/in/post-order."
+  },
+  "logic": {
+    "steps": [
+      { "title": "DFS recursion", "detail": "dfs(node): if null return; the relative position of 'visit(node)' among the two recursive calls chooses pre/in/post-order." },
+      { "title": "Iterative DFS", "detail": "Use an explicit stack to avoid recursion limits. Push children in reverse so the left child is processed first." },
+      { "title": "BFS with a queue", "detail": "Enqueue the root; repeatedly dequeue a node, visit it, and enqueue its children. Process one level fully before the next." }
+    ],
+    "code": {
+      "language": "python",
+      "title": "traversals.py",
+      "source": "def inorder(node, out):\n    if not node: return\n    inorder(node.left, out)\n    out.append(node.val)        # visit between children\n    inorder(node.right, out)\n\ndef bfs(root):\n    from collections import deque\n    q, out = deque([root]), []\n    while q:\n        node = q.popleft()\n        out.append(node.val)\n        if node.left:  q.append(node.left)\n        if node.right: q.append(node.right)\n    return out"
+    },
+    "complexity": {
+      "time": "O(n)",
+      "timeReason": "Each node and edge is processed exactly once.",
+      "space": "O(h) for DFS (recursion depth = tree height), O(n) worst case",
+      "spaceReason": "BFS queue can hold an entire level (up to n/2 nodes); DFS stack is the height h."
+    },
+    "pitfalls": [
+      "Recursive DFS can stack-overflow on skewed (linked-list-like) trees of depth n.",
+      "In-order on a BST is sorted — a frequent 'gotcha' that turns hard problems easy.",
+      "Mixing up child push order in iterative DFS reverses the visit order."
+    ]
+  },
+  "dryRun": {
+    "input": "Tree: 1 with children 2,3; 2 has 4,5; 3 has 6,7",
+    "columns": ["Traversal", "Order", "Note"],
+    "rows": [
+      ["Pre-order", "1 2 4 5 3 6 7", "Visit node before children"],
+      ["In-order", "4 2 5 1 6 3 7", "Left, node, right"],
+      ["Post-order", "4 5 2 6 7 3 1", "Children before node"],
+      ["BFS", "1 2 3 4 5 6 7", "Level by level"]
+    ],
+    "clickMoment": "Compare pre-order and post-order: the root is first in one and last in the other. Post-order is exactly what you want when a node's answer needs both subtree answers first — like computing heights or sums."
+  },
+  "problems": [
+    { "id": "tt1", "title": "Binary Tree Inorder Traversal", "difficulty": "Easy", "statement": "Return the in-order traversal of a binary tree.", "hint": "Recursion, or an explicit stack pushing left spines.", "tests": "In-order DFS.", "link": "https://leetcode.com/problems/binary-tree-inorder-traversal/" },
+    { "id": "tt2", "title": "Binary Tree Level Order Traversal", "difficulty": "Medium", "statement": "Return node values grouped by level.", "hint": "BFS, capturing the queue size to delimit each level.", "tests": "BFS by levels.", "link": "https://leetcode.com/problems/binary-tree-level-order-traversal/" },
+    { "id": "tt3", "title": "Validate Binary Search Tree", "difficulty": "Medium", "statement": "Check whether a tree is a valid BST.", "hint": "In-order traversal must be strictly increasing.", "tests": "In-order property of BSTs.", "link": "https://leetcode.com/problems/validate-binary-search-tree/" },
+    { "id": "tt4", "title": "Construct Tree from Preorder and Inorder", "difficulty": "Medium", "statement": "Rebuild a binary tree from its pre-order and in-order arrays.", "hint": "Pre-order gives the root; in-order splits left/right subtrees.", "tests": "Relationship between traversal orders.", "link": "https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/" },
+    { "id": "tt5", "title": "Binary Tree Right Side View", "difficulty": "Medium", "statement": "Return the values visible from the right side.", "hint": "BFS and take the last node per level (or DFS visiting right first).", "tests": "Level traversal with selection.", "link": "https://leetcode.com/problems/binary-tree-right-side-view/" }
+  ]
+}

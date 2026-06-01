@@ -1,0 +1,61 @@
+{
+  "slug": "scc",
+  "categoryId": "graphs",
+  "order": 7,
+  "title": "Strongly Connected Components",
+  "tagline": "Collapse mutually-reachable groups in a digraph — Kosaraju and Tarjan.",
+  "estMinutes": 20,
+  "simulator": null,
+  "complexity": { "time": "O(V + E)", "space": "O(V)" },
+  "tags": ["scc", "dfs", "condensation"],
+  "intuition": {
+    "analogy": "In a city of one-way streets, a strongly connected component is a neighbourhood where you can drive from any corner to any other and back. Different neighbourhoods may only connect one way.",
+    "paragraphs": [
+      "A strongly connected component (SCC) of a directed graph is a maximal set of vertices where every vertex can reach every other. Condensing each SCC into a single node turns any digraph into a DAG — extremely useful for 2-SAT, dependency analysis, and DP.",
+      "Kosaraju's method is two DFS passes: first record finish times, then DFS the transposed graph in decreasing finish order; each tree is one SCC. The transpose trick ensures you can't 'leak' out of a component.",
+      "Tarjan's method finds SCCs in a single DFS using discovery times and low-link values, popping a component off a stack whenever a node's low-link equals its own index. Both are linear time."
+    ],
+    "keyIdea": "Order vertices by DFS finish time, then explore the reverse graph — each reverse-DFS tree is exactly one SCC."
+  },
+  "logic": {
+    "steps": [
+      { "title": "First DFS (Kosaraju)", "detail": "Run DFS on the original graph, pushing each vertex onto a stack when it finishes." },
+      { "title": "Transpose", "detail": "Reverse every edge to build the transposed graph." },
+      { "title": "Second DFS", "detail": "Pop vertices from the stack; for each unvisited one, DFS the transpose. Every vertex reached forms one SCC." }
+    ],
+    "code": {
+      "language": "python",
+      "title": "kosaraju.py",
+      "source": "def kosaraju(n, adj, radj):\n    visited = [False]*n; order = []\n    def dfs1(u):\n        visited[u] = True\n        for v in adj[u]:\n            if not visited[v]: dfs1(v)\n        order.append(u)\n    for u in range(n):\n        if not visited[u]: dfs1(u)\n    comp = [-1]*n\n    def dfs2(u, c):\n        comp[u] = c\n        for v in radj[u]:\n            if comp[v] == -1: dfs2(v, c)\n    c = 0\n    for u in reversed(order):\n        if comp[u] == -1:\n            dfs2(u, c); c += 1\n    return comp, c"
+    },
+    "complexity": {
+      "time": "O(V + E)",
+      "timeReason": "Two linear DFS passes (Kosaraju) or one (Tarjan).",
+      "space": "O(V + E)",
+      "spaceReason": "Adjacency, transpose, stack, and component arrays."
+    },
+    "pitfalls": [
+      "Kosaraju needs the transpose; forgetting to reverse edges breaks correctness.",
+      "Recursion depth can be large — iterative DFS for big graphs.",
+      "Tarjan's low-link update rules (tree edge vs back edge vs on-stack) are subtle — get them exactly right."
+    ]
+  },
+  "dryRun": {
+    "input": "Edges 0→1, 1→2, 2→0, 2→3, 3→4, 4→3",
+    "columns": ["Phase", "Observation", "SCCs"],
+    "rows": [
+      ["finish order", "0,1,2 cycle; 3,4 cycle", "—"],
+      ["reverse DFS", "from highest finish", "{0,1,2}"],
+      ["reverse DFS", "next component", "{3,4}"],
+      ["result", "—", "2 SCCs"]
+    ],
+    "clickMoment": "{0,1,2} are mutually reachable (a cycle), and {3,4} form another. The edge 2→3 connects them only one way, so they stay separate components in the condensation DAG."
+  },
+  "problems": [
+    { "id": "scc1", "title": "Critical Connections (Bridges)", "difficulty": "Hard", "statement": "Find all bridges in a graph.", "hint": "Tarjan-style low-link DFS.", "tests": "Low-link technique.", "link": "https://leetcode.com/problems/critical-connections-in-a-network/" },
+    { "id": "scc2", "title": "Strongly Connected Components", "difficulty": "Hard", "statement": "Count/label SCCs of a directed graph.", "hint": "Kosaraju or Tarjan.", "tests": "Core SCC.", "link": "https://cses.fi/problemset/task/1683" },
+    { "id": "scc3", "title": "2-SAT", "difficulty": "Hard", "statement": "Decide satisfiability of a 2-CNF formula.", "hint": "Build the implication graph; a variable and its negation must not share an SCC.", "tests": "SCC application to logic.", "link": "https://cses.fi/problemset/task/1684" },
+    { "id": "scc4", "title": "Mother Vertex", "difficulty": "Medium", "statement": "Find a vertex from which all others are reachable.", "hint": "Last-finished DFS vertex is the candidate; verify with one DFS.", "tests": "Finish-time reasoning.", "link": "https://www.geeksforgeeks.org/find-a-mother-vertex-in-a-graph/" },
+    { "id": "scc5", "title": "Planet Queries / Condensation", "difficulty": "Hard", "statement": "Reachability queries via the condensation DAG.", "hint": "Condense SCCs, then DP/reachability on the DAG.", "tests": "Condensation + DAG DP.", "link": "https://cses.fi/problemset/task/1750" }
+  ]
+}

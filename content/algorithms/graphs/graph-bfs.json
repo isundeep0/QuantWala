@@ -1,0 +1,61 @@
+{
+  "slug": "graph-bfs",
+  "categoryId": "graphs",
+  "order": 1,
+  "title": "Breadth-First Search (BFS)",
+  "tagline": "Explore a graph in rings of increasing distance — the tool for shortest paths on unweighted graphs.",
+  "estMinutes": 16,
+  "simulator": "graph-bfs",
+  "complexity": { "time": "O(V + E)", "space": "O(V)" },
+  "tags": ["graph", "queue", "shortest path"],
+  "intuition": {
+    "analogy": "Drop a stone in a pond. The ripple reaches all points one metre away before any point two metres away. BFS is that ripple — it visits everything at distance 1, then distance 2, and so on.",
+    "paragraphs": [
+      "BFS explores a graph level by level using a queue. Starting from a source, it visits all immediate neighbours, then their neighbours, expanding outward in waves of equal distance.",
+      "Because it expands in order of distance, the first time BFS reaches a node is via a shortest path (in edges). That makes BFS the canonical algorithm for shortest paths on unweighted graphs and grids.",
+      "The visited set is essential: mark a node when you enqueue it (not when you dequeue) to avoid adding it twice. Each vertex and edge is processed once, giving linear time."
+    ],
+    "keyIdea": "A queue processes nodes in distance order, so the first visit to any node is along a shortest (fewest-edge) path."
+  },
+  "logic": {
+    "steps": [
+      { "title": "Initialise", "detail": "Put the source in a queue and mark it visited (distance 0)." },
+      { "title": "Process the queue", "detail": "Dequeue a node, then for each unvisited neighbour, mark it visited, set its distance = current + 1, and enqueue it." },
+      { "title": "Terminate", "detail": "When the queue empties, every reachable node has been visited with its shortest distance recorded." }
+    ],
+    "code": {
+      "language": "python",
+      "title": "bfs.py",
+      "source": "from collections import deque\ndef bfs(adj, src):\n    dist = {src: 0}\n    q = deque([src])\n    while q:\n        u = q.popleft()\n        for v in adj[u]:\n            if v not in dist:\n                dist[v] = dist[u] + 1\n                q.append(v)\n    return dist"
+    },
+    "complexity": {
+      "time": "O(V + E)",
+      "timeReason": "Every vertex is enqueued once and every edge examined once.",
+      "space": "O(V)",
+      "spaceReason": "The queue and visited/distance structures hold up to V vertices."
+    },
+    "pitfalls": [
+      "Marking visited at dequeue time lets duplicates pile up in the queue — mark at enqueue.",
+      "BFS gives shortest paths only for unweighted (or equal-weight) edges; use Dijkstra otherwise.",
+      "On grids, remember to bound moves and treat obstacles as non-neighbours."
+    ]
+  },
+  "dryRun": {
+    "input": "Start at 0 in graph 0-1, 0-2, 1-3, 1-4, 2-5, 4-6, 5-6",
+    "columns": ["Dequeue", "Queue after", "Distances"],
+    "rows": [
+      ["0", "[1,2]", "0:0,1:1,2:1"],
+      ["1", "[2,3,4]", "+3:2,4:2"],
+      ["2", "[3,4,5]", "+5:2"],
+      ["4", "[3,5,6]", "+6:3"]
+    ],
+    "clickMoment": "Distances come out grouped: all 1s, then all 2s, then 3. Node 6 is reached via 1→4→6 at distance 3 — the first arrival is automatically the shortest."
+  },
+  "problems": [
+    { "id": "bfs1", "title": "Number of Islands", "difficulty": "Medium", "statement": "Count connected groups of land in a grid.", "hint": "BFS/DFS flood fill from each unvisited land cell.", "tests": "Grid BFS / connectivity.", "link": "https://leetcode.com/problems/number-of-islands/" },
+    { "id": "bfs2", "title": "Rotting Oranges", "difficulty": "Medium", "statement": "Minutes until all oranges rot, spreading to neighbours.", "hint": "Multi-source BFS from all initially rotten oranges.", "tests": "Multi-source BFS levels.", "link": "https://leetcode.com/problems/rotting-oranges/" },
+    { "id": "bfs3", "title": "Word Ladder", "difficulty": "Hard", "statement": "Shortest transformation sequence between two words.", "hint": "BFS over words where edges connect one-letter changes.", "tests": "BFS shortest path on an implicit graph.", "link": "https://leetcode.com/problems/word-ladder/" },
+    { "id": "bfs4", "title": "01 Matrix", "difficulty": "Medium", "statement": "Distance of each cell to the nearest 0.", "hint": "Multi-source BFS seeded with all zeros.", "tests": "Distance via BFS.", "link": "https://leetcode.com/problems/01-matrix/" },
+    { "id": "bfs5", "title": "Shortest Path in Binary Matrix", "difficulty": "Medium", "statement": "Shortest clear path from top-left to bottom-right (8-directional).", "hint": "BFS counting cells with 8 neighbour moves.", "tests": "Grid BFS shortest path.", "link": "https://leetcode.com/problems/shortest-path-in-binary-matrix/" }
+  ]
+}

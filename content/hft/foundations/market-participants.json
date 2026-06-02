@@ -5,7 +5,11 @@
   "title": "Who's Who: Makers, Takers & the Ecosystem",
   "tagline": "The cast of characters in an electronic market — and which side an HFT firm plays.",
   "level": "Core",
-  "track": ["dev", "research", "trader"],
+  "track": [
+    "dev",
+    "research",
+    "trader"
+  ],
   "estMinutes": 14,
   "concept": {
     "analogy": "Think of a busy fish market. Wholesalers stand at stalls quoting buy and sell prices all day (makers / liquidity providers). Restaurant buyers rush in and take whatever is on offer right now because they need fish today (takers / liquidity removers). A few clever traders notice the same fish is cheaper one aisle over and shuttle between stalls (arbitrageurs). And the market operator runs the building, sets the rules, and matches everyone up (the exchange).",
@@ -85,11 +89,82 @@
           "Fragmentation arises from competition between venues, different fee models, and regulation. Lit exchanges display quotes; dark pools let large orders trade without revealing intent (reducing market impact).",
           "For an HFT system it creates the need to consume and time-align many feeds, build a consolidated view of the book / NBBO with minimal latency, and race across venues (e.g., when a price improves on one venue you must react on others). It also creates legging risk for cross-venue strategies and makes accurate, low-jitter timestamps essential."
         ]
+      },
+      {
+        "id": "q-rebate",
+        "q": "Why do exchanges pay maker rebates, and how does the maker-taker model shape behavior?",
+        "tag": "Concept",
+        "a": [
+          "Exchanges compete for order flow, and liquidity attracts more liquidity. To attract resting (passive) orders that make the book deep and tight, exchanges pay a small rebate to the 'maker' (the resting order that gets hit) and charge a slightly larger fee to the 'taker' (the aggressive order that crosses the spread). The exchange keeps the difference. This maker-taker pricing incentivizes participants to post liquidity.",
+          "It shapes behavior strongly: rebate-seeking strategies post passively to earn the rebate; takers internalize the fee as part of their cost of immediacy and route to minimize it (smart order routing). It also creates 'inverted' venues (taker-maker) and complex routing decisions, and can encourage queuing behavior. A market maker's economics include both the captured spread and the rebate, so fee schedules materially affect where and how aggressively firms quote."
+        ],
+        "followups": [
+          "What is an inverted (taker-maker) venue?",
+          "How do fees enter a smart-order-routing decision?"
+        ]
+      },
+      {
+        "id": "q-toxic",
+        "q": "What is 'toxic' order flow and why do market makers care so much about it?",
+        "tag": "Concept",
+        "a": [
+          "Toxic (or 'informed') flow is order flow that tends to be right about the short-term direction — e.g., orders from someone who knows the price is about to move, or the aggregate of many fast traders all reacting to the same signal. When a market maker fills toxic flow, the price systematically moves against the maker right after the fill (adverse selection), turning what looked like spread capture into a loss.",
+          "Makers care because adverse selection is their dominant risk. They estimate flow toxicity (via order-flow imbalance, fill patterns, which counterparties/venues, recent volatility) and respond by widening spreads, skewing quotes away from the toxic side, reducing size, or pulling liquidity entirely. Distinguishing benign 'noise' flow (which they want to trade against) from toxic flow (which they want to avoid) is central to profitable market making."
+        ],
+        "followups": [
+          "How might you detect toxicity in real time?",
+          "How does order-flow imbalance relate to toxicity?"
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-fees",
+        "title": "Compute net P&L with maker-taker fees",
+        "difficulty": "Core",
+        "statement": "A venue pays a maker rebate of $0.0020/share and charges a taker fee of $0.0030/share. A market maker buys 1,000 shares passively at $10.00 (earning the rebate) and later sells 1,000 shares passively at $10.005 (earning the rebate again). Compute total P&L including fees. Then redo it assuming the exit had to be an aggressive (taker) sell. What does this show about the value of passive execution?",
+        "hint": "Passive fills earn the rebate; aggressive fills pay the fee. Add the rebates/fees to the price P&L.",
+        "tests": "Concrete maker-taker economics.",
+        "solution": {
+          "approach": [
+            "Price P&L: sell − buy = (10.005 − 10.000) × 1000 = $5.00. Both legs passive: rebate on buy = 1000 × $0.0020 = $2.00; rebate on sell = $2.00. Total = $5.00 + $2.00 + $2.00 = $9.00. The rebates nearly doubled the gross spread capture here.",
+            "If the exit must be aggressive: instead of +$2.00 rebate you pay −$3.00 taker fee on the sell. Total = $5.00 + $2.00 (buy rebate) − $3.00 (sell fee) = $4.00. The difference of $5.00 between the two scenarios ($9 vs $4) is entirely fees/rebates — on a $5 gross trade, fees are first-order. This is why HFT market makers fight to stay passive (earn rebates, avoid taker fees), and why crossing the spread is reserved for when the edge clearly justifies paying for immediacy."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          }
+        }
+      },
+      {
+        "id": "p-ecosystem",
+        "title": "Map the participants of a single trade",
+        "difficulty": "Core",
+        "statement": "A retail investor's market buy order is routed by their broker and ultimately fills against a market maker's resting offer on an exchange. Identify each participant in this chain, classify each as maker/taker/intermediary, and explain who earns/pays what (spread, rebate, fee, payment-for-order-flow) and why each is willing to participate.",
+        "hint": "Retail → broker → (wholesaler/market maker) → exchange. Trace immediacy, spread, rebates, and PFOF.",
+        "tests": "Understanding the market ecosystem and incentives.",
+        "solution": {
+          "approach": [
+            "Chain: the retail investor (taker — wants immediacy, pays the spread), the broker (intermediary — routes the order, may receive payment-for-order-flow), often a wholesaler/market maker that internalizes or the order reaches an exchange, and the market maker posting the resting offer (maker — provides liquidity, earns the spread and possibly a rebate), on the exchange (intermediary — matches and charges/pays fees).",
+            "Economics: the retail taker pays the half-spread for immediacy; the market maker earns the spread (and any maker rebate) in exchange for providing liquidity and bearing inventory/adverse-selection risk; the broker may earn PFOF for routing to a wholesaler that offers price improvement vs the public quote; the exchange earns net fees. Each participates because the trade is positive-sum for their role: the investor values immediacy, the maker is compensated for liquidity provision and risk, intermediaries are paid for the service of routing/matching. Understanding who captures the spread and who pays for immediacy is the foundation of microstructure."
+          ],
+          "complexity": {
+            "time": "n/a",
+            "space": "n/a"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Trading and Exchanges", "by": "Larry Harris", "note": "Chapters on order-driven markets, dealers, and the players." },
-    { "title": "SEC Regulation NMS overview", "note": "Understand NBBO, order protection, and why US equities are fragmented." }
+    {
+      "title": "Trading and Exchanges",
+      "by": "Larry Harris",
+      "note": "Chapters on order-driven markets, dealers, and the players."
+    },
+    {
+      "title": "SEC Regulation NMS overview",
+      "note": "Understand NBBO, order protection, and why US equities are fragmented."
+    }
   ]
 }

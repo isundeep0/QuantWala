@@ -175,8 +175,8 @@ export default function HFTTopic() {
         </AnimatePresence>
       </div>
 
-      {/* Resources */}
-      {lesson.resources?.length > 0 && (
+      {/* Resources — only on the final step so earlier steps don't look like a summary + references */}
+      {lesson.resources?.length > 0 && active === steps.length - 1 && (
         <div className="mt-8 rounded-2xl border p-5" style={{ borderColor: "rgb(var(--border))" }}>
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
             <BookMarked className="h-4 w-4" style={{ color: accent }} /> Go deeper

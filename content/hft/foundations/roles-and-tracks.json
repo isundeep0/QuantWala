@@ -5,7 +5,12 @@
   "title": "Quant Dev vs Researcher vs Trader vs FPGA",
   "tagline": "The four main hiring tracks at HFT firms — what each does day-to-day and what they're tested on.",
   "level": "Core",
-  "track": ["dev", "research", "trader", "systems"],
+  "track": [
+    "dev",
+    "research",
+    "trader",
+    "systems"
+  ],
   "estMinutes": 15,
   "concept": {
     "analogy": "A Formula 1 team is the cleanest analogy. The driver (trader) makes real-time decisions and owns the result on track. The race engineers and aerodynamicists (researchers) design the car and strategy from data. The mechanics and software/hardware engineers (quant devs / systems / FPGA) build the car and the pit systems and make them blisteringly fast and reliable. You can be world-class at any of these roles — and they all need each other to win.",
@@ -70,7 +75,10 @@
           "Anchor it in genuine interest and evidence, not flattery. Strong answers connect what energizes you to what the role actually is: e.g., 'I love making systems fast and correct — I've spent time profiling C++, writing lock-free structures, and chasing tail latency, and the idea that a microsecond is worth real money is motivating. I find building the engine more compelling than making the discretionary calls.'",
           "Back it with a concrete artifact (a project: a matching engine, a low-latency parser, a benchmark you optimized). Show you understand the trade-off you're choosing — you're opting into deep systems work over direct P&L ownership — and that it's a deliberate, informed choice."
         ],
-        "followups": ["What project best demonstrates your low-latency skills?", "Where do you see the dev/researcher boundary at this firm?"]
+        "followups": [
+          "What project best demonstrates your low-latency skills?",
+          "Where do you see the dev/researcher boundary at this firm?"
+        ]
       },
       {
         "id": "q-overlap",
@@ -80,10 +88,64 @@
           "They overlap heavily around the strategy: researchers design signals and models and validate them in backtests; developers turn those into production code that runs on the hot path within a latency budget, and build the data/backtesting infrastructure researchers rely on.",
           "The hand-off is usually: researcher specifies and prototypes (often Python) → developer productionizes and optimizes (C++), ensuring the live system reproduces backtest behavior. At smaller firms one person may do both ('quant dev'); at larger firms they're distinct but tightly collaborating roles. Good devs understand the research; good researchers understand the latency/feasibility constraints."
         ]
+      },
+      {
+        "id": "q-dev-vs-researcher",
+        "q": "What's the day-to-day difference between a quant developer and a quant researcher at an HFT firm?",
+        "tag": "Career",
+        "a": [
+          "A quant developer builds and operates the trading system: the feed handlers, order books, strategy engine, OMS, and the low-latency C++/systems infrastructure that runs the firm's strategies in production with correctness and minimal latency/jitter. Their day is dominated by software engineering, performance work, debugging production issues, and reliability — they make the machine fast and correct.",
+          "A quant researcher discovers and validates the *strategies and signals*: they analyze data, build and backtest models, find alpha, calibrate parameters, and study execution and risk — largely offline/research work in Python/C++ with strong statistics. The two collaborate tightly: research produces the signal/parameters; development turns them into a fast, safe, production strategy. Some firms blur the line (researcher-developers), and traders sit alongside making/monitoring real-time decisions. Knowing which role you want determines whether you weight prep toward C++/systems or probability/stats/modeling."
+        ],
+        "followups": [
+          "Where does a 'quant trader' fit?",
+          "What about FPGA/hardware engineers?"
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-pick-role",
+        "title": "Match the skill profile to the role",
+        "difficulty": "Core",
+        "statement": "For each candidate, recommend the best-fit HFT track (quant dev, quant researcher, quant trader, or low-latency/FPGA engineer) and the single most important skill to deepen: (a) loves C++, memory models, and squeezing nanoseconds; (b) strong in statistics/ML, enjoys data and modeling, codes in Python; (c) thrives on fast decisions under uncertainty, great at mental math and games; (d) fascinated by digital logic, Verilog, and wire-speed processing.",
+        "hint": "Map each profile to the role whose core bar it already matches, then name the highest-leverage gap to close.",
+        "tests": "Self-assessment and track selection.",
+        "solution": {
+          "approach": [
+            "(a) Quant developer / low-latency systems — deepen the C++ cost/memory model and systems performance (caches, lock-free, measurement). (b) Quant researcher — deepen rigorous backtesting/statistics and avoiding lookahead/overfitting, plus enough engineering to productionize. (c) Quant trader — deepen probability/EV, fast mental math, and market-making game intuition, and practice them out loud under time pressure. (d) FPGA/hardware engineer — deepen RTL (Verilog/VHDL), timing closure, and the FPGA/CPU boundary plus the microstructure the logic implements.",
+            "The meta-point: each profile already matches a track's core bar, so the highest-leverage move is to *go deep* on that track's signature skill rather than spreading thin. Adjacent literacy still helps (a trader who can code a clean function, a dev who understands basic probability), but you win by being clearly excellent at your track's bar."
+          ],
+          "complexity": {
+            "time": "n/a",
+            "space": "n/a"
+          }
+        }
+      },
+      {
+        "id": "p-collab",
+        "title": "Trace a signal from research to production",
+        "difficulty": "Intermediate",
+        "statement": "A researcher finds that order-flow imbalance predicts the next 200ms price move with a small but real edge. Describe the hand-off and the responsibilities of the researcher, the quant developer, the trader, and (optionally) an FPGA engineer to get this live safely — and where it could go wrong if the roles don't coordinate.",
+        "hint": "Research validates the signal/params; dev productionizes it fast and correct; risk/trader gate and monitor it live; FPGA may host the hottest part.",
+        "tests": "Understanding how the tracks interlock.",
+        "solution": {
+          "approach": [
+            "Researcher: validates the imbalance signal with an honest backtest (realistic fills, costs, no lookahead), quantifies its edge/decay, and produces a compact parameter set (thresholds, sizing, horizon). Quant developer: implements the signal on the hot path as a fast, branch-predictable computation over those parameters, wires it into the strategy engine/OMS, ensures it's allocation-free and deterministic, and makes the same code run in backtest and live. Trader/risk: sets position and loss limits, monitors live P&L and behavior versus backtest, and can flatten/halt via the kill switch. FPGA engineer (optional): if latency-critical, implements the parse + imbalance trigger + risk gate in hardware for tens-of-ns response, with the CPU arming parameters.",
+            "Failure modes from poor coordination: the live implementation differs from the backtested logic (so tested edge ≠ live behavior); the signal decays faster than the system can act (latency mismatch); parameters aren't safely swappable; risk limits don't reflect the strategy's true exposure; or no one monitors live-vs-backtest divergence, so silent decay or a bug erodes capital. Tight role coordination — research correctness, dev fidelity/speed, trader/risk oversight — is what turns a backtested edge into safe live P&L."
+          ],
+          "complexity": {
+            "time": "n/a",
+            "space": "n/a"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "How to Get a Quant Job — track breakdowns", "note": "Community guides that contrast trader/researcher/dev hiring bars by firm." }
+    {
+      "title": "How to Get a Quant Job — track breakdowns",
+      "note": "Community guides that contrast trader/researcher/dev hiring bars by firm."
+    }
   ]
 }

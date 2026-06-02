@@ -5,7 +5,12 @@
   "title": "Your Roadmap: How to Become HFT-Ready",
   "tagline": "A concrete, ordered study plan from complete beginner to interview-ready — and how to use this module.",
   "level": "Core",
-  "track": ["dev", "research", "trader", "systems"],
+  "track": [
+    "dev",
+    "research",
+    "trader",
+    "systems"
+  ],
   "estMinutes": 14,
   "concept": {
     "analogy": "Becoming HFT-ready is like training for a triathlon, not a sprint. You need a base layer of general fitness (CS/math fundamentals), then sport-specific training in each discipline (probability, C++, systems), then race-specific practice (timed mental math, mock interviews, a real project). Skipping the base or only training one discipline leaves you unable to finish the race.",
@@ -84,11 +89,52 @@
           "Good projects are small, finished, performance-aware, and explainable. Examples: a single-threaded matching engine maintaining a limit order book from a sample feed; a zero-allocation message parser benchmarked with percentiles; a lock-free queue with a microbenchmark; a backtest of order-flow imbalance as a signal with honest pitfalls discussed.",
           "It matters because it gives concrete evidence of the exact skills the role needs, generates rich material for the deep-dive round ('why did you choose a flat array over std::map?'), and shows initiative. A finished small project beats an ambitious unfinished one every time."
         ]
+      },
+      {
+        "id": "q-prereq",
+        "q": "If you were starting from scratch, in what order would you learn HFT topics and why?",
+        "tag": "Career",
+        "a": [
+          "Business and domain first, then math, then engineering, then assembly and interview craft — because each layer makes the next meaningful. (1) Understand what HFT is, who plays, and which role fits, so the rest has context. (2) Learn market microstructure (order book, matching, market data, price formation) — the domain every role assumes. (3) Build the probability/statistics/mental-math core (the interview filter for trading/research and useful everywhere). (4) For dev/systems, master modern C++ and low-latency systems engineering (caches, lock-free, kernel bypass, measurement). (5) Assemble it into trading-system architecture (feed handler → book → strategy → OMS → risk). (6) Finally drill the interview process itself.",
+          "The principle is dependency order: you can't reason about a fast order book without microstructure; you can't design the order path without C++/systems; you can't ace a trading interview without the math. Layering this way means each topic reinforces the last, and by the end you can connect a low-level optimization all the way up to why it makes money."
+        ],
+        "followups": [
+          "How would the order change for a pure trading-role candidate?",
+          "How long should each layer take?"
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-study-plan",
+        "title": "Design a 12-week study plan for your track",
+        "difficulty": "Core",
+        "statement": "Pick a target track (quant dev/systems, or quant trader/researcher). Lay out a 12-week plan across the module's sections with weekly focus, the balance of theory vs practice (problems/mocks), and concrete weekly checkpoints that prove progress. Justify the sequencing.",
+        "hint": "Front-load domain + core skills, interleave practice from day one, end with architecture/interview and mocks. ~70% track core, ~30% adjacent.",
+        "tests": "Turning the roadmap into an executable plan.",
+        "solution": {
+          "approach": [
+            "Example (quant dev/systems): Weeks 1–2 Foundations + Microstructure (domain), with daily small coding warmups. Weeks 3–4 Probability/mental-math basics (adjacent, ~30%) while starting Modern C++. Weeks 5–7 Modern C++ deeply (cost model, move, templates/CRTP, allocators, memory model, pitfalls) — each week implement and benchmark something small (e.g., an object pool, an SPSC ring). Weeks 8–10 Low-Latency Systems (caches, false sharing, branch prediction, lock-free, SIMD, NUMA, kernel bypass, measurement) with a hands-on micro-benchmark each week. Week 11 Architecture (feed handler, order book, OMS, risk) + one systems-design mock. Week 12 Interview Mastery + multiple full mocks. Throughout: timed DS&A several times a week.",
+            "Checkpoints that prove progress: by week 4, explain RAII/move and the memory model out loud; by week 7, have a working, measured SPSC ring and explain its memory ordering; by week 10, profile a hot loop and cut its p99 with a layout/branch change; by week 11, design a feed handler/order book end-to-end with a latency budget; by week 12, solve a fresh medium-hard cleanly in ~25 min and pass a systems-design mock. Sequencing front-loads domain and core C++ (everything depends on them), interleaves practice from day one (theory without practice doesn't stick), and ends with assembly + interview rehearsal. A trader/researcher plan would instead center daily mental math, the Quant-Math section, market-making game practice, and modeling/backtesting rigor — same structure, different weighting."
+          ],
+          "complexity": {
+            "time": "12-week routine",
+            "space": "n/a"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "A Practical Guide to Quantitative Finance Interviews ('the Green Book')", "by": "Xinfeng Zhou", "note": "The standard probability/brain-teaser prep book." },
-    { "title": "Zetamac arithmetic game", "link": "https://arithmetic.zetamac.com/", "note": "The classic mental-math trainer — aim for a consistent target score." }
+    {
+      "title": "A Practical Guide to Quantitative Finance Interviews ('the Green Book')",
+      "by": "Xinfeng Zhou",
+      "note": "The standard probability/brain-teaser prep book."
+    },
+    {
+      "title": "Zetamac arithmetic game",
+      "link": "https://arithmetic.zetamac.com/",
+      "note": "The classic mental-math trainer — aim for a consistent target score."
+    }
   ]
 }

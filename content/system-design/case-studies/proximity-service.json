@@ -1,0 +1,180 @@
+{
+  "slug": "proximity-service",
+  "sectionId": "case-studies",
+  "order": 12,
+  "title": "Design a Proximity Service (Yelp / 'Nearby' / Uber)",
+  "tagline": "Find what's near me, fast — the geospatial indexing problem behind maps, ride-hailing, and local search.",
+  "summary": "Geohashing, quadtrees, spatial indexing, read-heavy search.",
+  "difficulty": "Advanced",
+  "estMinutes": 26,
+  "tags": ["case-study", "must-know"],
+  "prereqs": ["databases", "caching", "back-of-the-envelope"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Clarify requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Given a user's location (lat, lng) and a radius, return businesses/objects within it.",
+            "Add / update / delete places (or moving objects like drivers).",
+            "Return details for a selected place."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Low latency on search — users expect instant results.",
+            "Read-heavy for static places (Yelp); write-heavy for moving objects (Uber driver locations).",
+            "Scalable to hundreds of millions of places and high query volume."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "The core challenge is spatial: a standard B-tree index can't efficiently answer 'within X km of (lat,lng)' because 2D proximity isn't a 1D range. The whole design hinges on a geospatial index that turns 2D space into something searchable."
+        }
+      ]
+    },
+    {
+      "id": "naive",
+      "title": "2. Why the naive approach fails",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Naively: `SELECT * FROM places WHERE distance(lat,lng, ?, ?) < radius`. This computes distance to *every* row — a full table scan over hundreds of millions of places per query. Even indexing latitude and longitude separately doesn't help much: an index on latitude returns a thin horizontal band of the whole planet, an index on longitude a thin vertical band, and intersecting them is expensive. We need an index built for 2D proximity."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "text": "The trap is proposing two separate B-tree indexes on lat and lng. Interviewers want you to recognize that 2D nearest-neighbor needs a spatial structure (geohash / quadtree / R-tree / S2), not two 1D indexes."
+        }
+      ]
+    },
+    {
+      "id": "geohash",
+      "title": "3. Geohashing",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Geohashing recursively divides the world map into a grid and encodes each cell as a short string. Each added character refines the cell to a smaller area. The key property: **places that are physically close usually share a geohash prefix.**"
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Prefix = proximity", "detail": "Longer shared prefix → closer together. A 6-char geohash is roughly a ~1.2 km cell; 5-char ~5 km. Pick precision to match the search radius." },
+            { "term": "Indexable as a string", "detail": "Because a geohash is just a string, you can store it in a normal database/cache and do a prefix query (or exact-cell lookup) — which a standard index handles efficiently. This is the magic: 2D proximity becomes a 1D string-prefix problem." },
+            { "term": "Query", "detail": "Compute the user's geohash at the right precision, fetch places in that cell, and — to handle objects near a cell boundary — also fetch the 8 neighboring cells, then rank by exact distance." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "The boundary problem",
+          "text": "Two points can be meters apart but fall in different cells (and thus share no/short prefix) if they straddle a boundary. Always query the surrounding 8 neighbor cells too, then filter by true distance. This is the classic gotcha to mention."
+        }
+      ]
+    },
+    {
+      "id": "quadtree",
+      "title": "4. Quadtrees (the alternative)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A quadtree is an in-memory tree that recursively subdivides space into four quadrants, but only where density is high. Dense areas (downtown SF) split into many small cells; sparse areas (desert) stay as one big cell."
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "Geohash vs Quadtree",
+          "columns": ["", "Geohash", "Quadtree"],
+          "rows": [
+            ["Density handling", "Fixed grid — dense cells get huge, sparse cells empty", "Adaptive — splits only where dense (balanced cell sizes)"],
+            ["Storage", "Just strings in a DB/cache — easy to persist & shard", "In-memory tree — must rebuild on startup / from DB"],
+            ["Simplicity", "Very simple, language-agnostic", "More complex, but elegant for skewed density"],
+            ["Updates", "Update a row's geohash — cheap", "Rebalancing the tree on heavy churn is costlier"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Both are valid; mention the trade-off. Geohash is simpler to store and shard (great default). Quadtrees adapt to skewed density. Production systems often use Google S2 (a sophisticated geohash-like cell library) or PostGIS / database geospatial indexes (R-trees)."
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "5. Architecture & the moving-objects twist",
+      "blocks": [
+        {
+          "type": "diagram",
+          "caption": "A read-optimized location service backed by a geo-indexed store and cache.",
+          "groups": [
+            { "label": "Client", "nodes": [{ "label": "App", "icon": "Smartphone", "accent": "#0ea5e9" }] },
+            { "label": "Edge", "nodes": [{ "label": "LB / Gateway", "icon": "Scale", "accent": "#ef4444" }] },
+            { "label": "Services", "nodes": [{ "label": "Location Search Svc", "sub": "geohash query", "icon": "MapPin", "accent": "#d97706" }, { "label": "Business Svc", "sub": "place details" }] },
+            { "label": "Data", "nodes": [{ "label": "Geo index + cache", "sub": "geohash → places", "icon": "Zap", "accent": "#f59e0b" }, { "label": "Places DB", "icon": "Database", "accent": "#10b981" }] }
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Static places (Yelp)", "detail": "Places rarely move → extremely read-heavy. Precompute geohashes, store `geohash → list of place IDs`, and cache aggressively. Replicas + cache absorb the query load." },
+            { "term": "Moving objects (Uber drivers)", "detail": "Drivers send location updates every few seconds → write-heavy. Don't persist every ping to disk; keep current locations in an in-memory geo-index (e.g., Redis with geo commands) updated continuously, and only periodically checkpoint. The grid cell a driver belongs to changes as they move." },
+            { "term": "Sharding", "detail": "Shard by geohash prefix (region) so a query usually hits one shard. Beware hot regions (a concert, downtown rush hour) — use finer cells or replicate hot shards." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "text": "The senior insight is recognizing the two regimes: static-and-read-heavy (cache geohash buckets) vs moving-and-write-heavy (in-memory grid, frequent updates, periodic checkpointing). Tailor storage to which one you're asked about, and call out hot-cell load as the scaling risk."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "2D nearest-neighbor needs a spatial index — two separate B-tree indexes on lat/lng don't work.",
+    "Geohash: recursively grid the map into prefix-coded cells; close points share a prefix → 2D proximity becomes 1D prefix search.",
+    "Always query the 8 neighbor cells too (boundary problem), then rank by true distance.",
+    "Quadtree: adaptive subdivision — splits only dense regions; in-memory, more complex but handles skew.",
+    "Production: Google S2, PostGIS/R-trees, or Redis geo commands.",
+    "Static places (Yelp) = read-heavy → precompute geohashes + cache; moving objects (Uber) = write-heavy → in-memory grid + periodic checkpoint.",
+    "Shard by geohash/region; watch for hot cells (downtown, events) and split/replicate them."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Design",
+      "difficulty": "Medium",
+      "prompt": "Why can't you just index latitude and longitude columns separately, and how does geohashing solve it?",
+      "hint": "Think about what a 1D index returns for a 2D proximity query.",
+      "answer": [
+        "A B-tree index on latitude lets you fetch a thin horizontal band of the entire planet (all places within some latitude range); an index on longitude gives a thin vertical band. To find places near a point you'd intersect these two enormous bands and then distance-filter — the intersection is huge and the work scales with how many places fall in those global strips, not with how many are actually nearby. 1D indexes don't capture 2D locality.",
+        "Geohashing fixes this by mapping 2D coordinates to a single string such that physical proximity becomes shared-prefix proximity. You recursively divide the map into a grid; each cell gets a code, and longer codes mean smaller cells. Because nearby points share a long prefix, finding neighbors is a prefix lookup (or exact-cell lookup) on a single ordinary string index — efficient and shardable. You compute the user's geohash at a precision matching the radius, pull that cell plus its 8 neighbors (to handle boundary cases), and rank the candidates by exact distance. The query now scales with the local density, not the global table size."
+      ],
+      "keyPoints": ["1D index on lat/lng returns global bands; intersection is expensive and not local", "Geohash maps 2D → 1D string where proximity = shared prefix", "Prefix/exact-cell lookup on a normal index is efficient & shardable", "Query the cell + 8 neighbors, then rank by true distance"],
+      "followUps": ["How do you choose the geohash precision for a given search radius?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Hard",
+      "prompt": "For Uber, drivers send location updates every 4 seconds. How does the design differ from a static Yelp-style service?",
+      "hint": "Write-heavy + ephemeral data vs read-heavy + durable data.",
+      "answer": [
+        "Yelp places are essentially static and the workload is read-heavy, so you precompute each place's geohash, store `geohash → place IDs`, and cache the buckets aggressively; reads are served from cache/replicas and writes are rare. Uber inverts this: with millions of drivers pinging every ~4 seconds, it's write-heavy, and the data is ephemeral (only the *current* location matters, not the history of every ping).",
+        "So you don't durably persist every update to a disk-based DB — that's a write storm with no value. Instead keep current driver locations in an in-memory geospatial index (e.g., Redis geo, or an in-memory quadtree/grid) keyed by cell, updating in place as drivers move between cells. You only periodically checkpoint to durable storage for crash recovery. Reads ('drivers near this rider') query the rider's cell + neighbors from the in-memory index. The scaling risks shift too: hot cells during rush hour or near an event get a flood of both updates and queries, so you shard by region and split/replicate hot cells, and you may relax precision under load. In short: ephemeral, in-memory, write-optimized, checkpointed — versus Yelp's durable, cache-optimized, read-heavy design."
+      ],
+      "keyPoints": ["Uber = write-heavy + ephemeral (only current location matters)", "Keep live locations in-memory (Redis geo / in-memory grid), update in place", "Don't persist every ping — periodic checkpoint for recovery only", "Hot cells (events/rush hour) are the scaling risk → shard/split/replicate by region"],
+      "followUps": ["How would you match a rider to the nearest available driver while many riders search the same hot cell simultaneously?"]
+    }
+  ]
+}

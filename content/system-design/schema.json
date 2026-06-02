@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QuantWala System Design Lesson",
+  "description": "Schema for every system-design content file under content/system-design/<sectionId>/<slug>.json. Lessons are block-based long-form articles with an interview cheat sheet and a practice set.",
+  "type": "object",
+  "required": ["slug", "sectionId", "order", "title", "sections"],
+  "properties": {
+    "slug": { "type": "string", "description": "URL-safe id; also the filename." },
+    "sectionId": {
+      "type": "string",
+      "description": "Which curriculum section this lesson belongs to.",
+      "enum": [
+        "start-here",
+        "fundamentals",
+        "building-blocks",
+        "distributed-systems",
+        "case-studies",
+        "interview-playbook"
+      ]
+    },
+    "order": { "type": "integer", "description": "Position within the section roadmap (1-based)." },
+    "title": { "type": "string" },
+    "tagline": { "type": "string", "description": "One-line hook shown on the lesson header." },
+    "summary": { "type": "string", "description": "One-line description shown on the hub card." },
+    "difficulty": { "type": "string", "enum": ["Beginner", "Intermediate", "Advanced"] },
+    "estMinutes": { "type": "integer" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "prereqs": { "type": "array", "items": { "type": "string" }, "description": "Slugs recommended before this lesson." },
+    "sections": {
+      "type": "array",
+      "description": "The lesson body. Each entry becomes a Table-of-Contents anchor.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "blocks"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type"],
+              "description": "A content block. Renderer supports: text, analogy, key, callout, bullets, steps, compare, tradeoffs, diagram, code, metrics, stat. Unknown types are ignored. Inline markdown supported in strings: **bold**, `code`, *italic*.",
+              "properties": {
+                "type": { "type": "string" },
+                "title": { "type": "string" },
+                "text": { "type": "string" },
+                "paragraphs": { "type": "array", "items": { "type": "string" } },
+                "variant": { "type": "string", "enum": ["tip", "warning", "note", "insight", "interview", "junior", "senior"] },
+                "items": { "type": "array" },
+                "columns": { "type": "array", "items": { "type": "string" } },
+                "rows": { "type": "array", "items": { "type": "array", "items": { "type": "string" } } },
+                "pros": { "type": "array", "items": { "type": "string" } },
+                "cons": { "type": "array", "items": { "type": "string" } },
+                "caption": { "type": "string" },
+                "direction": { "type": "string", "enum": ["lr", "tb"] },
+                "groups": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "label": { "type": "string" },
+                      "nodes": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "label": { "type": "string" },
+                            "sub": { "type": "string" },
+                            "icon": { "type": "string" },
+                            "accent": { "type": "string" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "legend": { "type": "array", "items": { "type": "string" } },
+                "codes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["language", "source"],
+                    "properties": {
+                      "language": { "type": "string", "enum": ["cpp", "python", "java", "sql", "text"] },
+                      "title": { "type": "string" },
+                      "source": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "cheatsheet": {
+      "type": "array",
+      "description": "Crisp, interview-ready bullets the candidate should be able to recall.",
+      "items": { "type": "string" }
+    },
+    "questions": {
+      "type": "array",
+      "description": "Practice questions revealed progressively (prompt -> hint -> model answer -> follow-ups).",
+      "items": {
+        "type": "object",
+        "required": ["id", "prompt"],
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "type": "string", "enum": ["Conceptual", "Design", "Trade-off", "Scenario", "Estimation"] },
+          "difficulty": { "type": "string", "enum": ["Easy", "Medium", "Hard"] },
+          "prompt": { "type": "string" },
+          "hint": { "type": "string" },
+          "answer": { "type": "array", "items": { "type": "string" }, "description": "Model-answer paragraphs." },
+          "keyPoints": { "type": "array", "items": { "type": "string" }, "description": "Checklist of what a strong answer covers." },
+          "followUps": { "type": "array", "items": { "type": "string" } },
+          "link": { "type": "string" }
+        }
+      }
+    }
+  }
+}

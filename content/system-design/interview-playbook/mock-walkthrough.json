@@ -1,0 +1,227 @@
+{
+  "slug": "mock-walkthrough",
+  "sectionId": "interview-playbook",
+  "order": 7,
+  "title": "Putting It Together: An Annotated Mock Interview",
+  "tagline": "Watch the framework applied end to end on 'Design Pastebin' — with the reasoning narrated at every step.",
+  "summary": "A full worked interview showing the framework in action.",
+  "difficulty": "Intermediate",
+  "estMinutes": 24,
+  "tags": ["interview", "walkthrough", "must-know"],
+  "prereqs": ["the-framework", "gathering-requirements", "capacity-estimation", "common-mistakes"],
+  "sections": [
+    {
+      "id": "setup",
+      "title": "The prompt",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Interviewer: 'Design Pastebin — a service where a user pastes text and gets a short URL others can use to read it.' Pastebin is a great teaching example: simple enough to cover fully in one lesson, yet it exercises every step of the framework. Watch how each phase flows into the next.",
+            "Throughout, italic notes explain *why* the candidate is doing each thing — that meta-reasoning is what you're learning to internalize."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Notice the very first move: the candidate does NOT start designing. They announce a plan and clarify scope. That single habit puts you ahead of most candidates immediately."
+        }
+      ]
+    },
+    {
+      "id": "step1",
+      "title": "1. Requirements & scope",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Candidate: 'Let me clarify scope first, then estimate, sketch the API and data model, draw a high-level design, and deep-dive the interesting parts.'"
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Functional (agreed)",
+          "items": [
+            "Create a paste (text) and get back a unique short URL.",
+            "Read a paste via its URL.",
+            "Optional expiration (TTL) and custom alias. (Analytics, editing → out of scope.)"
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional (agreed)",
+          "items": [
+            "Read-heavy (a paste is created once, read many times).",
+            "Highly available; low-latency reads.",
+            "Pastes can be large-ish text (cap at, say, 10 MB).",
+            "Short URLs unique and not easily enumerable."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Why it matters: 'read-heavy' and 'pastes can be large' are the two observations that shape the entire design — caching for reads, and storing big blobs separately from metadata. The candidate surfaced both in the first two minutes."
+        }
+      ]
+    },
+    {
+      "id": "step2",
+      "title": "2. Estimation",
+      "blocks": [
+        {
+          "type": "metrics",
+          "title": "Quick math (stated assumptions aloud)",
+          "items": [
+            { "label": "New pastes/day (assume)", "value": "1M" },
+            { "label": "Write QPS (÷ 10^5)", "value": "~10 / sec" },
+            { "label": "Read:write ratio (assume)", "value": "10:1" },
+            { "label": "Read QPS", "value": "~100 / sec (peak ~300)" },
+            { "label": "Storage/yr (1M/day × ~10 KB avg × 365)", "value": "~3.6 TB/yr" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "note",
+          "text": "The numbers are modest — the candidate notes this honestly: 'This isn't a huge-scale problem, so I won't over-engineer. A single primary DB with a replica and a cache handles this comfortably; I'll mention how it scales if reads grew 100×.' Matching complexity to scale is a senior signal."
+        }
+      ]
+    },
+    {
+      "id": "step3",
+      "title": "3. API & data model",
+      "blocks": [
+        {
+          "type": "code",
+          "title": "API",
+          "codes": [
+            { "language": "text", "title": "api", "source": "POST /api/v1/pastes\n  body: { content: \"...\", expireAt?: ..., customAlias?: \"...\" }\n  → 201 { url: \"https://pst.bin/aZ91kQ\" }\n\nGET /{key}\n  → 200 { content, createdAt, expireAt }   (or 404 / 410 if expired)" }
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Data model — split metadata from the blob",
+          "items": [
+            { "term": "Metadata (DB)", "detail": "key (PK), createdAt, expireAt, contentLocation, size. Small, structured, queried by key." },
+            { "term": "Content (blob storage)", "detail": "The actual paste text goes in object storage (S3), keyed by the same id. Keeps large blobs out of the DB and is cheap + durable." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "The metadata-DB pattern",
+          "text": "Storing big content in blob storage and only a pointer + metadata in the database is a recurring pattern (same as the file-storage and video case studies). The candidate names it explicitly — pattern recognition reads as experience."
+        }
+      ]
+    },
+    {
+      "id": "step4",
+      "title": "4. High-level design",
+      "blocks": [
+        {
+          "type": "diagram",
+          "caption": "Write stores blob + metadata; read is cache-first, falling through to DB + blob store.",
+          "groups": [
+            { "label": "Client", "nodes": [{ "label": "Browser / API", "icon": "Smartphone", "accent": "#0ea5e9" }] },
+            { "label": "Edge", "nodes": [{ "label": "LB / Gateway", "icon": "Scale", "accent": "#ef4444" }] },
+            { "label": "App", "nodes": [{ "label": "Paste Service", "sub": "+ key generation", "icon": "Server", "accent": "#d97706" }] },
+            { "label": "Cache", "nodes": [{ "label": "Redis", "sub": "key → content", "icon": "Zap", "accent": "#f59e0b" }] },
+            { "label": "Store", "nodes": [{ "label": "Metadata DB", "icon": "Database", "accent": "#10b981" }, { "label": "Blob store", "sub": "paste content", "icon": "Cloud", "accent": "#8b5cf6" }] }
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Create (write)", "detail": "Service generates a unique key (base62 of a distributed id, or a pre-generated key from a key-gen service so it's non-enumerable), writes content to blob storage, writes metadata to the DB, returns the short URL." },
+            { "title": "Read", "detail": "Check Redis first → hit returns instantly. On miss, read metadata from DB, fetch content from blob storage, populate cache, return. Since it's read-heavy with a small hot set, cache hit rate is high." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Candidate pauses: 'Does this high-level design look reasonable before I go deeper?' — getting agreement before deep-diving is textbook framework discipline."
+        }
+      ]
+    },
+    {
+      "id": "step5",
+      "title": "5. Deep dives (the interesting parts)",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Unique, non-guessable keys", "detail": "'A plain auto-increment is a bottleneck and enumerable. I'd base62-encode ids from a distributed generator, or use a key-generation service that pre-shuffles a pool of keys so they're unique and non-sequential.' (Ties directly to the URL-shortener case study.)" },
+            { "term": "Expiration & cleanup", "detail": "'Store expireAt; on read, return 410 if past it (lazy expiry). A background job (or the blob store's lifecycle policy + DB TTL) reclaims expired data so we don't leak storage.'" },
+            { "term": "Hot paste (a viral link)", "detail": "'It's a single hot read key — served straight from Redis/CDN, so the DB barely sees it. I'd watch for cache stampede if it expires: pin hot keys or serve-stale-while-revalidate.'" },
+            { "term": "Availability & scaling at 100×", "detail": "'Stateless app servers behind the LB, DB read replicas, shard metadata by key via consistent hashing, and the cache + a CDN for content absorb read growth. The cache is an optimization, not a SPOF — misses fall through to DB + blob store.'" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "text": "Notice: the candidate deep-dives the genuinely hard/interesting parts (key generation, hot keys, failure) rather than re-explaining obvious boxes — and quantifies and trade-offs each. That's where senior signal is earned."
+        }
+      ]
+    },
+    {
+      "id": "step6",
+      "title": "6. Wrap-up: trade-offs & bottlenecks",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Bottlenecks named", "detail": "Key generation (solved with distributed ids/key-gen), cache node failure (falls through), DB write throughput (modest here; shard if it grows)." },
+            { "term": "Trade-offs made", "detail": "Eventual consistency on the read path is fine (a paste never changes after creation, so cache staleness is a non-issue — a nice property to call out). Chose blob storage over DB blobs for cost/durability." },
+            { "term": "What I'd monitor", "detail": "Cache hit rate, read/write latency p99, error rates, storage growth, expired-cleanup lag." },
+            { "term": "Revisit requirements", "detail": "'We met read-heavy + low-latency reads via cache-first, high availability via replication and a cache that's not a SPOF, and non-enumerable keys via the key-gen approach.'" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "The strongest possible finish: explicitly map the final design back to the requirements you agreed at minute three. It closes the loop and shows everything you built was in service of the goal — exactly the structured, intentional impression you want to leave."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Open by announcing your plan and clarifying scope — never start designing cold.",
+    "Surface the defining characteristics early (here: read-heavy + large blobs) — they shape everything.",
+    "Estimate, state assumptions aloud, and match complexity to scale (don't over-engineer modest load).",
+    "Split metadata (DB) from large content (blob storage) — a recurring, experience-signaling pattern.",
+    "Get agreement on the high-level design before deep-diving.",
+    "Deep-dive the genuinely hard parts (key generation, hot keys, expiry, failure) — quantify and trade-off each.",
+    "Finish by naming bottlenecks/trade-offs/monitoring and mapping the design back to the original requirements."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Design",
+      "difficulty": "Medium",
+      "prompt": "Without looking back, walk through how you'd design Pastebin using the framework, hitting each step in order.",
+      "hint": "Requirements → estimation → API/data → high-level → deep dive → trade-offs.",
+      "answer": [
+        "**Requirements:** clarify scope — create a paste and get a short URL, read by URL, optional TTL/custom alias; analytics/editing out of scope. Non-functional: read-heavy, highly available, low-latency reads, pastes up to ~10 MB, non-enumerable keys.",
+        "**Estimation:** assume ~1M pastes/day → ~10 writes/sec; 10:1 reads → ~100 reads/sec (peak ~300); ~3.6 TB/year. Note it's modest scale, so don't over-engineer.",
+        "**API & data model:** POST /pastes returns a short URL; GET /{key} returns content. Split storage: metadata (key, timestamps, expireAt, pointer) in a DB; the paste content in blob storage keyed by the same id.",
+        "**High-level design:** client → LB → stateless Paste Service → Redis cache → metadata DB + blob store. Write: generate a unique key, store blob + metadata. Read: cache-first, fall through to DB+blob on miss, then populate cache.",
+        "**Deep dives:** unique non-guessable keys via base62 of a distributed id or a key-generation service; lazy expiry (410 past expireAt) plus a cleanup job/lifecycle policy; hot viral paste served from cache/CDN with stampede protection; scale via read replicas, sharding by key, and a CDN.",
+        "**Trade-offs/wrap-up:** pastes are immutable so cache staleness is a non-issue (nice property); blob storage over DB blobs for cost/durability; monitor cache hit rate, p99 latency, storage growth, cleanup lag; map it all back to the agreed requirements (read-heavy + low-latency + HA + non-enumerable keys)."
+      ],
+      "keyPoints": ["Hits all steps in order: requirements → estimation → API/data → high-level → deep dive → trade-offs", "Read-heavy framing drives cache-first; metadata/blob split for large content", "Deep-dives keys, expiry, hot keys, scaling — not obvious boxes", "Closes by mapping the design back to requirements"],
+      "followUps": ["How would the design change if pastes could be edited after creation?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "In this walkthrough, why is it a genuinely nice property that pastes are immutable after creation?",
+      "hint": "Think about what immutability does to caching and consistency.",
+      "answer": [
+        "Because immutability makes the hard problem of cache consistency basically disappear. In most read-heavy systems, the tricky part of caching is invalidation: when the underlying data changes, the cached copy becomes stale and you need an invalidation or write-through strategy to avoid serving wrong data. But a paste never changes after it's created — the content is fixed for the life of the key. So once it's in the cache, the cached value can never be stale; there's nothing to invalidate.",
+        "That lets us cache aggressively and indefinitely (until expiry/eviction) with zero risk of serving incorrect data, push content to a CDN without worrying about purges on update, and avoid the complexity of write-through or invalidation logic entirely. It's worth explicitly calling this out in the interview because recognizing that a data property (immutability) simplifies the architecture is exactly the kind of insight that signals you understand *why* caching is normally hard — and that you're designing intentionally rather than bolting on a cache by reflex."
+      ],
+      "keyPoints": ["Immutability eliminates the cache-invalidation problem (no staleness possible)", "Can cache/CDN aggressively and indefinitely with no purge-on-update logic", "Removes need for write-through/invalidation complexity", "Calling it out signals you understand why caching is normally hard"],
+      "followUps": ["What caching/invalidation complications reappear the moment you allow editing pastes?"]
+    }
+  ]
+}

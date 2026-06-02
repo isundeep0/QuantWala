@@ -1,0 +1,132 @@
+{
+  "slug": "load-balancers",
+  "sectionId": "building-blocks",
+  "order": 1,
+  "title": "Load Balancers",
+  "tagline": "The traffic cop that spreads requests across servers, hides failures, and makes horizontal scaling possible.",
+  "summary": "L4 vs L7, balancing algorithms, health checks, and why it's not a SPOF.",
+  "difficulty": "Beginner",
+  "estMinutes": 16,
+  "tags": ["infra", "must-know"],
+  "prereqs": ["scalability"],
+  "sections": [
+    {
+      "id": "what",
+      "title": "What a load balancer does",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A **load balancer (LB)** sits in front of a pool of servers and distributes incoming requests across them. It's the component that makes horizontal scaling real: clients talk to one stable address (the LB), and the LB decides which backend actually handles each request.",
+            "Beyond spreading load, an LB delivers three more wins for free: it **removes a single point of failure** (if one backend dies, the LB stops routing to it), it enables **zero-downtime deploys** (drain a server, update it, add it back), and it can **terminate TLS** and do health checking centrally."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "One stable entry point fans out to a pool of interchangeable backends; dead nodes are routed around.",
+          "groups": [
+            { "label": "Clients", "nodes": [{ "label": "Users", "icon": "Users", "accent": "#0ea5e9" }] },
+            { "label": "Balancer", "nodes": [{ "label": "Load Balancer", "sub": "health-checks backends", "icon": "Scale", "accent": "#ef4444" }] },
+            { "label": "Backends", "nodes": [{ "label": "Server 1", "icon": "Server", "accent": "#d97706" }, { "label": "Server 2 ✓", "icon": "Server", "accent": "#d97706" }, { "label": "Server 3 ✗ dead", "icon": "Server", "accent": "#8c95a2" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l4-l7",
+      "title": "Layer 4 vs Layer 7",
+      "blocks": [
+        {
+          "type": "compare",
+          "columns": ["", "L4 (transport)", "L7 (application)"],
+          "rows": [
+            ["Decides based on", "IP + TCP/UDP port only", "Full HTTP — URL path, headers, cookies"],
+            ["Smarts", "Dumb & blazing fast; just forwards packets", "Content-aware routing (e.g., /api → API pool, /img → media pool)"],
+            ["Features", "Minimal", "TLS termination, sticky sessions, rewrites, compression, WAF"],
+            ["Cost", "Lowest latency/overhead", "More CPU per request, but far more flexible"],
+            ["Use when", "Raw throughput, non-HTTP protocols", "Microservices, path/host routing — the common case for web"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "L7 is the default for web apps because it understands HTTP and can route by path/host, terminate TLS, and do sticky sessions. L4 wins when you need maximum throughput or are balancing non-HTTP traffic. Many setups use both: an L4 LB spreading to multiple L7 LBs."
+        }
+      ]
+    },
+    {
+      "id": "algorithms",
+      "title": "Balancing algorithms",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Round robin", "detail": "Cycle through servers in order. Simple and fair when servers are identical and requests are uniform." },
+            { "term": "Weighted round robin", "detail": "Give bigger servers more turns. Handles heterogeneous hardware." },
+            { "term": "Least connections", "detail": "Send to the server with the fewest active connections. Better when request durations vary widely (some slow, some fast)." },
+            { "term": "Least response time", "detail": "Factor in measured latency, not just connection count. Routes around slow nodes." },
+            { "term": "IP hash / consistent hashing", "detail": "Hash the client (or a key) to a server, so the same client tends to hit the same backend — useful for cache locality or sticky behaviour without storing sessions on the LB." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "text": "Default to round robin for uniform, stateless workloads; switch to least-connections when request cost is uneven. Use hashing when you want the same key to land on the same node (cache affinity). Don't overthink this in an interview — name 2–3 and the trade-off."
+        }
+      ]
+    },
+    {
+      "id": "ha",
+      "title": "But isn't the load balancer itself a SPOF?",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Good catch — and interviewers love this follow-up. If you have one LB and it dies, everything is down. The fix is to make the LB tier itself redundant: run **at least two LBs** in active-active or active-passive, and put them behind a **floating/virtual IP** (or use DNS / a cloud LB that's internally redundant) so traffic fails over automatically.",
+            "In the cloud you usually use a managed LB (AWS ALB/NLB, GCP LB) that is already multi-node and highly available behind the scenes — but you should still *say* you've eliminated the SPOF, because that's the signal the interviewer is checking for."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Always pre-empt the SPOF question: 'The LB tier is itself redundant — two or more LBs behind a virtual IP/DNS failover (or a managed cloud LB), so losing one doesn't take down the system.'"
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "An LB spreads requests across a server pool — the enabler of horizontal scaling.",
+    "It also removes SPOFs (routes around dead nodes via health checks) and enables zero-downtime deploys.",
+    "L4 = fast, IP/port only; L7 = HTTP-aware (path/host routing, TLS termination, sticky sessions) — L7 is the web default.",
+    "Algorithms: round robin, weighted, least-connections, least-response-time, IP/consistent hash.",
+    "The LB itself must be redundant (2+ behind a virtual IP / managed cloud LB) so it's not a SPOF."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "When would you choose least-connections over round robin?",
+      "hint": "Think about what happens when some requests take much longer than others.",
+      "answer": [
+        "Round robin assumes every request costs about the same — it just hands them out in turn. That breaks when request durations vary widely: a server that happens to receive several slow requests gets overloaded while others sit idle, because round robin keeps sending it more regardless.",
+        "Least-connections routes each new request to the server with the fewest in-flight connections, so it naturally avoids piling work onto a node that's still busy with long requests. Use it when workloads are uneven (e.g., some endpoints do heavy queries, others return instantly)."
+      ],
+      "keyPoints": ["Round robin assumes uniform request cost", "Uneven durations overload some nodes under round robin", "Least-connections tracks in-flight load and avoids busy nodes", "Use for variable/long-running requests"],
+      "followUps": ["How does the LB know a backend is overloaded vs just slow on one request?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "You terminate TLS at the load balancer and route /api to one pool and /static to another. Which LB layer is this, and what's a benefit and a risk of TLS termination at the LB?",
+      "hint": "Routing by URL path requires understanding HTTP.",
+      "answer": [
+        "Routing by URL path (/api vs /static) requires reading the HTTP request, so this is a **Layer 7** load balancer. L4 only sees IP/port and couldn't distinguish paths.",
+        "Terminating TLS at the LB centralises certificate management and offloads expensive crypto from app servers (a real CPU win), and lets the LB inspect/route/compress traffic. The risk: traffic between the LB and backends is now plaintext unless you re-encrypt — inside a trusted network that's often acceptable, but for sensitive data you may want end-to-end TLS (re-encrypt to backends) or a service mesh with mTLS."
+      ],
+      "keyPoints": ["Path-based routing ⇒ Layer 7", "TLS termination: central cert mgmt + offloads crypto from app servers", "Risk: LB→backend hop is plaintext unless re-encrypted", "Mitigate with re-encryption / mTLS for sensitive traffic"],
+      "followUps": ["How would you do sticky sessions at L7, and why is it usually better to be stateless instead?"]
+    }
+  ]
+}

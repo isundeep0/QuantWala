@@ -1,0 +1,118 @@
+{
+  "slug": "cap-theorem",
+  "sectionId": "fundamentals",
+  "order": 5,
+  "title": "CAP Theorem (and PACELC)",
+  "tagline": "When the network splits, you must choose: consistency or availability. The most misquoted idea in system design, done right.",
+  "summary": "What CAP really says, why you can't 'give up P', and PACELC.",
+  "difficulty": "Intermediate",
+  "estMinutes": 14,
+  "tags": ["core", "consistency", "distributed", "must-know"],
+  "prereqs": ["consistency-models"],
+  "sections": [
+    {
+      "id": "statement",
+      "title": "What CAP actually says",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The CAP theorem concerns any distributed system that replicates data, and names three properties: **Consistency** (every read sees the latest write — like one copy), **Availability** (every request gets a non-error response), and **Partition tolerance** (the system keeps working even when the network drops/delays messages between nodes).",
+            "The theorem: when a **network partition** happens, you can have *at most two* of the three. And here's the part most people get wrong — in a distributed system, partitions *will* happen (cables fail, switches reboot, packets drop). So **P is not optional**. The real choice during a partition is binary: **CP** (sacrifice availability to stay consistent) or **AP** (stay available but serve possibly-stale data)."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "The #1 CAP misconception",
+          "text": "You do NOT 'pick 2 of 3' freely. You cannot give up partition tolerance in a real distributed system — partitions are a fact of nature. CAP only forces a trade-off *during a partition*, and that trade-off is C vs A. When the network is healthy, you can have both."
+        }
+      ]
+    },
+    {
+      "id": "cp-vs-ap",
+      "title": "CP vs AP: the choice during a partition",
+      "blocks": [
+        {
+          "type": "diagram",
+          "direction": "lr",
+          "caption": "During a partition, node A can't reach node B. A write arrives at A. Does A reject it (CP) or accept it and reconcile later (AP)?",
+          "groups": [
+            { "label": "Client", "nodes": [{ "label": "Write request", "icon": "Send", "accent": "#0ea5e9" }] },
+            { "label": "Node A", "nodes": [{ "label": "Node A", "sub": "can't reach B", "icon": "Server", "accent": "#d97706" }] },
+            { "label": "✂ partition ✂", "nodes": [{ "label": "Network split", "icon": "Split", "accent": "#ef4444" }] },
+            { "label": "Node B", "nodes": [{ "label": "Node B", "sub": "isolated", "icon": "Server", "accent": "#d97706" }] }
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["", "CP (Consistency + Partition tolerance)", "AP (Availability + Partition tolerance)"],
+          "rows": [
+            ["During a partition", "Refuse/block requests it can't make consistent (error or wait)", "Keep serving from each side; reconcile later"],
+            ["Reader sees", "Always correct, or an error", "Possibly stale data, but always an answer"],
+            ["Good for", "Banking, inventory, config, locks, unique IDs", "Feeds, carts, likes, sessions, catalogs"],
+            ["Example stores", "ZooKeeper, etcd, HBase, Spanner (CP-leaning)", "Cassandra, DynamoDB, Riak (tunable, AP-leaning)"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Many modern databases are *tunable* per request — e.g., Cassandra/DynamoDB let you choose consistency level (ONE vs QUORUM vs ALL) per query. So you can be AP for a feed read and CP for a critical write in the same database."
+        }
+      ]
+    },
+    {
+      "id": "pacelc",
+      "title": "PACELC — the missing half",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "CAP only talks about behaviour *during a partition*. But partitions are rare; what about the 99.99% of the time the network is fine? **PACELC** extends CAP: **if Partition (P) then choose Availability or Consistency (A/C); Else (E), choose Latency or Consistency (L/C).**",
+            "The insight: even with a healthy network, achieving strong consistency requires coordination between replicas, which *costs latency*. So every replicated system makes a second, everyday trade-off between low latency and strong consistency. For example, DynamoDB is **PA/EL** (favours availability and low latency), while a system like Spanner is **PC/EC** (favours consistency in both cases, paying latency for it)."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Mentioning PACELC is an instant senior signal. The crisp version: 'CAP forces C-vs-A during a partition; PACELC adds that even without partitions, strong consistency costs latency, so there's always a latency-vs-consistency trade-off too.'"
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "CAP: during a network partition you get at most 2 of Consistency, Availability, Partition tolerance.",
+    "P is NOT optional in a real distributed system — partitions happen. The real choice during a partition is CP vs AP.",
+    "CP = consistent but may reject requests (banking, inventory, locks). AP = always answers but may be stale (feeds, carts, likes).",
+    "Many stores (Cassandra, DynamoDB) tune consistency per request (ONE/QUORUM/ALL).",
+    "PACELC: Else (no partition) you still trade Latency vs Consistency — strong consistency costs coordination latency."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "Your interviewer says 'just pick CA — give up partition tolerance.' Why is that the wrong framing for a distributed system?",
+      "hint": "Can you choose whether the network fails?",
+      "answer": [
+        "Partition tolerance isn't a feature you opt into — it's whether your system keeps functioning when the network inevitably drops or delays messages between nodes. In any system spread across machines, partitions *will* occur, so you must tolerate them. A 'CA' system only exists if everything is on a single node (no network between replicas), which isn't a distributed system.",
+        "So the honest framing is: P is assumed, and CAP only tells you what to do *when* a partition strikes — stay consistent and reject some requests (CP), or stay available and serve possibly-stale data (AP). When the network is healthy, you can have both C and A."
+      ],
+      "keyPoints": ["P = tolerate inevitable network failures, not optional", "CA only makes sense on a single node", "Real choice is CP vs AP during a partition", "Both C and A are achievable when the network is healthy"],
+      "followUps": ["What does your database do during a partition by default — does it know?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "You're designing a shopping cart and a payment/checkout system. Which should lean AP and which CP, and why?",
+      "hint": "Where is a stale/duplicate value annoying vs financially wrong?",
+      "answer": [
+        "The **cart** should lean AP: users must always be able to add/remove items even during a partition. If two replicas briefly disagree, you can merge carts later (take the union of items) — a stale cart is annoying at worst, and Amazon famously chose availability here.",
+        "**Checkout/payment** should lean CP: charging a card or decrementing paid inventory must be globally agreed and correct. It's better to show 'try again in a moment' than to double-charge or oversell. So you accept reduced availability on the narrow critical write to guarantee consistency. This split — AP for the browsing/cart path, CP for the money path — is exactly how mature systems apply CAP per operation."
+      ],
+      "keyPoints": ["Cart = AP: always editable, merge on reconcile", "Checkout = CP: correctness over availability for money", "Apply CAP per operation, not system-wide", "Better to fail a payment safely than double-charge"],
+      "followUps": ["How would you 'merge' two divergent carts after a partition heals?"]
+    }
+  ]
+}

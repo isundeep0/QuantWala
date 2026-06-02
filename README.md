@@ -11,8 +11,14 @@ Three modules:
   language switcher, a curated 5‑problem set, and an interactive step‑by‑step
   simulator — **all 55 lessons have a simulator** (50 simulator components, several
   parametrised). Progress is `localStorage`‑based with a locked/unlocked roadmap.
-- **Module 2 — System Design** *(UI shell only)*: full navigation and placeholder
-  panels (concept, architecture diagram, key points, common questions).
+- **Module 2 — System Design** *(complete, end‑to‑end)*: **47 in‑depth lessons across 6
+  sections** — Start Here, Fundamentals, Building Blocks, Distributed Systems, Case
+  Studies (13 canonical designs), and a full Interview Playbook. Each lesson is a
+  block‑based long‑form article (text, analogies, callouts, comparison tables,
+  architecture diagrams, code, metrics) with a sticky scroll‑spy table of contents, an
+  **interview cheat sheet**, and a **practice question set** with progressive reveal
+  (hint → model answer → follow‑ups) and per‑question self‑assessment. Progress is
+  `localStorage`‑based, tracked independently from the Algorithms module.
 - **Module 3 — HFT / Low Latency** *(UI shell only)*: full navigation and placeholder
   panels (concept, code snippet, benchmark table, interview questions).
 
@@ -36,21 +42,29 @@ ready for when the platform goes public.
 
 ```
 Gare/
-├── content/                      # Source of truth for algorithm content
-│   ├── schema.json               # JSON schema for a lesson file
-│   └── algorithms/
-│       ├── sorting-searching/    # one JSON per algorithm
-│       ├── arrays-two-pointers/
-│       ├── linked-lists/
-│       ├── stacks-queues/
-│       ├── trees/
-│       ├── graphs/
-│       ├── dynamic-programming/
-│       ├── greedy/
-│       ├── backtracking/
-│       ├── segment-trees-bit/
-│       ├── strings/
-│       └── math-number-theory/
+├── content/                      # Source of truth for all lesson content
+│   ├── schema.json               # JSON schema for an algorithm lesson file
+│   ├── algorithms/
+│   │   ├── sorting-searching/    # one JSON per algorithm
+│   │   ├── arrays-two-pointers/
+│   │   ├── linked-lists/
+│   │   ├── stacks-queues/
+│   │   ├── trees/
+│   │   ├── graphs/
+│   │   ├── dynamic-programming/
+│   │   ├── greedy/
+│   │   ├── backtracking/
+│   │   ├── segment-trees-bit/
+│   │   ├── strings/
+│   │   └── math-number-theory/
+│   └── system-design/            # one JSON per system-design lesson
+│       ├── schema.json           # JSON schema for an SD lesson file
+│       ├── start-here/
+│       ├── fundamentals/
+│       ├── building-blocks/
+│       ├── distributed-systems/
+│       ├── case-studies/
+│       └── interview-playbook/
 │
 ├── frontend/                     # React + Tailwind app (Vite)
 │   ├── index.html
@@ -125,6 +139,28 @@ No rebuild config needed — Vite's `import.meta.glob` auto‑discovers new JSON
 
 ---
 
+## Adding / editing system‑design content
+
+1. Create `content/system-design/<sectionId>/<slug>.json` following
+   `content/system-design/schema.json`. Valid `sectionId`s: `start-here`,
+   `fundamentals`, `building-blocks`, `distributed-systems`, `case-studies`,
+   `interview-playbook`.
+2. Set `order` to position the lesson within its section roadmap.
+3. The lesson body is a list of `sections`, each containing `blocks`. The renderer
+   (`frontend/src/components/system-design/BlockRenderer.jsx`) supports these block
+   `type`s: `text`, `analogy`, `key`, `callout` (variants: tip/warning/note/insight/
+   interview/junior/senior), `bullets`, `steps`, `compare` (tables), `tradeoffs`,
+   `diagram`, `code`, `metrics`, `stat`. Inline markdown (`**bold**`, `` `code` ``,
+   `*italic*`) works inside strings.
+4. Add an `cheatsheet` (string array) and a `questions` array (prompt → hint → model
+   answer → follow‑ups) for the interview‑prep panels.
+
+Section metadata (titles, colors, icons, order) lives in
+`frontend/src/data/systemDesign.js`. Like the Algorithms module, new JSON files are
+auto‑discovered via `import.meta.glob` — no wiring required.
+
+---
+
 ## What to build next
 
 **Module 1 — done.** Every lesson has dual‑language code, a 5‑problem set, and an
@@ -133,10 +169,11 @@ interactive simulator. Possible future enhancements:
 - Per‑problem notes and a spaced‑repetition "review queue".
 - Expand the intentionally lean categories (greedy, stacks/queues) with more lessons.
 
-**Module 2 — System Design (content):**
-- Fill the placeholder panels with real concept text, diagrams (consider an
-  Excalidraw‑style embed), key interview points, and question banks.
-- Add an interactive "design canvas" for drawing architectures.
+**Module 2 — System Design — done.** 47 lessons across 6 sections, each with diagrams,
+an interview cheat sheet, and a practice question set. Possible future enhancements:
+- More case studies (e.g., distributed message queue, ad click aggregator, ticketing).
+- An interactive "design canvas" for drawing architectures.
+- Spaced‑repetition review queue across the practice questions.
 
 **Module 3 — HFT / Low Latency (content):**
 - Real C++/Python snippets with syntax highlighting, runnable benchmarks, and the

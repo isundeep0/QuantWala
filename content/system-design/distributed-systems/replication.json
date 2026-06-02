@@ -1,0 +1,140 @@
+{
+  "slug": "replication",
+  "sectionId": "distributed-systems",
+  "order": 1,
+  "title": "Replication",
+  "tagline": "Keep copies of your data on multiple machines for read scale, availability, and durability — and manage the lag.",
+  "summary": "Leader-follower, sync vs async, multi-leader, replication lag.",
+  "difficulty": "Intermediate",
+  "estMinutes": 17,
+  "tags": ["data", "distributed", "must-know"],
+  "prereqs": ["consistency-models", "databases"],
+  "sections": [
+    {
+      "id": "why",
+      "title": "Why replicate",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Read scalability", "detail": "Serve reads from many copies, multiplying read throughput (great for read-heavy systems)." },
+            { "term": "High availability", "detail": "If one node dies, another copy keeps serving — no data loss, minimal downtime." },
+            { "term": "Durability", "detail": "Data survives a single disk/machine failure because copies exist elsewhere." },
+            { "term": "Geo-locality", "detail": "Place replicas near users in different regions to cut read latency." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "note",
+          "text": "Replication = copies of the *same* data on multiple nodes (for redundancy/read scale). Partitioning/sharding = splitting *different* data across nodes (for write/storage scale). Big systems do both: shard the data, then replicate each shard."
+        }
+      ]
+    },
+    {
+      "id": "leader-follower",
+      "title": "Leader–follower (primary–replica)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The most common model: one **leader** (primary) accepts all writes; it streams its changes to one or more **followers** (replicas) that serve reads. Clients write to the leader and read from any replica. This scales reads and provides failover — if the leader dies, a follower is promoted."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "Writes go to the leader; the leader replicates to followers; reads spread across followers.",
+          "groups": [
+            { "label": "Writes", "nodes": [{ "label": "Leader / Primary", "sub": "all writes", "icon": "Database", "accent": "#ef4444" }] },
+            { "label": "Replicate", "nodes": [{ "label": "Follower 1", "icon": "Database", "accent": "#10b981" }, { "label": "Follower 2", "icon": "Database", "accent": "#10b981" }] },
+            { "label": "Reads", "nodes": [{ "label": "Read traffic", "icon": "Users", "accent": "#0ea5e9" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sync-async",
+      "title": "Synchronous vs asynchronous replication",
+      "blocks": [
+        {
+          "type": "compare",
+          "columns": ["", "Synchronous", "Asynchronous"],
+          "rows": [
+            ["When write is acked", "After replica(s) confirm they have it", "Immediately after leader writes locally"],
+            ["Durability on leader failure", "No data loss (replica has it)", "Risk of losing the last writes"],
+            ["Write latency", "Higher (waits for replicas)", "Low (don't wait)"],
+            ["Availability", "Blocks if a replica is slow/down", "Keeps accepting writes"],
+            ["Reality", "Often 'semi-sync': wait for 1 replica, rest async", "Default for performance; accept tiny loss window"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Pure synchronous (wait for all) is safe but fragile — one slow replica stalls writes. Pure async is fast but can lose recent writes on failover. The common compromise is semi-synchronous: acknowledge once at least one replica confirms, replicate to the rest asynchronously."
+        }
+      ]
+    },
+    {
+      "id": "lag",
+      "title": "Replication lag — the everyday gotcha",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "With async replication, followers are slightly behind the leader. A user who writes to the leader and immediately reads from a lagging follower may see *old* data — the 'I posted but it's not there' bug. This is replication lag, and it's the practical face of eventual consistency."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Mitigations (these map to consistency guarantees)",
+          "items": [
+            { "term": "Read-your-writes", "detail": "Route a user's reads to the leader (or a known-caught-up replica) for a short window after they write." },
+            { "term": "Monotonic reads", "detail": "Pin a user to one replica so they don't see time go backwards by bouncing between replicas at different lag." },
+            { "term": "Read from leader for critical data", "detail": "For data that must be fresh, just read the leader." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "title": "Multi-leader & leaderless (mention if pushed)",
+          "text": "Multi-leader: several leaders accept writes (e.g., one per region) and sync to each other — great for multi-region write latency, but you must resolve write conflicts. Leaderless (Dynamo-style, e.g., Cassandra): any replica takes reads/writes, using quorums (W + R > N) and read-repair to stay consistent. These are senior-level talking points."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Replication = copies of the same data on multiple nodes → read scale, availability, durability, geo-locality.",
+    "Leader–follower: one primary takes writes and streams to read replicas; promote a follower on failure.",
+    "Sync replication = no data loss but slower/blocking; async = fast but can lose recent writes; semi-sync is the common middle.",
+    "Async causes replication lag → stale reads; fix with read-your-writes, monotonic reads, or read-from-leader for critical data.",
+    "Multi-leader (per-region writes, needs conflict resolution) and leaderless/quorum (Dynamo/Cassandra, W+R>N) are advanced options.",
+    "Replication ≠ sharding: replicate copies, shard splits data. Big systems shard then replicate each shard."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "Your app uses async leader-follower replication. A user changes their profile photo, the write succeeds, but on the next page load they still see the old photo. Explain and fix.",
+      "hint": "Where did the write go, and where did the read come from?",
+      "answer": [
+        "The write went to the leader, but the follow-up read was served by a follower that hadn't yet received the replicated change (replication lag). So the user sees stale data — a read-your-writes violation caused by async replication.",
+        "Fix it narrowly: for a short window after a user writes, route *that user's* reads to the leader (or a replica confirmed to be caught up past their write position), or read the just-written value from a write-through cache. Everyone else can keep reading from followers cheaply. This preserves the read-scaling benefit while guaranteeing each user sees their own updates."
+      ],
+      "keyPoints": ["Replication lag: follower behind leader", "Read-your-writes violation", "Route own reads to leader/caught-up replica briefly", "Keep others on followers (don't make everything synchronous)"],
+      "followUps": ["How would you know a replica is 'caught up' past a user's write?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Trade-off",
+      "difficulty": "Hard",
+      "prompt": "For a banking ledger, would you use synchronous or asynchronous replication for the primary, and why?",
+      "hint": "What's the cost of losing the last few acknowledged writes?",
+      "answer": [
+        "Lean synchronous (at least semi-synchronous) for the ledger. If the leader fails right after acknowledging a write, async replication could lose that write — for money, silently losing an acknowledged transaction is unacceptable. Synchronous replication ensures at least one replica has the write before it's acked, so a promoted replica won't lose committed transactions (no data loss / RPO ≈ 0).",
+        "The cost is higher write latency and reduced availability if replicas are slow/unreachable — but for a ledger, correctness and durability outweigh latency. A practical setup: semi-sync (ack after one replica in another availability zone confirms), keeping the rest async for read scaling. State the trade-off explicitly: you're choosing durability/consistency over write latency for this specific data."
+      ],
+      "keyPoints": ["Sync/semi-sync for money: no loss of acked writes (RPO≈0)", "Async risks losing recent committed transactions on failover", "Accept higher write latency / lower availability for correctness", "Semi-sync (one AZ replica) balances safety and read scale"],
+      "followUps": ["How does this choice interact with CAP during a partition between leader and replica?"]
+    }
+  ]
+}

@@ -316,11 +316,11 @@
   }
 
   /* Flowing sheen streak that drifts across a band (top nav) */
-  .glass-sheen {
+  /* .glass-sheen {
     position: relative;
     overflow: hidden;
-  }
-  .glass-sheen::after {
+  } */
+  /* .glass-sheen::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -338,7 +338,7 @@
     pointer-events: none;
     mix-blend-mode: screen;
     z-index: -1;
-  }
+  } */
 }
 
 @layer utilities {

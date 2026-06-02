@@ -281,7 +281,7 @@
     isolation: isolate;
     border-radius: 9999px;
     background:
-      radial-gradient(120% 120% at 30% 22%, rgb(var(--glass-stroke) / calc(var(--glass-spec) * 0.7)), transparent 45%),
+      radial-gradient(120% 120% at 30% 22%, rgb(var(--glass-stroke) / calc(var(--glass-spec) * 0.7)), transparent 0%),
       linear-gradient(160deg, rgb(var(--bg-elev) / 0.6), rgb(var(--bg-sunken) / 0.5));
     backdrop-filter: blur(14px) saturate(160%);
     -webkit-backdrop-filter: blur(14px) saturate(160%);

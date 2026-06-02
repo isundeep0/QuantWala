@@ -1,0 +1,159 @@
+{
+  "slug": "capacity-estimation",
+  "sectionId": "interview-playbook",
+  "order": 3,
+  "title": "Step 2: Capacity Estimation Cheats",
+  "tagline": "The numbers and shortcuts that let you do back-of-the-envelope math out loud without panicking.",
+  "summary": "QPS, storage, bandwidth math + the latency numbers to memorize.",
+  "difficulty": "Beginner",
+  "estMinutes": 18,
+  "tags": ["interview", "estimation", "must-know"],
+  "prereqs": ["back-of-the-envelope", "the-framework"],
+  "sections": [
+    {
+      "id": "why",
+      "title": "Why estimate at all",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Estimation isn't about precision — it's about justifying decisions and finding bottlenecks. If you can show the system does 100k reads/sec, your decision to cache aggressively is grounded in fact, not vibes. Interviewers want to see you reason about magnitude, not compute to three decimals."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Round aggressively and use powers of ten. '100M users, 10% active daily, 10 actions each' → 100M reads/day. Say the assumptions out loud so the interviewer can correct them. Wrong-but-reasoned beats silent-and-precise."
+        }
+      ]
+    },
+    {
+      "id": "qps",
+      "title": "QPS: from users to requests/sec",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The master conversion: there are ~86,400 seconds in a day — round to **100,000 (10^5)**. So 'X per day ÷ 10^5 ≈ X per second.' This one shortcut handles most QPS questions instantly."
+          ]
+        },
+        {
+          "type": "metrics",
+          "title": "Worked example: a social feed",
+          "items": [
+            { "label": "Total users", "value": "100M" },
+            { "label": "Daily active (assume 50%)", "value": "50M" },
+            { "label": "Feed loads/user/day (assume 10)", "value": "500M reads/day" },
+            { "label": "Average read QPS (÷ 10^5)", "value": "~5,000 / sec" },
+            { "label": "Peak (×2–3 the average)", "value": "~10–15k / sec" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "Always compute peak, not just average",
+          "text": "Traffic isn't uniform — it spikes (mornings, events, time zones). Multiply average QPS by 2–3× (or more for spiky workloads) to size for peak. Designing only for average load is a classic miss."
+        }
+      ]
+    },
+    {
+      "id": "storage-bandwidth",
+      "title": "Storage & bandwidth",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Storage", "detail": "writes/day × bytes/write × retention. e.g., 500M tweets/day × 300 bytes ≈ 150 GB/day → ~55 TB/year. Round and state assumptions about object size." },
+            { "term": "Bandwidth", "detail": "QPS × payload size. 10k image reads/sec × 200 KB ≈ 2 GB/sec egress — instantly explains why you need a CDN." },
+            { "term": "Memory for cache", "detail": "Apply the 80/20 rule: ~20% of data serves ~80% of reads. Size your cache for the hot set, not the whole dataset." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "note",
+          "title": "Powers of two for data sizes",
+          "text": "KB=10^3, MB=10^6, GB=10^9, TB=10^12, PB=10^15. A char ≈ 1 byte, a typical metadata row ≈ hundreds of bytes, a photo ≈ 100s of KB–few MB, a minute of video ≈ tens of MB. Keep these rough anchors handy."
+        }
+      ]
+    },
+    {
+      "id": "latency",
+      "title": "Latency numbers every engineer should know",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "These orders of magnitude (Jeff Dean's famous list) explain *why* we cache, why memory beats disk, and why cross-region calls hurt. You don't need exact figures — just the relative scale."
+          ]
+        },
+        {
+          "type": "metrics",
+          "title": "Approximate latencies (orders of magnitude)",
+          "items": [
+            { "label": "L1 cache reference", "value": "~1 ns" },
+            { "label": "Main memory (RAM) reference", "value": "~100 ns" },
+            { "label": "Read 1 MB sequentially from RAM", "value": "~10 µs" },
+            { "label": "SSD random read", "value": "~100 µs" },
+            { "label": "Round trip within same datacenter", "value": "~0.5 ms" },
+            { "label": "Read 1 MB from SSD", "value": "~1 ms" },
+            { "label": "Disk (HDD) seek", "value": "~10 ms" },
+            { "label": "Round trip across continents", "value": "~100–150 ms" }
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "What to take away (not the digits)",
+          "items": [
+            { "term": "Memory ≫ disk", "detail": "RAM is ~100,000× faster than a disk seek → cache hot data in memory." },
+            { "term": "SSD ≫ HDD", "detail": "SSD random reads are ~100× faster than HDD seeks → SSDs for random-access workloads." },
+            { "term": "Network has a floor", "detail": "Even a same-DC round trip is ~0.5 ms and cross-continent is ~100+ ms → minimize round trips, co-locate data, and use CDNs/edge for global users." },
+            { "term": "Sequential ≫ random", "detail": "Sequential disk reads vastly outperform random ones → batch and stream rather than scatter tiny random I/Os." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "text": "You won't be asked to recite these, but referencing them naturally ('a cross-region hop is ~100 ms, so I'll keep this call same-region') is a strong senior signal — it shows you reason from physics, not folklore."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "~86,400 sec/day → round to 10^5. So 'per day ÷ 10^5 ≈ per second' for instant QPS.",
+    "Estimate to justify decisions and find bottlenecks — round aggressively, state assumptions out loud.",
+    "Always compute peak QPS = average × 2–3× (more for spiky traffic).",
+    "Storage = writes/day × bytes × retention; Bandwidth = QPS × payload size (this is what reveals 'need a CDN').",
+    "80/20: cache the ~20% hot data that serves ~80% of reads — size cache for the hot set.",
+    "Latency scale: RAM ~100ns ≪ SSD ~100µs ≪ DC round trip ~0.5ms ≪ disk seek ~10ms ≪ cross-continent ~100ms.",
+    "Takeaways: memory ≫ disk, SSD ≫ HDD, sequential ≫ random, minimize network round trips."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Estimation",
+      "difficulty": "Medium",
+      "prompt": "A photo-sharing app has 200M users, 25% active daily, each viewing 20 photos/day at ~300 KB each. Estimate read QPS and egress bandwidth, and state what it implies.",
+      "hint": "Use ÷10^5 for QPS; bandwidth = QPS × payload.",
+      "answer": [
+        "Daily active users = 25% × 200M = 50M. Photo views/day = 50M × 20 = 1B views/day. Average read QPS = 1B ÷ 10^5 ≈ 10,000 reads/sec. Peak is ~2–3×, so design for roughly 20,000–30,000 reads/sec.",
+        "Bandwidth (egress) at peak ≈ peak QPS × payload = ~25,000 × 300 KB ≈ 7.5 GB/sec. That's an enormous, sustained egress rate. The implication is immediate: you cannot serve this from origin servers economically or with low latency — you need a CDN to cache and serve photos from edge locations near users, which offloads the vast majority of that bandwidth and cuts latency. The QPS and bandwidth numbers together justify the CDN and aggressive caching as the centerpiece of the read path, rather than asserting them without evidence.",
+        "Throughout I'd round and state assumptions ('25% DAU, 20 views each, 300 KB/photo, peak 2.5×') so the interviewer can adjust any input — the goal is correct magnitude and sound reasoning, not exact arithmetic."
+      ],
+      "keyPoints": ["DAU 50M → 1B views/day → ~10k avg QPS → ~25k peak (÷10^5, ×2.5)", "Bandwidth = QPS × 300KB ≈ several GB/sec egress", "Implication: CDN + edge caching is mandatory for the read path", "Round, state assumptions, target magnitude not precision"],
+      "followUps": ["How would the storage estimate look if users upload 2 photos/day and you keep them forever?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "Why is it useful to know that a RAM reference is ~100 ns while a disk seek is ~10 ms?",
+      "hint": "It's a ~100,000× gap.",
+      "answer": [
+        "Because the ratio is enormous — roughly 100,000× — and that gap is the entire justification for caching. If data lives in memory you can read it in ~100 nanoseconds; if it requires a spinning-disk seek it takes ~10 milliseconds, five orders of magnitude slower. So any time data is read frequently, keeping it in RAM (a cache like Redis/Memcached, or an in-memory index) turns a slow operation into a near-instant one, which is why read-heavy systems are built around caches.",
+        "It also informs broader choices: prefer SSDs over HDDs for random-access workloads (SSD random reads ~100 µs are ~100× faster than HDD seeks), favor sequential access over random I/O, and minimize how often you touch disk on the hot path at all. Internalizing these orders of magnitude lets you reason about where the time in a request actually goes and where a cache or a different storage medium will move the needle — rather than guessing."
+      ],
+      "keyPoints": ["RAM vs disk seek is ~100,000× — the core reason caching works", "Frequently-read data belongs in memory (Redis/Memcached/in-memory index)", "Also drives SSD>HDD, sequential>random, minimize disk on hot path", "Lets you reason about where request time actually goes"],
+      "followUps": ["Given a same-DC round trip is ~0.5 ms, why might 50 sequential service calls be a latency problem?"]
+    }
+  ]
+}

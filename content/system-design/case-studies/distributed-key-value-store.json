@@ -101,13 +101,13 @@
           ]
         },
         {
-          "type": "metrics",
-          "title": "The quorum rule",
+          "type": "bullets",
+          "title": "The quorum rule (N replicas, W write acks, R read responses)",
           "items": [
-            { "label": "Strong-ish consistency", "value": "W + R > N", "detail": "Read and write sets overlap → a read always sees the latest acknowledged write." },
-            { "label": "Fast writes", "value": "W = 1", "detail": "Ack after one replica; durable replication continues in background. Low latency, weaker guarantee." },
-            { "label": "Fast reads", "value": "R = 1", "detail": "Return from the first replica that answers. Lowest read latency." },
-            { "label": "Balanced (N=3)", "value": "W = R = 2", "detail": "W+R=4 > 3 → consistent, and tolerates one node down on each path." }
+            { "term": "W + R > N → strong-ish consistency", "detail": "Read and write sets overlap on at least one replica → a read always sees the latest acknowledged write." },
+            { "term": "W = 1 → fast writes", "detail": "Ack after one replica; durable replication continues in the background. Low latency, weaker guarantee." },
+            { "term": "R = 1 → fast reads", "detail": "Return from the first replica that answers. Lowest read latency, may be stale." },
+            { "term": "W = R = 2 (with N = 3) → balanced", "detail": "W+R = 4 > 3 → consistent, and still tolerates one node down on each path." }
           ]
         },
         {

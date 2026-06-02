@@ -48,7 +48,7 @@ export default function SimulatorShell({
             className="relative min-h-[280px] overflow-hidden rounded-2xl border p-4 sm:p-6"
             style={{ borderColor: "rgb(var(--border))", backgroundColor: "rgb(var(--bg-elev))" }}
           >
-            <div className="absolute inset-0 dot-grid opacity-40" aria-hidden />
+            <div className="absolute inset-0 dot-grid opacity-30" aria-hidden />
             <div className="relative flex h-full min-h-[240px] items-center justify-center">
               {children}
             </div>

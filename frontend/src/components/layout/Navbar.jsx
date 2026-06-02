@@ -24,16 +24,13 @@ function Logo() {
             strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{ filter: "drop-shadow(0 0 4px rgba(96,165,250,0.8))" }}
           />
           <circle cx="18" cy="6" r="1.9" fill="#34d399" stroke="#fff" strokeWidth="1.1" />
         </svg>
       </span>
       <span className="text-[17px] font-extrabold tracking-tight">
-        <span className="lit-text">Quant</span>
-        <span className="text-brand-500" style={{ filter: "drop-shadow(0 0 8px rgba(59,130,246,0.55))" }}>
-          Wala
-        </span>
+        <span>Quant</span>
+        <span className="text-brand-500 dark:text-brand-400">Wala</span>
       </span>
     </Link>
   );

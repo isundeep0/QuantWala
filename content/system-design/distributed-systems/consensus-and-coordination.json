@@ -1,0 +1,127 @@
+{
+  "slug": "consensus-and-coordination",
+  "sectionId": "distributed-systems",
+  "order": 4,
+  "title": "Consensus, Quorums & Coordination",
+  "tagline": "How a group of unreliable machines agrees on one truth — leader election, Raft/Paxos, and quorum reads/writes.",
+  "summary": "Quorums (W+R>N), leader election, Raft/Paxos, ZooKeeper.",
+  "difficulty": "Advanced",
+  "estMinutes": 18,
+  "tags": ["distributed", "consistency"],
+  "prereqs": ["replication", "cap-theorem"],
+  "sections": [
+    {
+      "id": "problem",
+      "title": "Why agreement is hard",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "In a distributed system, machines crash, messages are delayed or lost, and clocks drift. Yet many tasks need the nodes to **agree on a single value or decision**: who is the leader? what's the order of these writes? did this transaction commit? **Consensus** is the problem of getting a group of nodes to agree on one outcome even when some fail.",
+            "The catch (the FLP result, informally): you can't guarantee consensus is reached *and* always terminates in a fully asynchronous network with even one faulty node. Practical algorithms (Raft, Paxos) sidestep this with timeouts and by only needing a **majority**, trading a little liveness for safety."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quorum",
+      "title": "Quorums: the majority rule",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A **quorum** is the minimum number of nodes that must participate for an operation to be considered successful. The key idea in replicated stores: with N replicas, require W nodes to acknowledge a write and R nodes to answer a read. If **W + R > N**, the write set and read set must overlap by at least one node — so any read is guaranteed to see at least one copy of the latest write. That overlap is what gives strong consistency without contacting *every* node."
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["Config (N=3)", "Behaviour", "Trade-off"],
+          "rows": [
+            ["W=3, R=1", "Writes hit all, reads any one", "Fast reads, slow/fragile writes"],
+            ["W=1, R=3", "Write one, read all", "Fast writes, slow reads"],
+            ["W=2, R=2", "Majority both ways (W+R>N)", "Balanced, strongly consistent, tolerates 1 failure"],
+            ["W=1, R=1", "W+R ≤ N", "Fast but eventually consistent (may read stale)"]
+          ],
+          "caption": "Tunable consistency: Cassandra/DynamoDB let you pick W and R per operation. W+R>N → strong; otherwise eventual."
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Why majorities (e.g., 2 of 3) rather than all? Requiring all nodes means one slow/dead node blocks everything (poor availability). A majority quorum stays available as long as more than half the nodes are alive, and two majorities always overlap — guaranteeing a consistent decision. This is also why cluster sizes are usually odd (3, 5, 7): an odd count maximizes failure tolerance per node and avoids split votes."
+        }
+      ]
+    },
+    {
+      "id": "leader-election",
+      "title": "Leader election & Raft/Paxos",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Many systems elect a single **leader** to coordinate (e.g., the primary that orders all writes). Electing one — and re-electing when it dies — is itself a consensus problem solved by algorithms like **Raft** and **Paxos**.",
+            "**Raft** (designed to be understandable) works like this: nodes are followers; if a follower hears nothing from a leader within a randomized timeout, it becomes a candidate and requests votes; a candidate that gets a **majority** becomes leader for a 'term'. The leader appends entries to a replicated log and commits an entry once a majority has stored it. Randomized timeouts prevent endless split votes. **Paxos** solves the same problem and underlies systems like Google Chubby/Spanner; it's powerful but notoriously hard to follow, which is why Raft is more commonly taught and implemented."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "You won't implement Raft in an interview, but you should be able to say: 'A consensus algorithm like Raft elects a leader and replicates a log; an entry commits once a majority persists it; it tolerates a minority of failures and uses randomized election timeouts.' That demonstrates real distributed-systems literacy."
+        }
+      ]
+    },
+    {
+      "id": "coordination-services",
+      "title": "Coordination services — don't build it yourself",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Rolling your own consensus is a recipe for subtle, dangerous bugs. In practice you delegate coordination to a battle-tested service: **ZooKeeper**, **etcd**, or **Consul**. These provide a small, strongly-consistent store (backed by Raft/ZAB) used for: leader election, distributed locks, service discovery (which nodes are alive), configuration management, and distributed coordination primitives.",
+            "For example, a cluster uses etcd to elect which node is the active primary and to detect node membership changes. Kubernetes stores all its state in etcd; Kafka historically used ZooKeeper for controller election and metadata."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "text": "Coordination services are strongly consistent (CP) — during a partition they prioritize correctness over availability, and they don't store bulk data. Use them for metadata/coordination, not as your main database."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Consensus = getting unreliable nodes to agree on one value/decision despite failures (needed for leader election, ordering, commit).",
+    "Quorum: with N replicas require W acks to write, R to read; W+R>N guarantees overlap → strong consistency.",
+    "Majority quorums (2 of 3) stay available while >half live and any two majorities overlap; use odd cluster sizes.",
+    "Tunable consistency (Cassandra/Dynamo): W+R>N strong, otherwise eventual — chosen per operation.",
+    "Raft/Paxos elect a leader and replicate a log; an entry commits once a majority persists it; tolerates a minority failing.",
+    "Don't build consensus yourself — use ZooKeeper/etcd/Consul for leader election, locks, service discovery, config (CP, metadata only)."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "With 3 replicas, why does choosing W=2 and R=2 give strong consistency, and how many node failures can it tolerate?",
+      "hint": "Do the read set and write set always share a node? How many nodes must be up?",
+      "answer": [
+        "W=2, R=2, N=3 satisfies W+R>N (2+2>3), so the set of 2 nodes that acknowledged the latest write and the set of 2 nodes a read contacts must overlap in at least one node. That overlapping node has the newest value, so every read is guaranteed to see the latest write — strong consistency.",
+        "It tolerates **1 node failure**: with 2 of 3 alive you can still get 2 acks for both reads and writes. If 2 of 3 are down, you can't form a quorum of 2, so operations block (choosing consistency over availability, per CAP). This balanced setting is a common default."
+      ],
+      "keyPoints": ["W+R>N → read/write sets overlap → latest value always read", "Strong consistency from the overlap", "Tolerates 1 failure (need 2 of 3 for quorum)", "If quorum unreachable, blocks (CP)"],
+      "followUps": ["What changes with N=5? How many failures can a majority quorum tolerate?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "Your system needs exactly one node to be the 'active' coordinator at a time, and to re-elect automatically if it crashes. How would you implement this without writing your own consensus?",
+      "hint": "There's a category of off-the-shelf services for exactly this.",
+      "answer": [
+        "Use a coordination service like **etcd, ZooKeeper, or Consul**, which provide leader-election primitives backed by a proven consensus algorithm (Raft/ZAB). Nodes attempt to acquire a leadership lease/lock; exactly one succeeds and becomes the active coordinator, and it renews the lease via heartbeats. If it crashes, the lease expires and the remaining nodes elect a new leader automatically.",
+        "This avoids the extremely subtle bugs of hand-rolled consensus (split-brain, lost updates under partition). You'd also handle fencing — when a new leader takes over, ensure the old one can't still act (e.g., fencing tokens) in case it was just slow rather than dead. Delegating coordination to a CP service is the standard, correct approach."
+      ],
+      "keyPoints": ["Use etcd/ZooKeeper/Consul leader election (Raft/ZAB)", "Acquire lease/lock, renew via heartbeats, auto re-elect on expiry", "Avoid hand-rolled consensus bugs / split-brain", "Add fencing so a stale old leader can't still act"],
+      "followUps": ["What is split-brain and how do fencing tokens prevent it?"]
+    }
+  ]
+}

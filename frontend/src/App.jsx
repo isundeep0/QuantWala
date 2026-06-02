@@ -8,6 +8,8 @@ import SystemDesign from "./pages/system-design/SystemDesign.jsx";
 import SystemDesignLesson from "./pages/system-design/SystemDesignLesson.jsx";
 import HFT from "./pages/hft/HFT.jsx";
 import HFTTopic from "./pages/hft/HFTTopic.jsx";
+import CPHub from "./pages/cp/CPHub.jsx";
+import CPThemeDetail from "./pages/cp/CPThemeDetail.jsx";
 import NotFound from "./pages/NotFound.jsx";
 
 export default function App() {
@@ -23,6 +25,8 @@ export default function App() {
           <Route path="/system-design/:topicId" element={<SystemDesignLesson />} />
           <Route path="/hft" element={<HFT />} />
           <Route path="/hft/:topicId" element={<HFTTopic />} />
+          <Route path="/cp" element={<CPHub />} />
+          <Route path="/cp/:phaseId/:themeId" element={<CPThemeDetail />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Layout>

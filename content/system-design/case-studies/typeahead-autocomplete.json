@@ -1,0 +1,161 @@
+{
+  "slug": "typeahead-autocomplete",
+  "sectionId": "case-studies",
+  "order": 7,
+  "title": "Design Search Autocomplete (Typeahead)",
+  "tagline": "Suggest the top completions as the user types — in single-digit milliseconds, across billions of queries.",
+  "summary": "Tries, precomputed top-K, prefix caching, the read-heavy path.",
+  "difficulty": "Advanced",
+  "estMinutes": 20,
+  "tags": ["case-study", "search"],
+  "prereqs": ["caching", "search-systems"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "As the user types a prefix, return the top ~5–10 most relevant completions.",
+            "Suggestions ranked by popularity (search frequency), possibly personalized/recent.",
+            "Reflect trending queries over time."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Extremely low latency (<~100 ms, ideally <50 ms) — it fires on *every keystroke*.",
+            "Massively read-heavy (queries ≫ updates to the suggestion data).",
+            "Eventual consistency is fine — a new trending term can take minutes to appear.",
+            "Huge query volume; tolerate approximate ranking."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "The defining traits: fires per keystroke (so read latency is everything) and is read-heavy with tolerance for stale/approximate results. That pushes the whole design toward precomputation + caching, not live computation."
+        }
+      ]
+    },
+    {
+      "id": "naive",
+      "title": "2. Why you can't compute it live",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The naive idea — on each keystroke, scan a queries table for rows starting with the prefix, sort by frequency, take top 5 — is far too slow at scale. A prefix like 'a' matches millions of strings; doing that per keystroke per user at billions of queries/day is impossible. We must **precompute** the top suggestions for each prefix and serve them with a simple lookup."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "trie",
+      "title": "3. The trie (prefix tree) with cached top-K",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The core data structure is a **trie**: a tree where each path from the root spells a prefix, and nodes mark complete words with their frequency. To find completions of a prefix, walk to that prefix's node, then explore its subtree for the highest-frequency words.",
+            "But exploring the subtree on every request is still too slow for hot prefixes. The key optimization: **store the precomputed top-K completions directly at each trie node**. Then answering a query is just: walk to the prefix node (O(prefix length)) and return its cached top-K list — essentially O(1) for fixed K. This trades extra storage and update cost for blazing reads, which is exactly the right trade for a read-heavy, latency-critical system."
+          ]
+        },
+        {
+          "type": "diagram",
+          "direction": "lr",
+          "caption": "Walk the trie to the prefix node, then return its precomputed top-K list — no subtree scan at query time.",
+          "groups": [
+            { "label": "Type 'ca'", "nodes": [{ "label": "Prefix", "icon": "Search", "accent": "#0ea5e9" }] },
+            { "label": "Trie lookup", "nodes": [{ "label": "node('ca')", "sub": "O(len) walk", "icon": "GitBranch", "accent": "#8b5cf6" }] },
+            { "label": "Cached", "nodes": [{ "label": "top-K at node", "sub": "[cat, car, camera...]", "icon": "List", "accent": "#10b981" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "4. Read path vs build path (separate them)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Split the system into a fast **query service** and an offline **build/aggregation pipeline** — a recurring pattern for read-heavy systems."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Query service (online, hot path)", "detail": "Holds the trie (often in memory, or as a precomputed prefix→top-K map in Redis). Looks up the prefix and returns top-K. Heavily cached at multiple layers; prefixes are sharded across nodes by first letters." },
+            { "term": "Data collection", "detail": "Every executed search is logged (to a queue/log). This is the raw frequency signal." },
+            { "term": "Aggregation pipeline (offline)", "detail": "Periodically (e.g., hourly) batch-aggregate query frequencies (MapReduce/stream processing), recompute top-K per prefix, and build a new trie/map. Trending uses time-decayed or windowed counts." },
+            { "term": "Atomic swap", "detail": "Build the new trie offline, then swap it into the query service atomically (versioned) so reads always hit a complete, consistent structure." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Because suggestions can be stale (eventual consistency is fine), you decouple the expensive aggregation from the read path entirely. Reads serve a precomputed snapshot; the snapshot refreshes in the background. This is the same 'precompute offline, serve fast online' shape as news-feed fan-out and search indexing."
+        }
+      ]
+    },
+    {
+      "id": "details",
+      "title": "5. Optimizations & edge cases",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Caching prefixes", "detail": "Short, popular prefixes ('a', 'th') are requested constantly — cache prefix→top-K in Redis/CDN with the highest hit rates. Most keystrokes never reach the trie service." },
+            { "term": "Sharding the trie", "detail": "The trie is huge; shard by prefix (e.g., by first 1–2 characters) across nodes, with a router. Hot shards (common letters) get more replicas." },
+            { "term": "Debouncing on the client", "detail": "Don't fire a request on literally every keystroke — debounce (wait ~100–300 ms after typing stops) to cut request volume dramatically." },
+            { "term": "Limit prefix/word length", "detail": "Cap suggestions to reasonable lengths to bound the trie." },
+            { "term": "Personalization & safety", "detail": "Blend in user history/recent searches; filter offensive/disallowed suggestions in the build pipeline." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Crisp summary: 'Trie with precomputed top-K cached at each node for O(prefix) reads; an offline pipeline aggregates query logs hourly and atomically swaps in a fresh trie; cache hot prefixes in Redis/CDN; shard the trie by prefix; debounce on the client.' Mentioning the online/offline split and client debouncing stands out."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Autocomplete fires per keystroke → read latency is everything; read-heavy + stale-tolerant → precompute, don't compute live.",
+    "Use a trie (prefix tree) with the top-K completions PRECOMPUTED and cached at each node → O(prefix length) reads.",
+    "Separate a fast query service (in-memory/Redis trie) from an offline aggregation pipeline over query logs.",
+    "Aggregate frequencies in batches, rebuild the trie, and atomically swap it in (versioned); trending uses windowed/decayed counts.",
+    "Cache hot prefixes in Redis/CDN, shard the trie by prefix, and debounce requests on the client."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Design",
+      "difficulty": "Medium",
+      "prompt": "Why store the top-K completions at each trie node instead of computing them by scanning the subtree at query time?",
+      "hint": "What's the read latency of a subtree scan for a popular prefix?",
+      "answer": [
+        "Scanning the subtree at query time means, for a prefix like 'a', traversing potentially millions of descendant words and sorting them by frequency — on every keystroke, at billions of queries/day. That's far too slow and CPU-heavy for a sub-50 ms, per-keystroke requirement.",
+        "By precomputing and caching the top-K list *at each node*, a query becomes: walk to the prefix node (O(length of prefix), tiny and bounded) and return its ready-made top-K — effectively O(1) for fixed K. You pay more in storage (a small list per node) and in update cost (recompute lists when frequencies change, done offline in batches), but reads become trivially fast. Trading storage/precompute for read latency is exactly right for a read-heavy, latency-critical, staleness-tolerant system."
+      ],
+      "keyPoints": ["Subtree scan = traverse millions of nodes + sort, per keystroke — too slow", "Precomputed top-K at node → O(prefix length) ≈ O(1) read", "Costs extra storage + offline update work", "Right trade for read-heavy, latency-critical, stale-tolerant workload"],
+      "followUps": ["How and how often would you update the cached top-K lists as query frequencies change?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "How do new trending searches make it into suggestions, given the read path serves precomputed data?",
+      "hint": "There's an offline pipeline feeding the online trie.",
+      "answer": [
+        "All executed searches are logged to a queue/log. An **offline aggregation pipeline** periodically (say hourly) batch-processes these logs to recompute query frequencies — using time-windowed or decayed counts so recent surges are weighted, which is how 'trending' emerges. It rebuilds the trie/prefix→top-K structure with the updated rankings and **atomically swaps** the new version into the query service.",
+        "So trending terms appear after the next aggregation cycle — a delay of minutes to an hour, which is acceptable because autocomplete tolerates eventual consistency. The read path always serves a complete, consistent precomputed snapshot; freshness comes from how frequently you rebuild and swap, which you tune against cost. For near-real-time trends you can run a faster streaming layer that updates hot prefixes more often."
+      ],
+      "keyPoints": ["Searches logged → offline pipeline aggregates frequencies periodically", "Windowed/decayed counts surface trending terms", "Rebuild trie + atomic versioned swap into query service", "Minutes-of-staleness acceptable; tune rebuild frequency / add streaming layer"],
+      "followUps": ["What's the trade-off in rebuilding every 5 minutes vs every hour?"]
+    }
+  ]
+}

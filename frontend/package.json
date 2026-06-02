@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "description": "QuantWala — a learning platform for competitive programmers, OA prep, system design and HFT/low-latency interviews.",
+  "homepage": "https://isundeep0.github.io/QuantWala",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

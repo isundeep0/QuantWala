@@ -1,0 +1,104 @@
+{
+  "slug": "what-is-hft",
+  "sectionId": "foundations",
+  "order": 1,
+  "title": "What HFT Is & How It Makes Money",
+  "tagline": "Strip away the mystique: HFT is automated market participation where speed is the edge.",
+  "level": "Core",
+  "track": ["dev", "research", "trader", "systems"],
+  "estMinutes": 16,
+  "concept": {
+    "analogy": "Imagine a currency-exchange kiosk at an airport. It quotes a price to buy dollars and a slightly higher price to sell them, and it pockets the small difference on every transaction. It doesn't care which way the dollar moves long-term — it just wants to do millions of these tiny round-trips while never holding a big risky pile of cash. An HFT market maker is that kiosk, except the spread is a fraction of a cent, the transactions happen in microseconds, and a computer runs it.",
+    "paragraphs": [
+      "High-frequency trading (HFT) is a subset of algorithmic trading defined by very high speeds, very high turnover (lots of orders), and very short holding periods — often milliseconds to seconds. Positions at the end of the day are usually small or flat. The 'edge' is not a deep view on where a stock will be in a year; it is being faster, smarter, and better-organized than other participants over tiny time windows.",
+      "HFT firms make money in a few repeatable ways. (1) Market making: continuously quoting a bid and an ask and capturing the spread plus, often, exchange rebates, while managing the risk of being 'run over' by informed traders. (2) Arbitrage: spotting the same or related instruments priced inconsistently across venues (e.g., an ETF vs. its underlying basket, or a future vs. spot) and trading them back to fair value. (3) Short-horizon statistical prediction: using signals like order-flow imbalance to predict the next tiny price move and trading ahead of it.",
+      "Because the edge is small per trade, two things matter enormously: scale (do it a huge number of times) and risk control (one bug or one bad fill repeated a million times is catastrophic). This is why HFT is as much a systems-engineering and risk-management discipline as it is a trading one — and why firms hire deeply technical people.",
+      "A crucial myth to drop: HFT is not 'predicting the market' in the Hollywood sense. Most HFT strategies are agnostic to long-term direction. They are closer to running a very efficient, very fast logistics operation on a flow of orders."
+    ],
+    "points": [
+      "Speed is a means, not the product — the product is liquidity provision and price-correction, sold for a tiny, repeated edge.",
+      "Holding periods are short and end-of-day inventory is small: HFT firms are rarely making leveraged directional bets.",
+      "Profit per trade is tiny; profit comes from volume × edge − costs, so both scale and cost-control (latency, fees, losses) decide who wins.",
+      "It is a team sport across traders/researchers (the strategy), developers (the system), and infra/hardware (the speed)."
+    ],
+    "keyIdea": "HFT earns a small, statistical edge an enormous number of times. Winning means being faster and more reliable than competitors while never letting a single mistake scale."
+  },
+  "deepDive": {
+    "intro": "Let's make the economics concrete and see why every microsecond and every basis point of cost is fought over.",
+    "steps": [
+      {
+        "title": "The unit economics of a spread",
+        "detail": "Suppose you make a market in a stock with a 1-cent spread and you capture, on average, 0.2 cents of edge per share after adverse selection. On 100 million shares a day that is $200,000/day of gross edge from one name. Multiply across thousands of names and venues. The edge per trade is microscopic; the business is built on turnover."
+      },
+      {
+        "title": "Why latency converts directly to money",
+        "detail": "When the market moves, there is a race to update or cancel your now-stale quote before someone picks it off, and a race to be the order that gets filled at a newly attractive price. If you are 1µs slower, you are systematically the one left holding bad fills. Latency is not vanity — it is the difference between capturing edge and donating it."
+      },
+      {
+        "title": "Adverse selection: the maker's core risk",
+        "detail": "When someone trades against your quote, ask why. Often they know something you don't (the price is about to move their way). A market maker's profitability hinges on collecting the spread from uninformed flow faster than informed flow can pick them off. Managing this — via fast cancels, smart quoting, and signals — is the whole game."
+      },
+      {
+        "title": "Costs that eat the edge",
+        "detail": "Exchange fees/rebates, co-location and data costs, clearing, and most of all losses from bad fills. A strategy with positive gross edge can be net-negative after costs. HFT firms obsess over fee tiers, rebate capture, and minimizing 'toxic' fills."
+      },
+      {
+        "title": "Capacity and competition",
+        "detail": "Edges decay as competitors find them. Speed advantages get arbitraged away as everyone co-locates and buys FPGAs. So firms continuously invest in faster systems and new signals just to stay in place — a technological red-queen race."
+      }
+    ],
+    "notes": [
+      {
+        "title": "HFT vs. 'quant' more broadly",
+        "detail": "Not all quant trading is high-frequency. Stat-arb funds may hold for days; systematic macro for months. HFT specifically lives at the fast end where microstructure and latency dominate. The skills overlap, but HFT uniquely rewards low-latency systems engineering."
+      }
+    ],
+    "pitfalls": [
+      "Thinking HFT 'predicts the market'. Most strategies are direction-agnostic over their horizon; they harvest structure and speed, not forecasts.",
+      "Assuming faster always wins. Speed is necessary but not sufficient — a fast system quoting bad prices just loses money faster.",
+      "Ignoring that the same code runs millions of times: a tiny logic error or unbounded position is a firm-ending event, which is why risk controls are sacred."
+    ]
+  },
+  "practice": {
+    "intro": "These are warm-up conceptual questions of the kind that open an HFT interview to check you actually understand the business — not just the buzzwords.",
+    "interviewQuestions": [
+      {
+        "id": "q-edge",
+        "q": "A market maker captures 0.3 cents of edge per share on average but trades 50 million shares a day in a name. A competitor is 2µs faster. Qualitatively, what happens to your edge and why?",
+        "tag": "Business",
+        "a": [
+          "The faster competitor wins the races that matter: they cancel stale quotes before getting picked off and they get filled first on newly attractive prices. You are left disproportionately with the 'toxic' fills — the ones that happen right before the price moves against you.",
+          "So your *average* edge per share shrinks (more adverse selection) even though the headline spread is unchanged. In the limit, your gross 0.3 cents can turn negative net of adverse selection and fees. This is exactly why firms spend enormously to shave microseconds — it's not vanity, it converts directly into realized edge."
+        ],
+        "followups": [
+          "How would you quantify 'adverse selection' from your fill data?",
+          "If you can't win the speed race, what non-speed levers could preserve edge (wider quotes, better signals, different venues)?"
+        ]
+      },
+      {
+        "id": "q-mm-vs-arb",
+        "q": "Contrast how a market-making strategy and a cross-venue arbitrage strategy make money. Which carries more inventory risk?",
+        "tag": "Strategy",
+        "a": [
+          "Market making earns the bid-ask spread by passively providing liquidity (posting resting orders) and getting filled by others; its risk is adverse selection and the inventory it accumulates while waiting to offset.",
+          "Cross-venue arbitrage earns a (near) riskless difference by simultaneously buying the cheaper venue and selling the dearer one when the same/related instrument is mispriced; ideally both legs fill near-instantly, so inventory risk is small but execution/legging risk (one leg fills, the other doesn't) is the danger.",
+          "Market making generally carries more sustained inventory risk because it holds positions while waiting for offsetting flow; arbitrage aims to be flat almost immediately, so its dominant risk is execution/legging rather than holding."
+        ]
+      },
+      {
+        "id": "q-myth",
+        "q": "Your friend says 'HFT is just predicting the market really fast.' Why is that mostly wrong?",
+        "tag": "Concept",
+        "a": [
+          "Most HFT strategies are agnostic to long-term direction. A market maker profits whether the price goes up or down, as long as it collects the spread and manages inventory. An arbitrageur profits from a relative mispricing, not a directional view.",
+          "Where prediction does appear, it's over extremely short horizons (microseconds to seconds) and is statistical, not a 'view' — e.g., 'given the current order-book imbalance, the next tick is slightly more likely to be up.' The business is harvesting microstructure and being fast/reliable, not forecasting tomorrow's close."
+        ]
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Trading and Exchanges: Market Microstructure for Practitioners", "by": "Larry Harris", "note": "The canonical, readable foundation for how markets actually work." },
+    { "title": "Flash Boys", "by": "Michael Lewis", "note": "Popular (and one-sided) but useful for the cultural context — read it critically." },
+    { "title": "Algorithmic and High-Frequency Trading", "by": "Cartea, Jaimungal & Penalva", "note": "The rigorous, math-forward reference once you want depth." }
+  ]
+}

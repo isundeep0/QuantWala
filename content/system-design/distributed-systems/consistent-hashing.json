@@ -1,0 +1,125 @@
+{
+  "slug": "consistent-hashing",
+  "sectionId": "distributed-systems",
+  "order": 3,
+  "title": "Consistent Hashing",
+  "tagline": "Distribute keys across nodes so that adding or removing a node moves as little data as possible.",
+  "summary": "The hash ring, virtual nodes, and why mod-N rehashing is bad.",
+  "difficulty": "Advanced",
+  "estMinutes": 15,
+  "tags": ["distributed", "must-know"],
+  "prereqs": ["partitioning-sharding"],
+  "sections": [
+    {
+      "id": "problem",
+      "title": "The problem it solves",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "When you spread keys across N nodes with `hash(key) % N`, the assignment depends on N. The moment N changes — you add a cache node, or one dies — almost every key maps somewhere new. For a cache, that means a near-total cache miss storm (everything has to be re-fetched). For a database, it means moving nearly all the data. Both are catastrophic.",
+            "**Consistent hashing** is a technique where adding or removing a node only remaps roughly **1/N of the keys** instead of nearly all of them. It's the backbone of distributed caches (Memcached clients), databases (DynamoDB, Cassandra), and load balancers."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ring",
+      "title": "The hash ring",
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Map a circle", "detail": "Imagine the hash output space (e.g., 0 to 2^32−1) bent into a ring/circle." },
+            { "title": "Place the nodes", "detail": "Hash each node (by name/IP) to a point on the ring." },
+            { "title": "Place the keys", "detail": "Hash each key to a point on the same ring." },
+            { "title": "Assign clockwise", "detail": "Each key belongs to the first node found going clockwise from the key's position." }
+          ]
+        },
+        {
+          "type": "text",
+          "paragraphs": [
+            "Now the magic: if a node is **removed**, only the keys that mapped to it shift to the *next* node clockwise — every other key stays put. If a node is **added**, it sits between two existing nodes and only steals the keys in that arc from its clockwise neighbor. Either way, roughly 1/N of keys move, not all of them."
+          ]
+        },
+        {
+          "type": "diagram",
+          "direction": "lr",
+          "caption": "Keys hash onto the ring and belong to the next node clockwise; adding/removing a node only affects one arc.",
+          "groups": [
+            { "label": "Hash key", "nodes": [{ "label": "key → point on ring", "icon": "Hash", "accent": "#0ea5e9" }] },
+            { "label": "Walk clockwise", "nodes": [{ "label": "Find next node →", "icon": "Repeat", "accent": "#f59e0b" }] },
+            { "label": "Owner", "nodes": [{ "label": "Assigned Node", "icon": "Server", "accent": "#10b981" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "virtual-nodes",
+      "title": "Virtual nodes (the crucial refinement)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Plain consistent hashing has a problem: with few nodes, their random positions on the ring are uneven, so some nodes own much larger arcs (and more keys/load) than others. Worse, when a node dies, *all* its load dumps onto a single neighbor.",
+            "The fix is **virtual nodes**: each physical node is placed at *many* points around the ring (e.g., 100–200 virtual positions). This smooths the distribution so each physical node owns many small arcs scattered around the ring. Now load is even, and when a node fails its arcs are redistributed across *many* remaining nodes instead of crushing one. Virtual nodes also let you weight bigger machines (give them more virtual positions)."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Always mention virtual nodes — naming consistent hashing without them is incomplete. The crisp line: 'Each physical node gets many virtual positions on the ring so load is balanced and a node's failure spreads across many peers, not one.'"
+        }
+      ]
+    },
+    {
+      "id": "uses",
+      "title": "Where it's used",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Distributed caches", "detail": "So adding/removing a cache server doesn't invalidate the whole cache — only ~1/N of keys remap." },
+            { "term": "Sharded databases", "detail": "DynamoDB, Cassandra, Riak use it (with virtual nodes) to assign data to nodes and rebalance cheaply when scaling." },
+            { "term": "Load balancers", "detail": "Route a given client/session consistently to the same backend for cache affinity, surviving backend changes gracefully." }
+          ]
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "mod-N hashing remaps ~all keys when N changes (cache-miss storm / full data move).",
+    "Consistent hashing: place nodes and keys on a hash ring; each key → first node clockwise.",
+    "Adding/removing a node only moves ~1/N of keys (just one arc), not everything.",
+    "Virtual nodes = each physical node at many ring positions → even load + failure spreads across many peers (and supports weighting).",
+    "Used by distributed caches, Cassandra/DynamoDB, and affinity load balancers."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "Walk through what happens to keys when a node is removed from a consistent-hashing ring, versus a mod-N scheme.",
+      "hint": "Which keys have to move in each case?",
+      "answer": [
+        "On the ring, each key is owned by the next node clockwise. When a node is removed, only the keys that were in *its* arc move — they shift to the next node clockwise. Every other key keeps the same owner, so roughly 1/N of keys move and the rest are undisturbed.",
+        "With `hash(key) % N`, removing a node changes N (e.g., 5→4), so `% N` changes for almost every key — nearly all keys are reassigned at once. For a cache this is a near-total miss storm; for a DB it's a near-total data migration. That's the whole reason consistent hashing exists."
+      ],
+      "keyPoints": ["Ring: only the removed node's arc moves to its clockwise neighbor (~1/N)", "Other keys unaffected", "mod-N: changing N remaps almost all keys", "Avoids cache-miss storm / full data reshuffle"],
+      "followUps": ["Without virtual nodes, what's the risk to the single neighbor that inherits the dead node's keys?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "What problem do virtual nodes solve, and how?",
+      "hint": "Think about uneven arcs and what happens on failure.",
+      "answer": [
+        "With few physical nodes placed at random ring positions, arc sizes are uneven, so some nodes own far more keys/load than others — and when a node dies, its entire load dumps onto its single clockwise neighbor, potentially overloading it.",
+        "Virtual nodes give each physical node many positions on the ring (say 100–200). This averages out the arc sizes for balanced load, and on failure the dead node's many small arcs get redistributed across many different physical nodes rather than one. As a bonus, you can assign more virtual nodes to more powerful machines to weight load. It turns a lumpy, fragile distribution into a smooth, resilient one."
+      ],
+      "keyPoints": ["Few nodes → uneven arcs → unbalanced load", "Failure dumps all load on one neighbor", "Virtual nodes = many positions per physical node → even load", "Failure spreads across many peers; enables weighting"],
+      "followUps": ["How many virtual nodes per physical node is reasonable, and what's the cost of more?"]
+    }
+  ]
+}

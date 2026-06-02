@@ -1,0 +1,125 @@
+{
+  "slug": "system-overview",
+  "sectionId": "architecture",
+  "order": 1,
+  "title": "The Tick-to-Trade Path",
+  "tagline": "The end-to-end pipeline from a packet on the wire to an order on the wire — and where every nanosecond goes.",
+  "level": "Intermediate",
+  "track": ["dev", "systems", "research"],
+  "estMinutes": 18,
+  "visualizer": "latency-ladder",
+  "concept": {
+    "analogy": "A trading system is a factory assembly line for decisions. Raw material (market-data packets) arrives at the loading dock (NIC), gets unpacked and labeled (feed handler), assembled into a current picture of the market (order book), inspected by the designer who decides what to build (strategy), quality-and-safety checked (risk), and shipped out the door (order gateway). 'Tick-to-trade' is the time from material arriving to product shipping — and like any line, it's only as fast as its slowest station and as reliable as its worst day.",
+    "paragraphs": [
+      "Every HFT system, however fancy, is the same pipeline: market data comes in, a decision is made, an order goes out. The 'tick-to-trade' latency is the wall-clock time from a market-data packet hitting your NIC to your resulting order leaving your NIC. The fastest firms measure this in nanoseconds and obsess over both its median and its tail.",
+      "The stages, in order: (1) Network in — the NIC receives exchange multicast/unicast, ideally via kernel bypass. (2) Feed handler — parse and sequence the raw protocol (ITCH/OUCH/FIX/proprietary), detect gaps, arbitrate A/B feeds. (3) Order book — apply each event to maintain the current book (top-of-book or full depth) so the strategy has an accurate market picture. (4) Strategy/signal — compute the trading decision (does this event trigger a quote/cancel/take?). (5) Order management — translate the decision into an exchange order, manage state, route it. (6) Risk — pre-trade checks (limits, fat-finger, kill switch) that must pass before anything is sent. (7) Network out — encode and send the order to the exchange.",
+      "Two cross-cutting concerns wrap the whole line. Determinism: each stage must be fast and, just as importantly, low-jitter (the earlier lessons on caches, lock-free queues, pinning, and kernel bypass all serve this). And observability/control: time synchronization to stamp every stage, latency histograms per hop, sequence/gap monitoring, position/PNL tracking, and the ability to flatten and halt instantly. The data path is hot and minimal; the control/monitoring path runs alongside, off the critical path.",
+      "Architecturally the hot path is a chain of lock-free handoffs between pinned threads (or a Disruptor): NIC→feed→book→strategy→OMS→risk→NIC, each stage doing the least work possible with no allocation, no locks, and no syscalls. Anything not strictly required to make and send the decision (logging, analytics, recovery, config) is pushed to side threads. Understanding this map — and which stage owns which latency — is the foundation for everything else in this section."
+    ],
+    "points": [
+      "Tick-to-trade = NIC-in → feed handler → order book → strategy → OMS → risk → NIC-out.",
+      "Measured in nanoseconds; both median and tail (jitter) matter.",
+      "Hot path = lock-free handoffs between pinned threads (or a Disruptor), doing minimal work.",
+      "Cross-cutting: determinism (caches/pinning/bypass) and observability/control (timestamps, histograms, kill switch).",
+      "Everything non-essential to the decision (logging, recovery, config) lives off the critical path."
+    ],
+    "callouts": [
+      { "type": "tip", "title": "Know your latency budget", "body": "Assign a nanosecond budget per stage (e.g., parse 50 ns, book update 50 ns, strategy 100 ns, risk 30 ns, encode+send 100 ns) and measure each hop. Optimization should follow the budget, not guesses." },
+      { "type": "info", "title": "Software vs hardware split", "body": "In the fastest shops, the simplest, hottest stages (parse, top-of-book, risk gate, fire pre-armed order) live in an FPGA on the NIC, while complex strategy/OMS logic stays in software — but the logical pipeline is identical." }
+    ],
+    "keyIdea": "Every trading system is one pipeline — NIC → feed handler → order book → strategy → OMS → risk → NIC — built as lock-free handoffs between pinned threads, doing minimal work per stage, with timing/risk/control running off the hot path. Master the map and the per-stage latency budget, and the rest of the architecture follows."
+  },
+  "deepDive": {
+    "intro": "Each stage's job, its latency budget, and how the stages connect without locks or allocation.",
+    "steps": [
+      {
+        "title": "Network in (kernel bypass)",
+        "detail": "The NIC delivers exchange packets. Using DPDK/Onload/AF_XDP, frames land in user-space memory and a pinned, isolated core busy-polls them — no interrupts, copies, or syscalls. This stage also hardware-timestamps arrival (PTP/PHC) so you can measure wire-to-wire latency downstream."
+      },
+      {
+        "title": "Feed handler",
+        "detail": "Parse the exchange's binary protocol (ITCH-style add/modify/delete, or FIX/FAST), validate, and sequence: track per-channel sequence numbers, detect gaps, arbitrate redundant A/B feeds (take first copy), and trigger snapshot/retransmit recovery on loss. Output: a normalized stream of book events. Budget: tens of ns; must be branch-light and allocation-free."
+      },
+      {
+        "title": "Order book",
+        "detail": "Apply each event to maintain the current market. Top-of-book is cheap; full-depth books use price-level arrays/intrusive structures optimized for the common add/cancel-at-level operations (covered next lesson). The strategy reads the book; correctness here (matching the exchange exactly) is as important as speed."
+      },
+      {
+        "title": "Strategy / signal",
+        "detail": "On each relevant update, compute the decision: should we quote, re-quote, cancel, or take? This is where alpha lives — microprice, imbalance, signals — but on the hot path it must reduce to a fast, branch-predictable computation. Heavy research/model work is precomputed or runs on a side thread that feeds parameters in."
+      },
+      {
+        "title": "OMS, risk, and network out",
+        "detail": "The Order Management System turns the decision into an exchange order, tracks its lifecycle (new/ack/fill/cancel), and routes it (possibly across venues — smart order routing). Before anything is sent, pre-trade risk gates it (size/price/notional limits, position limits, rate limits, kill switch). Then encode the order in the exchange's protocol and send via the bypass path. Budget: tens to low hundreds of ns."
+      },
+      {
+        "title": "Connecting the stages",
+        "detail": "Stages run as pinned threads connected by lock-free SPSC rings (or one Disruptor with a consumer DAG). No stage allocates, locks, or syscalls on the hot path. Side threads handle logging (via a ring), recovery, analytics, and config — so the critical chain stays minimal and deterministic."
+      }
+    ],
+    "notes": [
+      { "title": "Correctness gates speed", "detail": "A faster system that books incorrectly, mis-sequences, or skips a risk check is worse than useless — it loses money fast. Build correct, deterministic stages first, then optimize within that envelope." },
+      { "title": "The control plane", "detail": "Alongside the data plane sits a control plane: start/stop, parameter updates, kill switch, position/PNL, and monitoring. It must be able to halt and flatten instantly, but it never sits in the hot path." },
+      { "title": "Colocation and the wire", "detail": "Much of tick-to-trade is outside your code: cross-connect, switch, and NIC latency. Firms colocate next to the matching engine and minimize hops because the wire is part of the budget." }
+    ],
+    "complexity": {
+      "time": "~hundreds of ns end-to-end (software)",
+      "timeReason": "Sum of per-stage budgets plus NIC/switch latency; FPGA fast paths push the simplest version to tens of ns. The tail is governed by the determinism techniques applied to each stage.",
+      "space": "Pre-allocated, bounded",
+      "spaceReason": "Books, queues, and order state are pre-sized; no hot-path allocation. Memory is laid out for cache locality and NUMA-local to the owning core."
+    },
+    "pitfalls": [
+      "Putting logging, allocation, or locks anywhere on the hot path instead of off-loading to side threads.",
+      "Optimizing one stage while another (often the wire or the OMS) dominates the budget — measure per hop first.",
+      "Skipping or weakening pre-trade risk to save latency — a recipe for catastrophic loss.",
+      "An order book that doesn't exactly mirror the exchange's matching, so the strategy trades on a wrong picture.",
+      "No per-stage timestamps, so you can't tell where latency or jitter actually comes from."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-stages",
+        "q": "Walk me through the tick-to-trade path. What happens from a market-data packet arriving to your order leaving?",
+        "tag": "Architecture",
+        "a": [
+          "The NIC receives the exchange packet (ideally via kernel bypass, hardware-timestamped). The feed handler parses and sequences the protocol — detecting gaps, arbitrating A/B feeds, recovering via snapshots if needed — and emits normalized book events. The order book applies each event to maintain the current market picture. The strategy reads the book and decides whether to quote/cancel/take, computing its signal. The OMS turns that decision into an exchange order and manages its lifecycle and routing. Pre-trade risk gates it (size/price/notional/position/rate limits and the kill switch). Finally the order is encoded and sent back out the NIC.",
+          "Across all of it, stages are pinned threads connected by lock-free rings (or a Disruptor), doing minimal allocation-free, lock-free, syscall-free work for determinism, while logging/recovery/analytics/config run off the hot path. The whole chain is hundreds of nanoseconds in software (tens with FPGA fast paths), and you care about both its median and its tail."
+        ],
+        "followups": ["Which stage would you move to hardware first?", "Where do you put logging so it doesn't hurt latency?"]
+      },
+      {
+        "id": "q-budget",
+        "q": "How would you find and reduce tick-to-trade latency in an existing system?",
+        "tag": "Architecture",
+        "a": [
+          "First, measure per-stage: hardware-timestamp ingress on the NIC, then take cheap rdtsc timestamps at each hop (feed, book, strategy, OMS, risk, send) and record them into per-stage latency histograms (p50/p99/p99.9). This tells you which stage owns the latency and the jitter rather than guessing.",
+          "Then attack the biggest contributor with the right tool: kernel bypass and busy-poll for network-in; allocation-free, branch-light parsing for the feed handler; cache-friendly book layout; branchless/predictable strategy math; lean OMS encoding. Reduce jitter with pinning/isolation, pre-faulting+mlock, huge pages, and removing locks/allocations from the path. Re-measure after each change (one variable at a time), and remember the wire (cross-connect/switch/NIC) is part of the budget — sometimes the win is colocation or fewer hops, not code."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-budget",
+        "title": "Draw the pipeline and assign a latency budget",
+        "difficulty": "Intermediate",
+        "statement": "For a single-venue market-making system, draw the tick-to-trade pipeline as a sequence of stages connected by queues. Assign a plausible nanosecond budget to each stage summing to a target, state which thread/core each stage runs on, where the lock-free handoffs are, and where logging and recovery live. Identify the two stages you'd optimize first and why.",
+        "hint": "NIC→feed→book→strategy→OMS→risk→NIC; pinned threads + SPSC rings; logging off-path; measure to choose.",
+        "tests": "Systems decomposition and budgeting.",
+        "solution": {
+          "approach": [
+            "Pipeline: NIC-in (kernel bypass) → feed handler → order book → strategy → OMS → pre-trade risk → NIC-out. Connect adjacent stages with lock-free SPSC rings (release/acquire, padded indices), or run the whole thing as one Disruptor with a consumer DAG. Run the feed handler on one pinned, isolated core (busy-polling the NIC), and strategy+OMS+risk on another (or split across a couple of pinned cores), each NUMA-local to its memory.",
+            "Example budget toward ~400 ns of software path: parse/sequence 60 ns, book update 50 ns, strategy/signal 120 ns, OMS encode + state 90 ns, risk gate 30 ns, send 50 ns — plus NIC/switch latency outside the software budget. Logging is a side thread fed by a ring (binary records, formatted off-path); feed recovery (snapshot/retransmit) and analytics/config also run on non-pinned side threads so they never touch the hot chain.",
+            "Optimize first the two stages your histograms show dominate — commonly (a) the strategy/signal if the math is heavy or branchy (make it branch-predictable/precomputed), and (b) network-in/out if you're still on kernel sockets (switch to bypass+busy-poll). But the data decides: instrument per stage and target the biggest median+tail contributor, then re-measure."
+          ],
+          "complexity": { "time": "Target ~hundreds of ns, budgeted per stage", "space": "Pre-allocated books/rings/order state" }
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Developing High-Frequency Trading Systems", "by": "Donadio, Ghosh, Rossier", "note": "End-to-end build of a trading system: feed, book, strategy, OMS, risk." },
+    { "title": "QuantCup / open-source matching-engine & feed-handler projects", "note": "Real code to study the stages and their interfaces." },
+    { "title": "Exchange protocol specs (Nasdaq ITCH/OUCH, CME MDP)", "note": "What the feed handler and OMS actually parse and produce." }
+  ]
+}

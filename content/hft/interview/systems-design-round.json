@@ -1,0 +1,129 @@
+{
+  "slug": "systems-design-round",
+  "sectionId": "interview",
+  "order": 3,
+  "title": "The Systems-Design Round",
+  "tagline": "'Design a low-latency X.' A repeatable framework to architect a trading component out loud — correct, fast, and defensible.",
+  "level": "Advanced",
+  "track": ["dev", "systems"],
+  "estMinutes": 20,
+  "concept": {
+    "analogy": "A systems-design round is like being asked to design a kitchen for a specific restaurant, not to cook a dish. The interviewer cares less about the exact recipe and more about whether you ask what's on the menu (requirements), lay out the stations sensibly (architecture), know which station is the bottleneck at dinner rush (latency budget), and have a plan for when the fryer catches fire (failure handling). A structured walkthrough beats a brilliant but unstructured brain-dump.",
+    "paragraphs": [
+      "Unlike a generic web-systems-design interview (load balancers, databases, sharding), the HFT systems-design round centers on the trading domain and on latency/determinism: 'design a feed handler', 'design a low-latency order book', 'design an SPSC queue / a market-data distribution system', 'design the order path with risk', or 'design a backtester that matches live'. The components are exactly the Architecture section of this module; the round tests whether you can assemble and defend them under questioning.",
+      "What's being graded: do you clarify requirements before designing? Do you choose data structures and concurrency primitives with reasons tied to access patterns and the memory model? Do you reason quantitatively about latency (a per-stage budget, p50 vs p99/p99.9) rather than hand-waving 'it's fast'? Do you handle correctness and failure (gaps, recovery, races, risk, kill switch)? And do you make sensible trade-offs (latency vs throughput, complexity vs flexibility, software vs FPGA) and articulate them? Communication and structure are as important as the final design.",
+      "A repeatable framework keeps you on track: (1) Clarify — scope, throughput/burst rates, single vs multi producer/consumer, latency target, instruments/venues, and what 'done' means. (2) Sketch the high-level pipeline — the stages and the data flow between them. (3) Drill into each component — data structures, concurrency, memory ordering, allocation strategy, with reasons. (4) Latency budget — assign per-stage nanosecond budgets and identify the bottleneck. (5) Correctness & failure — gaps/recovery, out-of-order, risk, kill switch, monitoring. (6) Trade-offs & extensions — alternatives you rejected and why, and how it scales (more venues, multi-producer, FPGA). Narrate throughout.",
+      "The biggest differentiators are quantitative reasoning and judgment. Saying 'I'll use a dense tick-indexed array of levels with an order-id→node map for O(1) updates because a std::map would cache-miss on every operation, and I'd target ~50 ns per book update, measuring p99 with rdtsc into a histogram' is a hire-level answer. Saying 'I'll use a fast data structure and optimize it' is not. Tie every decision to a concrete cost, a number, or a failure you're preventing."
+    ],
+    "points": [
+      "HFT systems design is domain + latency focused: feed handler, order book, queue, order path + risk, backtester.",
+      "Graded on: clarifying requirements, reasoned data-structure/concurrency choices, quantitative latency reasoning, correctness/failure handling, and trade-offs.",
+      "Framework: Clarify → Pipeline sketch → Per-component drill → Latency budget → Correctness & failure → Trade-offs/extensions.",
+      "Differentiators: assign a per-stage ns budget, discuss p50 vs p99/p99.9, and tie every choice to a cost/number/failure.",
+      "Communicate and structure throughout — it's graded as much as the design."
+    ],
+    "callouts": [
+      { "type": "tip", "title": "Always start by clarifying", "body": "Before drawing anything, ask: throughput and burst rate? single or multiple producers/consumers? bounded? latency vs throughput priority? one venue or many? full depth or top-of-book? The right design depends entirely on these — and asking shows seniority." },
+      { "type": "warn", "title": "Don't forget failure & correctness", "body": "Candidates who only optimize latency and ignore gap recovery, out-of-order messages, risk gating, and the kill switch lose points. A fast system that's wrong or unsafe is a fail in trading." }
+    ],
+    "keyIdea": "Treat 'design a low-latency X' as a structured walkthrough: clarify requirements, sketch the pipeline, drill each component with reasoned data-structure/concurrency/memory choices, assign a per-stage latency budget and find the bottleneck, handle correctness and failure (gaps, races, risk, kill switch), and articulate trade-offs — tying every decision to a concrete cost, number, or prevented failure."
+  },
+  "deepDive": {
+    "intro": "The framework applied, with a worked example (design a feed handler) showing the level of specificity expected.",
+    "steps": [
+      {
+        "title": "Step 1 — Clarify requirements",
+        "detail": "Pin scope and constraints: which exchange/protocol and feed type (order-by-order vs aggregated)? message rate and worst-case burst (auction)? latency target and is it latency- or throughput-priority? full depth or top-of-book? redundant A/B feeds and snapshot channel available? how many downstream consumers? Restate the requirements you'll design to."
+      },
+      {
+        "title": "Step 2 — Sketch the pipeline",
+        "detail": "Draw the data flow: NIC (kernel bypass) → parser/sequencer → A/B arbitration → order book → normalized event ring → consumers (strategy, logger). State that stages are pinned threads connected by lock-free SPSC rings (or a Disruptor) and that non-critical work (logging, recovery, monitoring) runs off-path."
+      },
+      {
+        "title": "Step 3 — Drill each component",
+        "detail": "For the parser: zero-copy overlay on the buffer, fixed-offset reads, switch/jump-table dispatch, decode only needed fields into pre-allocated events — no allocation. For sequencing: expected-seq tracking, gap detection, A/B dedup. For the book: dense tick-indexed level array + order-id→node map + intrusive lists from a pool for O(1) ops. Justify each with the access pattern and the cost avoided (cache miss, allocation, indirection)."
+      },
+      {
+        "title": "Step 4 — Latency budget & bottleneck",
+        "detail": "Assign budgets: parse ~40 ns, sequence/arbitrate ~10 ns, book update ~50 ns, hand-off ~30 ns — plus NIC/switch outside software. Identify the likely bottleneck (often the book's id-map lookup cache miss, or the wire). Say how you'd measure: rdtsc per stage into histograms, report p50/p99/p99.9, attribute with perf."
+      },
+      {
+        "title": "Step 5 — Correctness, failure, trade-offs",
+        "detail": "Handle gaps (snapshot/retransmit while buffering live), out-of-order across A/B, startup snapshot, bursts (sized rings + batching + back-pressure), and signal 'stale' to consumers during recovery. Then discuss trade-offs and extensions: top-of-book vs full depth, software vs FPGA parse, single vs multi-consumer (Disruptor), and what changes for more venues. Conclude by naming the alternatives you rejected and why."
+      }
+    ],
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "design_notes.cpp — the artifacts you'd whiteboard",
+        "source": "// What you'd sketch for 'design a low-latency feed handler':\n//\n//  [NIC kernel-bypass, HW timestamp]\n//        |  busy-poll on pinned/isolated core\n//        v\n//  [Parser] zero-copy overlay, fixed-offset, switch dispatch, no alloc\n//        |\n//        v\n//  [Sequencer + A/B arbiter] expected-seq, gap detect, dedup-by-seq\n//        |\n//        v\n//  [Order book] dense tick array + id->node map + pooled intrusive lists (O(1))\n//        |  SPSC ring (release/acquire, padded indices)\n//        v\n//  [Strategy]                 [Logger / Recovery / Monitor]  <- off hot path\n//\n// Budget (software): parse 40ns | seq 10ns | book 50ns | handoff 30ns  (+ wire)\n// Recovery: gap -> snapshot/retransmit, buffer live, mark 'stale', replay\n// Measure: rdtsc per stage -> HdrHistogram -> p50/p99/p99.9; perf for misses"
+      }
+    ],
+    "notes": [
+      { "title": "Whiteboard the pipeline first", "detail": "A clear box-and-arrow diagram of the stages and queues anchors the whole conversation and lets the interviewer steer you to the part they want to probe." },
+      { "title": "It's a dialogue", "detail": "Check in ('does this match what you had in mind? want me to go deeper on the book or the recovery?'). Designing with the interviewer, not at them, scores better and surfaces what they care about." },
+      { "title": "Know your numbers", "detail": "Have ballpark latencies memorized (L1 ~1ns, DRAM ~80ns, kernel recv ~µs, SPSC handoff ~tens ns) so your budget is credible. The Systems lessons give you these." }
+    ],
+    "complexity": {
+      "time": "Framework-driven, ~30–45 min round",
+      "timeReason": "The skill is structured reasoning and communication over a known component set, applied within the time of a typical onsite round.",
+      "space": "n/a",
+      "spaceReason": "This lesson teaches an interview approach, not an algorithm."
+    },
+    "pitfalls": [
+      "Designing before clarifying requirements (rate, producers/consumers, latency target, depth).",
+      "Hand-waving 'it's fast' instead of assigning a latency budget and naming the bottleneck.",
+      "Choosing data structures by habit, not by access pattern and concrete cost.",
+      "Ignoring correctness/failure: gaps, recovery, races, risk, kill switch, monitoring.",
+      "Monologuing without checking in or whiteboarding the pipeline."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-framework",
+        "q": "Design a low-latency market-data feed handler. Walk me through your design.",
+        "tag": "Architecture",
+        "a": [
+          "First I'd clarify: which exchange/protocol and is it order-by-order or aggregated; message rate and worst-case auction burst; latency vs throughput priority; full depth or top-of-book; are redundant A/B feeds and a snapshot channel available; and how many downstream consumers. I'll assume an ITCH-style order-by-order UDP multicast feed with A/B and snapshots, full depth, latency-priority, feeding a strategy plus a logger.",
+          "Pipeline: NIC via kernel bypass (busy-poll on a pinned, isolated, hardware-timestamping core) → zero-copy parser (overlay packed structs, fixed-offset reads, switch/jump-table dispatch, decode only needed fields into pre-allocated events, no allocation) → sequencer + A/B arbiter (track expected sequence, dedup by sequence taking the first copy, detect gaps) → order book (dense tick-indexed level array + order-id→node hash map + pooled intrusive lists for O(1) add/cancel/execute) → normalized events to consumers over a lock-free SPSC ring (release/acquire, padded indices). Logging, recovery, and monitoring run off the hot path.",
+          "Latency budget (software): ~40 ns parse, ~10 ns sequence/arbitrate, ~50 ns book update, ~30 ns hand-off, plus NIC/switch outside the budget; likely bottleneck is the id-map cache miss or the wire, which I'd confirm with rdtsc-per-stage histograms (p50/p99/p99.9) and perf. Correctness/failure: start from a snapshot, detect gaps and recover via retransmit/snapshot while buffering the live stream and marking state 'stale' so the strategy stops quoting until re-synced; size rings for bursts with batching and back-pressure. Trade-offs/extensions: top-of-book vs full depth, software vs FPGA parsing, and a Disruptor if I need to multicast to several consumers with dependencies."
+        ],
+        "followups": ["Where's the bottleneck and how would you measure it?", "How do you handle a sequence gap mid-session?"]
+      },
+      {
+        "id": "q-grade",
+        "q": "What separates a strong systems-design answer from a weak one in an HFT interview?",
+        "tag": "Architecture",
+        "a": [
+          "A strong answer is structured and quantitative: it clarifies requirements first, sketches the pipeline, drills each component with data-structure and concurrency choices justified by access patterns and the memory model, assigns a per-stage latency budget and identifies the bottleneck, and explicitly handles correctness and failure (gaps/recovery, races, risk, kill switch, monitoring) plus trade-offs and extensions. Every decision is tied to a concrete cost, number, or prevented failure, and it's communicated as a dialogue with the interviewer.",
+          "A weak answer designs before clarifying, hand-waves 'it's fast' without budgets or measurement, picks structures by habit rather than reason, ignores failure/correctness and safety, and either monologues or jumps straight to micro-optimizations. The skill being graded is principled, measurable reasoning and clear communication — not recalling a single 'right' architecture."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-design",
+        "title": "Design a low-latency order-entry path with risk",
+        "difficulty": "Advanced",
+        "statement": "In a mock systems-design round, design the order-entry path from a strategy decision to an acknowledged order at the exchange, including pre-trade risk and a kill switch. Apply the full framework: clarify, pipeline, per-component choices, latency budget, correctness/failure, and trade-offs. Be specific about data structures, concurrency, the session protocol, and what you'd measure.",
+        "hint": "Strategy → OMS (state machine, idempotent clids) → pre-trade risk (fail-closed) → encode → bypass session → exchange; handle acks/fills/rejects/races; kill switch; budget + measure.",
+        "tests": "Full systems-design framework on the order path.",
+        "solution": {
+          "approach": [
+            "Clarify: how many venues; protocol (FIX/OUCH/binary) and transport (TCP/bypass); order rate and exchange message limits; latency target; which risk limits apply; is cancel-on-disconnect available. Assume single venue, binary order entry over a kernel-bypass TCP stack (Onload/TCPDirect), latency-priority.",
+            "Pipeline: Strategy emits an action over an SPSC ring → OMS turns it into an order with a unique client order id and a precise lifecycle state machine (PendingNew→Working→Partial/Filled/Cancelled/Rejected), maintaining the working-order table and true position → Pre-trade risk gates it (size, notional, price collar, position/exposure, rate limits, self-trade), fail-closed, in ~tens of ns using its own reconciled counters → encoder builds the wire message (zero-copy into a pre-allocated buffer) → bypass session sends it; inbound acks/fills/rejects come back over the session and update the OMS, with drop-copy reconciliation. A kill switch (manual + auto-tripwires) can instantly halt sends, mass-cancel, and flatten.",
+            "Per-component choices with reasons: OMS working-order table = pre-sized open-addressing map keyed by client order id (O(1), no tree pointer-chasing); idempotency via unique clids and status-query-on-timeout (never blind resend) to avoid duplicate live orders; risk counters maintained incrementally and reconciled, independent of the strategy; encoder allocation-free with fixed-offset writes. Concurrency: single-threaded OMS+risk on a pinned core fed by the strategy ring, so no locks and reproducible behavior.",
+            "Latency budget: OMS encode+state ~80 ns, risk ~30 ns, send ~50 ns, plus wire round-trip (the dominant term) — measured with rdtsc per stage and NIC hardware timestamps for wire-to-wire, reporting p50/p99/p99.9. Correctness/failure: handle fill-before-ack, cancel-reject-because-filled, out-of-order/duplicate executions (dedupe by exec id), session gap fill/resync, crash recovery from a durable order log + exchange status, and rate-limit throttling. Trade-offs/extensions: software vs FPGA risk gate; single venue vs smart order routing across venues (parent/child orders); how the kill switch interacts with cancel-on-disconnect. Conclude with rejected alternatives (e.g., std::map for orders, blind resend) and why."
+          ],
+          "complexity": { "time": "~tens-hundreds of ns software + wire RTT", "space": "Working-order map + risk counters + durable log" }
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "This module's Architecture section", "note": "Feed handler, order book, strategy engine, OMS, risk — the exact components these rounds ask you to design." },
+    { "title": "Developing High-Frequency Trading Systems", "by": "Donadio et al.", "note": "End-to-end system design to draw on for the round." },
+    { "title": "CppCon low-latency design talks", "note": "How practitioners reason about latency budgets and trade-offs out loud." }
+  ]
+}

@@ -1,0 +1,213 @@
+{
+  "slug": "scaling-from-zero-to-millions",
+  "sectionId": "start-here",
+  "order": 2,
+  "title": "Scaling From Zero to Millions of Users",
+  "tagline": "Watch one app grow from a single server to a global system — and meet every building block on the way.",
+  "summary": "The whole module in one story: how an app evolves as users grow.",
+  "difficulty": "Beginner",
+  "estMinutes": 22,
+  "tags": ["start-here", "architecture", "scaling"],
+  "prereqs": ["how-system-design-interviews-work"],
+  "sections": [
+    {
+      "id": "why",
+      "title": "Why tell it as a story",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Every component you'll study in this module — load balancers, caches, replicas, queues, CDNs — exists to solve a *specific pain* that appears at a *specific scale*. The fastest way to truly understand them is to watch a single app grow and feel each pain as it arrives.",
+            "So we'll start with the simplest possible setup: one server, one user. Then we'll add users until things break, fix the break with one new idea, and repeat. By the end you'll have met the whole toolbox and — more importantly — you'll know *when* and *why* to reach for each tool. That 'why' is exactly what interviews reward."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "text": "Don't memorise this as a checklist to dump in interviews. The lesson is the *reasoning*: identify the bottleneck, then introduce the minimum component that removes it. Over-engineering early is itself a red flag."
+        }
+      ]
+    },
+    {
+      "id": "single-server",
+      "title": "Stage 1 — A single server",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Day one: your web app, your database, and your files all live on **one machine**. A user's browser does a DNS lookup to get the server's IP, sends an HTTP request, and the server runs your app code, talks to the local database, and returns HTML or JSON. This is perfect — it's cheap, simple, and easy to debug. Most products should start exactly here."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "Everything on one box. Simple and correct — until it isn't.",
+          "groups": [
+            { "label": "User", "nodes": [{ "label": "Browser / App", "icon": "Smartphone", "accent": "#0ea5e9" }] },
+            { "label": "DNS", "nodes": [{ "label": "DNS", "sub": "name → IP", "icon": "Globe", "accent": "#8b5cf6" }] },
+            { "label": "Server", "nodes": [{ "label": "Web + App + DB", "sub": "one machine", "icon": "Server", "accent": "#d97706" }] }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "The pain",
+          "text": "As users grow, this one box runs out of CPU, memory, and connections. Worse: if it dies, the *entire* product is down. One machine is a single point of failure."
+        }
+      ]
+    },
+    {
+      "id": "split-and-scale",
+      "title": "Stage 2 — Split tiers & scale out",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "First fix: **separate the database onto its own server**. The web tier and data tier now scale independently — you can give the database a big-memory machine and the web tier cheap CPU boxes. This is the classic *two-tier* split.",
+            "Next, the web server itself is overloaded. You have two options. **Vertical scaling** (scale up): buy a bigger machine — more CPU/RAM. It's simple but has a hard ceiling and still a single point of failure. **Horizontal scaling** (scale out): run *many* identical web servers behind a **load balancer** that spreads incoming requests across them. This is how real systems scale, because it has effectively no ceiling and removes the single point of failure."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "A load balancer fronts a pool of stateless web servers; the database is its own tier.",
+          "groups": [
+            { "label": "Users", "nodes": [{ "label": "Clients", "icon": "Users", "accent": "#0ea5e9" }] },
+            { "label": "Entry", "nodes": [{ "label": "Load Balancer", "sub": "spreads traffic", "icon": "Scale", "accent": "#ef4444" }] },
+            { "label": "Web tier", "nodes": [{ "label": "Web Server 1", "icon": "Server", "accent": "#d97706" }, { "label": "Web Server 2", "icon": "Server", "accent": "#d97706" }, { "label": "Web Server N", "icon": "Server", "accent": "#d97706" }] },
+            { "label": "Data", "nodes": [{ "label": "Database", "icon": "Database", "accent": "#10b981" }] }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "The key enabler: stateless web servers",
+          "text": "Horizontal scaling only works if any server can handle any request. So we keep web servers **stateless** — no user session stored on the box. Session/state goes to a shared store (a cache or database). Now we can add or remove servers freely, and one dying just means the load balancer routes around it."
+        }
+      ]
+    },
+    {
+      "id": "database-scaling",
+      "title": "Stage 3 — The database becomes the bottleneck",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Now the web tier scales, but everyone hammers one database. Reads usually dominate (most apps are ~10:1 read:write or more), so we add **replication**: one *primary* (leader) takes writes and copies them to several *replicas* (followers) that serve reads. Read throughput now scales with replica count, and a replica can be promoted if the primary fails.",
+            "We also notice the same expensive queries run over and over. So we add a **cache** (like Redis) in front of the database: check the cache first, and only hit the DB on a miss. A cache hit is a sub-millisecond memory lookup instead of a heavier disk query, slashing latency and DB load.",
+            "Eventually even writes or total data outgrow one machine. Then we **shard** (partition): split the data across multiple databases by a key (e.g., user_id). Each shard holds a slice of the data, so writes and storage scale horizontally too — at the cost of much more complexity (cross-shard queries, rebalancing, hot shards)."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "Cache absorbs hot reads; primary/replica splits writes from reads; sharding splits the data itself.",
+          "groups": [
+            { "label": "Web tier", "nodes": [{ "label": "Web Servers", "icon": "Server", "accent": "#d97706" }] },
+            { "label": "Cache", "nodes": [{ "label": "Redis Cache", "sub": "hot data, fast reads", "icon": "Zap", "accent": "#f59e0b" }] },
+            { "label": "Primary", "nodes": [{ "label": "DB Primary", "sub": "all writes", "icon": "Database", "accent": "#10b981" }] },
+            { "label": "Replicas", "nodes": [{ "label": "Read Replica 1", "icon": "Database", "accent": "#10b981" }, { "label": "Read Replica 2", "icon": "Database", "accent": "#10b981" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "global",
+      "title": "Stage 4 — Going global & getting resilient",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Users are now worldwide, and someone in Sydney waits 300 ms just for packets to cross the planet to your US data center. Two fixes. A **CDN** caches static assets (images, video, JS/CSS) at edge locations physically near users, so most bytes never travel far. And you deploy to **multiple data centers / regions**, with DNS or a global load balancer routing each user to the nearest healthy one — which also means surviving an entire region going down.",
+            "As features multiply, the single codebase (the *monolith*) gets hard to ship. Teams split it into **microservices** that communicate over the network, deploy independently, and scale separately. To decouple them and absorb spikes, you put **message queues** between services: the producer drops a job on the queue and moves on; consumers process asynchronously at their own pace. Email, image processing, and notifications are classic async jobs.",
+            "Finally, you can't operate what you can't see, so you add **observability** — metrics, logs, and distributed tracing — plus autoscaling that adds/removes servers based on load."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "The mature shape: CDN at the edge, gateway + LB, stateless services, cache, replicated/sharded data, and a queue for async work.",
+          "groups": [
+            { "label": "Edge", "nodes": [{ "label": "CDN", "sub": "static assets", "icon": "Cloud", "accent": "#8b5cf6" }] },
+            { "label": "Entry", "nodes": [{ "label": "API Gateway + LB", "icon": "Scale", "accent": "#ef4444" }] },
+            { "label": "Services", "nodes": [{ "label": "User Service", "icon": "Server", "accent": "#d97706" }, { "label": "Feed Service", "icon": "Server", "accent": "#d97706" }, { "label": "Media Service", "icon": "Server", "accent": "#d97706" }] },
+            { "label": "Async", "nodes": [{ "label": "Message Queue", "sub": "decouple + buffer", "icon": "Inbox", "accent": "#0ea5e9" }, { "label": "Workers", "icon": "Cpu", "accent": "#0ea5e9" }] },
+            { "label": "Data", "nodes": [{ "label": "Cache", "icon": "Zap", "accent": "#f59e0b" }, { "label": "Sharded DB", "icon": "Database", "accent": "#10b981" }] }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "This evolution *is* the answer to the popular question \"How would you scale a system from 0 to millions of users?\" Walk the interviewer through the stages, naming the bottleneck that motivates each new component. That structure alone reads as senior."
+        }
+      ]
+    },
+    {
+      "id": "recap",
+      "title": "The toolbox, recapped",
+      "blocks": [
+        {
+          "type": "compare",
+          "columns": ["When it hurts", "The fix", "What it buys you"],
+          "rows": [
+            ["One box, growing load", "Split DB onto its own tier", "Independent scaling of app vs data"],
+            ["Web tier overloaded / SPOF", "Load balancer + many stateless servers", "Horizontal scale, no single point of failure"],
+            ["Read-heavy DB", "Replication (primary + read replicas)", "Read throughput + failover"],
+            ["Repeated hot reads", "Cache (Redis/Memcached)", "Sub-ms reads, less DB load"],
+            ["Data/writes outgrow one DB", "Sharding / partitioning", "Horizontal write + storage scale"],
+            ["Far-away users, heavy assets", "CDN + multi-region", "Low latency globally + DR"],
+            ["Services tangled, spiky load", "Microservices + message queues", "Independent deploys, async buffering"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Don't skip stages in an interview",
+          "text": "Introducing sharding and 5 microservices for a hobby app with 100 users is over-engineering — and interviewers notice. Always tie a component to the scale/requirement that justifies it."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Start simple (one server); add a component only when a real bottleneck appears.",
+    "Vertical scaling = bigger box (simple, capped, SPOF); horizontal = more boxes behind a load balancer (the real answer).",
+    "Horizontal scaling requires **stateless** servers — push session/state to a shared cache or DB.",
+    "Reads dominate → replication + caching; writes/data outgrow one box → sharding.",
+    "Go global with a CDN at the edge + multi-region; decouple services with message queues for async work.",
+    "Always justify each component by the bottleneck it removes — over-engineering early is a red flag."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "Why must web servers be *stateless* before you can scale horizontally behind a load balancer?",
+      "hint": "What happens to a logged-in user if their second request lands on a different server than their first?",
+      "answer": [
+        "A load balancer can send each request to any server in the pool. If a server stores user state locally (e.g., a login session in memory), then a follow-up request routed to a *different* server won't find that state — the user appears logged out, their cart is empty, etc.",
+        "By keeping servers stateless and moving shared state to an external store (a Redis session cache or the database), every server can serve every request identically. This lets you add, remove, or restart servers freely and route around failures — the whole point of horizontal scaling."
+      ],
+      "keyPoints": [
+        "LB may route consecutive requests to different servers",
+        "Local state breaks under that routing",
+        "Externalise state to a shared cache/DB",
+        "Enables free add/remove of servers and failover"
+      ],
+      "followUps": ["What's the downside of 'sticky sessions' as an alternative?", "Where exactly would you store session data and why?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Trade-off",
+      "difficulty": "Medium",
+      "prompt": "Your read-heavy app's database is overloaded. Compare adding read replicas vs adding a cache. Which first?",
+      "hint": "Think about latency, cost, and what each one actually offloads.",
+      "answer": [
+        "A **cache** typically comes first for hot reads: it's cheap, gives sub-millisecond hits from memory, and absorbs the most-requested keys, dramatically cutting DB load and tail latency. The cost is added complexity (invalidation, staleness) and it only helps for repeatedly-read data.",
+        "**Read replicas** scale *all* reads (not just hot ones) and add failover, but each replica is a full database (more expensive) and introduces replication lag, so reads can be slightly stale. In practice you use both: cache for the hottest keys, replicas to spread the remaining read load and provide redundancy. Start with the cache if traffic is skewed toward popular items; add replicas as steady read volume grows."
+      ],
+      "keyPoints": [
+        "Cache: cheap, sub-ms, only helps hot/repeated reads, needs invalidation",
+        "Replicas: scale all reads + failover, costlier, replication lag",
+        "Real systems use both; pick based on access skew",
+        "Both introduce staleness/consistency trade-offs"
+      ],
+      "followUps": ["How do you keep the cache consistent with the DB on writes?", "What is replication lag and when does it bite users?"]
+    }
+  ]
+}

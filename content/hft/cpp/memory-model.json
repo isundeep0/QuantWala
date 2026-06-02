@@ -1,0 +1,101 @@
+{
+  "slug": "memory-model",
+  "sectionId": "cpp",
+  "order": 5,
+  "title": "The C++ Memory Model & Atomics",
+  "tagline": "What 'happens-before' really means — the rules that make lock-free code correct across CPU cores.",
+  "level": "Advanced",
+  "track": ["dev", "systems"],
+  "estMinutes": 22,
+  "concept": {
+    "analogy": "Two chefs work from a shared whiteboard but each keeps private sticky notes (CPU caches) and reorders their own tasks for efficiency (compiler/CPU reordering). If chef A writes 'sauce ready' on a sticky and only later copies it to the whiteboard, chef B might start plating before the sauce exists. Memory ordering is the agreed protocol — 'finish the sauce, THEN publish to the whiteboard; don't read the plate-up flag until you've checked the board' — that guarantees B never acts on data A hasn't actually published yet.",
+    "paragraphs": [
+      "Modern CPUs and compilers reorder memory operations for speed, and each core can observe memory in a different order without synchronization. The C++ memory model (since C++11) defines exactly when one thread is guaranteed to see another thread's writes, via the 'happens-before' relationship. Without establishing happens-before, concurrent access to shared data is a data race — undefined behavior.",
+      "std::atomic types provide race-free operations plus ordering guarantees controlled by a memory_order parameter. The main ones: relaxed (atomicity only, no ordering — just no torn reads/writes), acquire/release (the workhorse pair: a release store 'publishes' and a matching acquire load 'consumes', establishing happens-before so everything written before the release is visible after the acquire), and seq_cst (sequentially consistent — a single global order, the default, simplest to reason about but the most expensive).",
+      "The canonical pattern is publish/consume: a producer writes data, then does a release store to a flag/index; a consumer does an acquire load of that flag, and is then guaranteed to see the data. This acquire/release pairing is the exact mechanism behind the lock-free SPSC ring buffer (see the systems lesson) — the producer release-stores the head index, the consumer acquire-loads it.",
+      "You rarely need the full theory, but for dev/systems interviews you must be able to explain: what a data race is, why you need atomics (not just volatile — volatile is NOT for threading in C++), what acquire/release guarantee, and why seq_cst is correct-but-slower. Getting memory ordering wrong produces bugs that appear only under load, on certain hardware, intermittently — the worst kind."
+    ],
+    "points": [
+      "CPUs/compilers reorder memory ops; without synchronization, cores see different orders.",
+      "A data race (unsynchronized concurrent access with ≥1 write) is undefined behavior.",
+      "std::atomic gives race-free ops + ordering via memory_order; volatile is NOT a threading tool.",
+      "relaxed = atomicity only; acquire/release = publish/consume (establishes happens-before); seq_cst = global order, safest, slowest.",
+      "Publish/consume (release store + acquire load) is the basis of lock-free queues."
+    ],
+    "keyIdea": "The memory model defines when one thread sees another's writes via happens-before. Atomics with acquire/release let a producer publish data and a consumer safely consume it without locks — the foundation of all lock-free HFT data structures."
+  },
+  "deepDive": {
+    "intro": "The ordering levels and the one pattern you must know cold.",
+    "steps": [
+      {
+        "title": "Data races and why volatile won't save you",
+        "detail": "If two threads access the same memory, at least one writes, and there's no synchronization, it's a data race → undefined behavior (the optimizer may assume it can't happen and miscompile). volatile prevents the compiler from eliding/reordering accesses to that variable for the purposes of device I/O, but it provides NO atomicity and NO cross-thread ordering/visibility guarantees. Use std::atomic for threading; volatile is for memory-mapped hardware, not concurrency."
+      },
+      {
+        "title": "memory_order_relaxed",
+        "detail": "Guarantees the operation is atomic (no torn values) but imposes no ordering relative to other memory operations. Useful for counters/statistics where you only need a correct count, not ordering (e.g., an event counter incremented from many threads). Cheapest, but you can't use it to publish data to another thread."
+      },
+      {
+        "title": "acquire / release — the workhorse",
+        "detail": "A release store (memory_order_release) ensures all writes the thread did *before* it are visible to any thread that performs an acquire load (memory_order_acquire) of that same atomic and reads the released value. So: producer writes payload; producer.flag.store(true, release); consumer waits until flag.load(acquire)==true; now the payload is guaranteed visible. This pair establishes happens-before with minimal cost (often free or a cheap fence on x86)."
+      },
+      {
+        "title": "seq_cst (the default)",
+        "detail": "memory_order_seq_cst gives a single total order of all seq_cst operations that all threads agree on — the easiest to reason about and the default for atomics. It can require stronger fences (e.g., an mfence on x86 for stores), so it's the most expensive. Use it when in doubt for correctness, then relax to acquire/release on the measured hot path once you've reasoned it's safe."
+      },
+      {
+        "title": "Compare-and-swap and lock-free building blocks",
+        "detail": "atomic compare_exchange_weak/strong is the primitive behind lock-free stacks/queues: read a value, compute a new one, atomically swap only if it hasn't changed (else retry). The 'weak' form may fail spuriously (use in a loop); 'strong' won't. CAS loops, with the right ordering, build lock-free structures — but they're subtle (ABA problem, retries under contention)."
+      }
+    ],
+    "notes": [
+      {
+        "title": "x86 vs ARM",
+        "detail": "x86 has a relatively strong memory model (most loads/stores are already acquire/release-ish), so buggy ordering code often 'works' on x86 and then breaks on weakly-ordered ARM. Never rely on the hardware's strength — write to the C++ model's guarantees, so your code is correct everywhere and the compiler can optimize within the rules."
+      }
+    ],
+    "pitfalls": [
+      "Using volatile for inter-thread communication — it gives neither atomicity nor ordering in C++.",
+      "Assuming x86's strong ordering means you can skip atomics/ordering — it breaks on ARM and is UB anyway.",
+      "Mismatched acquire/release (e.g., releasing the data but loading the flag relaxed) — no happens-before, stale reads.",
+      "ABA problems in CAS loops (a value changes A→B→A and looks unchanged) — use tagged pointers/generation counts.",
+      "Reaching for seq_cst everywhere on the hot path when acquire/release suffices — unnecessary fences cost latency."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-acq-rel",
+        "q": "Explain acquire/release ordering with the producer/consumer publishing pattern. Why does it guarantee the consumer sees the data?",
+        "tag": "C++",
+        "a": [
+          "In the pattern, the producer writes the payload (ordinary writes), then performs a release store to a shared atomic flag/index: data is written, THEN `ready.store(true, memory_order_release)`. The consumer spins on `ready.load(memory_order_acquire)` and only proceeds when it reads true.",
+          "The guarantee: a release store synchronizes-with an acquire load that reads the stored value, establishing a happens-before relationship. That means every memory write the producer did *before* the release store is guaranteed visible to the consumer *after* its acquire load returns true. So the consumer can safely read the payload — it cannot observe the flag as set while still seeing stale/partial data. This is precisely why a lock-free SPSC queue is correct: the producer release-stores the head index after writing the slot, and the consumer acquire-loads head before reading it."
+        ],
+        "followups": ["Where exactly does the SPSC ring buffer use this?", "Why is acquire/release cheaper than seq_cst on x86?"]
+      },
+      {
+        "id": "q-volatile",
+        "q": "A candidate uses `volatile bool ready` to signal between two threads. What's wrong, and what should they use?",
+        "tag": "C++",
+        "a": [
+          "volatile is the wrong tool for threading in C++. It tells the compiler not to optimize away or reorder accesses *to that variable* (intended for memory-mapped hardware / signal handlers), but it provides no atomicity (a multi-byte access could tear, though bool is small) and — critically — no cross-thread ordering or visibility guarantees. The producer's writes to other data are not ordered or published relative to the volatile write, so the consumer can see `ready == true` while the protected data is still stale. It's a data race → undefined behavior.",
+          "Use std::atomic<bool> with proper ordering: the producer does `ready.store(true, std::memory_order_release)` after writing the data, and the consumer does `ready.load(std::memory_order_acquire)`. That establishes happens-before and guarantees the data is visible once the flag is seen as true. (Or use seq_cst for simplicity.) The fix is atomics + memory ordering, never volatile."
+        ]
+      },
+      {
+        "id": "q-relaxed",
+        "q": "When is memory_order_relaxed appropriate, and when is it dangerous?",
+        "tag": "C++",
+        "a": [
+          "relaxed gives atomicity (no torn reads/writes, and a consistent modification order for that single atomic) but no ordering relative to other memory operations. It's appropriate when you only care that the operation itself is atomic and don't use it to synchronize access to other data — e.g., incrementing a statistics/event counter from multiple threads where you just want a correct total, or a flag whose ordering relative to other data is irrelevant.",
+          "It's dangerous whenever you're using the atomic to *publish or guard other data*. If a producer writes a payload and then relaxed-stores a 'ready' flag, a consumer reading the flag relaxed has no guarantee the payload is visible — there's no happens-before, so it may read stale data. For any publish/consume or guarding scenario you need at least acquire/release. Rule of thumb: relaxed for independent counters; acquire/release (or seq_cst) for anything that protects or publishes other memory."
+        ]
+      }
+    ]
+  },
+  "resources": [
+    { "title": "C++ Concurrency in Action", "by": "Anthony Williams", "note": "The definitive, readable treatment of the C++ memory model and atomics." },
+    { "title": "Jeff Preshing's blog (acquire/release, lock-free)", "link": "https://preshing.com/", "note": "Outstanding intuition-building posts on memory ordering." }
+  ]
+}

@@ -1,0 +1,142 @@
+{
+  "slug": "unique-id-generator",
+  "sectionId": "case-studies",
+  "order": 2,
+  "title": "Design a Distributed Unique ID Generator (Snowflake)",
+  "tagline": "Generate billions of unique, roughly time-ordered 64-bit IDs per day across many machines — no coordination per ID.",
+  "summary": "Why not UUID/auto-increment; the Snowflake 64-bit layout.",
+  "difficulty": "Intermediate",
+  "estMinutes": 16,
+  "tags": ["case-study"],
+  "prereqs": ["back-of-the-envelope"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "We need IDs that are",
+          "items": [
+            { "term": "Unique", "detail": "Globally, across many servers and data centers, with no duplicates." },
+            { "term": "Roughly sortable by time", "detail": "Newer IDs > older IDs (useful for ordering feeds, pagination, and DB index locality)." },
+            { "term": "Numeric & compact", "detail": "Fit in 64 bits (a BIGINT), so they're small and fast to index/store." },
+            { "term": "High throughput, low latency", "detail": "Generate 10,000+ IDs/sec per node without coordinating with other nodes on each ID." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "naive",
+      "title": "2. Why the obvious options fall short",
+      "blocks": [
+        {
+          "type": "compare",
+          "columns": ["Approach", "Problem"],
+          "rows": [
+            ["DB auto-increment", "Single point of failure + write bottleneck; doesn't scale across DBs; sequential = guessable"],
+            ["UUID v4 (random 128-bit)", "Unique & decentralized, BUT 128 bits (big), not time-sortable, and random → terrible DB index locality (page splits)"],
+            ["Central 'ticket server'", "Single coordinator per ID = latency + SPOF unless made HA"],
+            ["Hashing", "Collisions; not ordered"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "UUIDs are fine when you just need uniqueness and don't care about ordering or size. But for IDs used as primary keys / sort keys at scale, their randomness hurts index performance and they're 2x the size. That's the gap Snowflake fills."
+        }
+      ]
+    },
+    {
+      "id": "snowflake",
+      "title": "3. The Snowflake approach",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Twitter's **Snowflake** composes a 64-bit ID from several parts, so each machine generates IDs locally with zero coordination, yet they're globally unique and time-ordered. A common layout:"
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["Bits", "Field", "Purpose"],
+          "rows": [
+            ["1", "Sign bit", "Always 0 (keep it positive)"],
+            ["41", "Timestamp (ms since a custom epoch)", "Gives ~69 years of millis and makes IDs time-ordered"],
+            ["10", "Machine / worker ID", "Up to 1,024 unique generators (data center + worker)"],
+            ["12", "Sequence number", "Up to 4,096 IDs per machine per millisecond"]
+          ],
+          "caption": "41 + 10 + 12 = 63 bits (+1 sign). Each machine: timestamp + its id + a per-ms counter → unique without talking to anyone."
+        },
+        {
+          "type": "text",
+          "paragraphs": [
+            "How a node generates one: take the current millisecond, append its assigned machine id, and append a sequence counter that increments within the same millisecond (resets each ms). 12 sequence bits → 4,096 IDs/ms/machine = ~4 million IDs/sec/machine. The leading timestamp makes IDs monotonically increasing over time, so sorting by ID ≈ sorting by creation time."
+          ]
+        },
+        {
+          "type": "code",
+          "title": "Sketch (Python)",
+          "codes": [
+            { "language": "python", "title": "snowflake.py", "source": "EPOCH = 1700000000000  # custom epoch (ms)\n\nclass Snowflake:\n    def __init__(self, machine_id):\n        self.machine_id = machine_id & 0x3FF   # 10 bits\n        self.seq = 0\n        self.last_ms = -1\n\n    def next_id(self):\n        ms = current_millis()\n        if ms == self.last_ms:\n            self.seq = (self.seq + 1) & 0xFFF   # 12 bits\n            if self.seq == 0:                    # overflow → wait next ms\n                ms = wait_next_millis(self.last_ms)\n        else:\n            self.seq = 0\n        self.last_ms = ms\n        return ((ms - EPOCH) << 22) | (self.machine_id << 12) | self.seq" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "edge-cases",
+      "title": "4. Edge cases & trade-offs",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Clock skew / NTP rollback", "detail": "If a machine's clock moves backward, you could generate a duplicate/out-of-order ID. Handle by refusing to generate until the clock catches up, or by waiting. This is the classic Snowflake gotcha." },
+            { "term": "Assigning machine IDs", "detail": "Each generator needs a unique worker id. Hand them out via a coordination service (ZooKeeper/etcd) or config; reusing an id breaks uniqueness." },
+            { "term": "Sequence overflow", "detail": "If a machine exhausts 4,096 IDs in one ms, it waits for the next millisecond — fine, since that's 4M/sec/machine." },
+            { "term": "Ordering is approximate", "detail": "IDs are time-ordered to the millisecond, but two IDs in the same ms from different machines aren't strictly ordered. 'Roughly sortable' is usually enough." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "The crisp summary: '64-bit ID = timestamp + machine id + per-ms sequence. Each node generates locally (no coordination), IDs are unique and time-sortable. Main risk is clock skew — guard against backward clock moves.' That's a complete answer to the common 'design a unique ID generator' question."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Need IDs that are globally unique, time-sortable, 64-bit, and generated locally without per-ID coordination.",
+    "Auto-increment = SPOF/bottleneck; UUIDv4 = unique but 128-bit, unordered, bad index locality.",
+    "Snowflake 64-bit = sign(1) + timestamp(41) + machine id(10) + sequence(12).",
+    "Each node: ms timestamp + its machine id + per-ms counter → ~4M IDs/sec/machine, time-ordered, no coordination.",
+    "Watch clock skew (refuse/wait on backward clock); assign unique machine ids via ZooKeeper/etcd."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Trade-off",
+      "difficulty": "Medium",
+      "prompt": "When is a UUID perfectly fine, and when does Snowflake-style ID become worth the extra complexity?",
+      "hint": "Think size, ordering, and how the ID is used in storage.",
+      "answer": [
+        "A UUID (v4) is perfectly fine when you just need a globally unique identifier generated anywhere with zero coordination and you don't care about ordering or size — e.g., request/trace ids, idempotency keys, opaque external references. It's the simplest correct choice there.",
+        "Snowflake becomes worth it when the ID is used as a **primary/sort key at scale** and you want time-ordering and compactness: 64-bit IDs index far better than random 128-bit UUIDs (random keys cause B-tree page splits and poor cache locality), and time-sortable IDs let you order/paginate feeds by ID directly. So: UUID for opaque uniqueness; Snowflake when storage performance and ordering matter."
+      ],
+      "keyPoints": ["UUID: simplest, fine for opaque uniqueness without ordering/size concerns", "Snowflake: 64-bit, time-ordered, better index locality for PKs at scale", "Random UUID PKs hurt B-tree/index performance", "Choose based on whether ordering + storage cost matter"],
+      "followUps": ["Why specifically does a random primary key hurt a B-tree index?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Hard",
+      "prompt": "A Snowflake node's clock is corrected backward by NTP. Why is this dangerous and how do you handle it?",
+      "hint": "The timestamp is the high bits of the ID.",
+      "answer": [
+        "The timestamp forms the high-order bits of the ID. If the clock jumps backward, the node could regenerate timestamps it already used, and combined with the sequence counter that risks producing a **duplicate ID** (or at least an out-of-order one that violates the time-sortable guarantee).",
+        "Handle it by tracking the last timestamp used: if the current clock reading is *less* than the last one, the generator must not emit IDs with the older timestamp. Options are to **wait** until the clock catches up to the last timestamp before generating again, or to **reject/alert** if the skew is large. Some implementations keep a monotonic 'last max timestamp' and only advance forward. The key point in an interview is recognizing clock skew as the primary correctness risk of Snowflake and proposing a forward-only/wait strategy."
+      ],
+      "keyPoints": ["Timestamp = high bits → backward clock risks duplicate/out-of-order IDs", "Track last-used timestamp; never emit with an older one", "Wait for clock to catch up, or reject/alert on large skew", "Forward-only timestamp invariant"],
+      "followUps": ["How would you assign and manage the 10-bit machine IDs across hundreds of nodes?"]
+    }
+  ]
+}

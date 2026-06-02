@@ -1,0 +1,148 @@
+{
+  "slug": "back-of-the-envelope",
+  "sectionId": "fundamentals",
+  "order": 8,
+  "title": "Back-of-the-Envelope Estimation",
+  "tagline": "The numbers every engineer should know, and a repeatable recipe to size QPS, storage, and bandwidth in 5 minutes.",
+  "summary": "The numbers to memorize + a recipe for QPS/storage/bandwidth.",
+  "difficulty": "Intermediate",
+  "estMinutes": 20,
+  "tags": ["core", "estimation", "must-know"],
+  "prereqs": ["latency-throughput"],
+  "sections": [
+    {
+      "id": "why",
+      "title": "Why estimate at all",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Estimation turns a vague prompt into concrete numbers that *drive design decisions*. Whether you need 5 servers or 5,000, whether the data fits on one machine or needs sharding, whether you can cache everything in memory — all of this falls out of a few quick calculations. Interviewers ask for estimates to see if your architecture is grounded in reality, not hand-waving.",
+            "The goal is an *order of magnitude*, not precision. Round aggressively, use powers of ten, and state your assumptions out loud. Getting within ~2–3x of reality is a pass; spending 15 minutes on arithmetic is a fail."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "numbers",
+      "title": "Numbers to know by heart",
+      "blocks": [
+        {
+          "type": "metrics",
+          "title": "Powers of two (for storage)",
+          "items": [
+            { "label": "2^10", "value": "~1 Thousand", "note": "1 KB" },
+            { "label": "2^20", "value": "~1 Million", "note": "1 MB" },
+            { "label": "2^30", "value": "~1 Billion", "note": "1 GB" },
+            { "label": "2^40", "value": "~1 Trillion", "note": "1 TB" },
+            { "label": "2^50", "value": "~1 Quadrillion", "note": "1 PB" }
+          ]
+        },
+        {
+          "type": "metrics",
+          "title": "Latency numbers every programmer should know (approx., orders of magnitude)",
+          "items": [
+            { "label": "L1 cache reference", "value": "~1 ns", "note": "" },
+            { "label": "Main memory (RAM) reference", "value": "~100 ns", "note": "100x slower than L1" },
+            { "label": "Read 1 MB sequentially from RAM", "value": "~10 µs", "note": "" },
+            { "label": "SSD random read", "value": "~100 µs", "note": "~1000x slower than RAM access" },
+            { "label": "Read 1 MB from SSD", "value": "~1 ms", "note": "" },
+            { "label": "Round trip within same data center", "value": "~0.5 ms", "note": "" },
+            { "label": "Disk (HDD) seek", "value": "~10 ms", "note": "" },
+            { "label": "Read 1 MB from spinning disk", "value": "~20–30 ms", "note": "" },
+            { "label": "Packet round trip US ↔ Europe", "value": "~150 ms", "note": "speed of light bound" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "The takeaways that matter",
+          "text": "Memory is ~100,000x faster than disk and SSD is ~10–20x faster than HDD — *this is why we cache*. Cross-region round trips (~150 ms) are bounded by physics, not by faster hardware — *this is why we use CDNs and multi-region*. A same-DC round trip (~0.5 ms) is cheap, so chatty in-DC calls are usually fine; cross-region chattiness is not."
+        }
+      ]
+    },
+    {
+      "id": "recipe",
+      "title": "The estimation recipe",
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Start from users", "detail": "Get/assume Daily Active Users (DAU). Estimate actions per user per day (e.g., 2 posts, 50 reads)." },
+            { "title": "Convert to QPS", "detail": "QPS = (DAU × actions/day) / 86,400 (seconds/day ≈ 100k, round to 10^5). Then **peak QPS ≈ 2–3× average** to handle bursts." },
+            { "title": "Split reads vs writes", "detail": "State the read:write ratio (often 10:1 to 100:1). It dictates caching/replication strategy." },
+            { "title": "Storage", "detail": "Per-item size × items/day × retention. Multiply by a replication factor (×3 is common)." },
+            { "title": "Bandwidth", "detail": "QPS × average payload size = bytes/sec in and out. Media (images/video) dominates here." },
+            { "title": "Memory for cache", "detail": "Apply the 80/20 rule: cache the hot ~20% of data that serves ~80% of reads. Check it fits in RAM." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "text": "Shortcuts: 1 day ≈ 86,400 s ≈ 10^5 s. 1 month ≈ 2.5M s. Always round to clean powers of ten and carry units. If a number is 'per day', divide by 10^5 to get per-second."
+        }
+      ]
+    },
+    {
+      "id": "worked",
+      "title": "Worked example: sizing a Twitter-like feed",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Assume 200M DAU. Each user posts 2 tweets/day and reads their feed 50 times/day. A tweet is ~300 bytes of text (ignore media for now)."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Write QPS", "detail": "200M × 2 / 10^5 ≈ 4,000 writes/sec average → ~12,000/sec peak (×3)." },
+            { "term": "Read QPS", "detail": "200M × 50 / 10^5 ≈ 100,000 reads/sec average → ~300,000/sec peak. Read:write ≈ 25:1 → heavy caching + precomputed feeds." },
+            { "term": "Storage/day", "detail": "200M × 2 tweets × 300 B ≈ 120 GB/day of tweet text. Over a year ≈ 44 TB; ×3 replication ≈ 130 TB. Clearly needs sharding, not one box." },
+            { "term": "Bandwidth (reads)", "detail": "If each feed read returns ~10 tweets × 300 B = 3 KB → 100,000 × 3 KB ≈ 300 MB/s outbound (text only; media would dwarf this and belongs on a CDN)." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Notice how the numbers *led* to architecture: 25:1 read:write → cache + precompute feeds (fan-out on write); 130 TB → shard the tweet store; media bandwidth → push to a CDN. That's the whole point — estimates justify your design, so tie each number to a decision."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Estimation gives order-of-magnitude numbers that justify architecture — round hard, state assumptions.",
+    "1 day ≈ 86,400 s ≈ 10^5 s; peak QPS ≈ 2–3× average; replication factor ≈ ×3 for storage.",
+    "Memory ~100ns, SSD ~100µs, same-DC RTT ~0.5ms, disk seek ~10ms, US↔EU RTT ~150ms.",
+    "Memory ≫ SSD ≫ disk → cache; cross-region RTT is physics-bound → CDN/multi-region.",
+    "Recipe: DAU → actions → QPS (split read/write) → storage (size×count×retention×replication) → bandwidth → cache memory (80/20)."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Estimation",
+      "difficulty": "Medium",
+      "prompt": "Estimate the QPS and daily storage for a URL shortener with 100M new URLs created per day, average original URL 100 bytes, read:write ratio 100:1.",
+      "hint": "Convert per-day to per-second with /10^5; reads = 100× writes; storage = count × size × retention.",
+      "answer": [
+        "Write QPS: 100M / 10^5 = ~1,000 writes/sec average, ~2,000–3,000/sec peak. Read QPS = 100× = ~100,000 reads/sec average, ~200,000–300,000/sec peak. The huge read skew screams 'cache the hot URLs aggressively'.",
+        "Storage: per record ≈ original URL (100 B) + short code + metadata ≈ ~500 B to be safe. 100M/day × 500 B = ~50 GB/day → ~18 TB/year, and we likely retain for years. With ×3 replication that's tens of TB — fine for a sharded key-value store, and the read path is dominated by cache hits."
+      ],
+      "keyPoints": ["Writes ≈ 1k/s, reads ≈ 100k/s (100:1)", "Read-heavy → cache hot codes", "~50 GB/day → ~18 TB/yr (×3 replication)", "Key-value store, sharded; reads served from cache"],
+      "followUps": ["How many characters does the short code need to encode billions of URLs in base62?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "Why is 'memory is ~100,000x faster than disk' one of the most important numbers in system design?",
+      "hint": "What architectural pattern does this single fact justify?",
+      "answer": [
+        "It's the entire justification for **caching** and for keeping hot data in RAM. If a value can be served from memory (~100 ns) instead of disk (~10 ms), you cut latency by orders of magnitude and offload the slow datastore. That's why we put Redis/Memcached in front of databases, hold indexes in memory, and design for high cache hit rates.",
+        "It also shapes data layout decisions: sequential disk/SSD access is far cheaper than random seeks, so systems batch and append (e.g., log-structured storage) rather than doing many random disk reads. The speed hierarchy — CPU cache > RAM > SSD > HDD > network/cross-region — drives where you want each piece of data to live."
+      ],
+      "keyPoints": ["Justifies caching / RAM for hot data", "Memory ~100ns vs disk ~10ms = orders of magnitude", "Drives cache layers (Redis/Memcached), in-memory indexes", "Also motivates sequential vs random access patterns"],
+      "followUps": ["Given a 1 TB dataset and the 80/20 rule, how much cache RAM would you provision?"]
+    }
+  ]
+}

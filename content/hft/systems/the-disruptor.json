@@ -1,0 +1,127 @@
+{
+  "slug": "the-disruptor",
+  "sectionId": "systems",
+  "order": 5,
+  "title": "The Disruptor Pattern",
+  "tagline": "LMAX's ring buffer with sequence barriers: millions of messages/sec, mechanical sympathy, and multicast to many consumers.",
+  "level": "Advanced",
+  "track": ["dev", "systems"],
+  "estMinutes": 18,
+  "concept": {
+    "analogy": "Think of a single circular notice board with numbered slots. The writer posts notices in order and announces 'everything up to slot 1000 is published.' Several readers — a journalist, an archivist, an auditor — each track how far they've personally read, and each can only advance up to what's published (and, if they depend on each other, up to where the reader ahead of them has finished). No one removes notices or locks the board; everyone just reads sequence numbers. That coordination-by-counters is the Disruptor.",
+    "paragraphs": [
+      "The Disruptor is a high-performance inter-thread messaging pattern from LMAX (a retail exchange) designed for 'mechanical sympathy' — working with the CPU rather than against it. At its core it's a pre-allocated ring buffer of fixed size, but it generalizes the SPSC queue to multiple consumers and dependency graphs while keeping everything lock-free and allocation-free.",
+      "The key idea is sequences. A single shared 'cursor' (a padded atomic counter) tracks the highest slot the producer has published. Each consumer keeps its own sequence of how far it has processed. A consumer may read up to the published cursor; a downstream consumer may only read up to where its upstream dependency has finished (a 'sequence barrier'). All coordination is reading and CAS-ing these counters — no locks, no queue-per-consumer, and crucially the same event is multicast to every consumer without copying.",
+      "Mechanical sympathy shows up everywhere: the ring is pre-allocated so entries are reused (no per-message allocation or GC pressure), entries are laid out for cache locality, sequence counters are cache-line padded to avoid false sharing, the size is a power of two for mask-based indexing, and consumers can process in batches (when they fall behind they catch up several entries at once, amortizing costs and improving throughput under load). LMAX reported handling ~6 million messages/second on a single thread with this design.",
+      "Why HFT cares: a typical pipeline fans one market-data stream out to several consumers (book builder, strategy, logger, risk) that have ordering dependencies. The Disruptor expresses that as a dependency graph over one ring with predictable, low-jitter latency — versus a tangle of separate queues with copies and locks. Even when you don't use the library, the pattern (pre-allocated ring + sequence barriers + batching + padding) is a blueprint for low-latency messaging."
+    ],
+    "points": [
+      "Pre-allocated ring buffer + sequence counters instead of locks or per-consumer queues.",
+      "One producer cursor publishes; each consumer tracks its own progress sequence.",
+      "Dependency graph via sequence barriers: a consumer reads up to its upstream's finished sequence.",
+      "Same event multicast to all consumers with no copying; batching amortizes cost under load.",
+      "Mechanical sympathy: no allocation/GC, cache-line padding, power-of-two size, prefetch-friendly."
+    ],
+    "callouts": [
+      { "type": "tip", "title": "Batching is the throughput secret", "body": "When a consumer falls behind, it discovers many newly-published slots at once and processes them in a tight loop — so under load it gets *more* efficient (better cache/instruction reuse), which flattens latency spikes." },
+      { "type": "info", "title": "Not just Java", "body": "The Disruptor originated in Java (LMAX) to dodge GC and lock costs, but the design is language-agnostic; C++ ports and the same principles are widely used in C++ trading systems." }
+    ],
+    "keyIdea": "The Disruptor replaces queues-and-locks with a single pre-allocated ring buffer coordinated entirely by cache-line-padded sequence counters and barriers. It multicasts each event to a dependency graph of consumers, batches under load, and never allocates on the hot path — delivering millions of low-jitter messages per second."
+  },
+  "deepDive": {
+    "intro": "The moving parts — ring, cursor, sequences, barriers, claim strategies — and how they compose into a pipeline.",
+    "steps": [
+      {
+        "title": "Ring buffer of pre-allocated entries",
+        "detail": "Allocate the entries (events) once at startup; the ring reuses these slots forever. Producers fill an existing slot in place (no `new`), avoiding allocation and keeping the entries hot in cache. Size is a power of two so slot = sequence & (size-1)."
+      },
+      {
+        "title": "Producer cursor and claim",
+        "detail": "A producer claims the next sequence (single producer: just increment; multi-producer: CAS to claim a slot, plus an 'available' bitmap so consumers know which claimed slots are actually filled). It writes the entry, then publishes by advancing the cursor (a release store) so consumers can see up to that sequence."
+      },
+      {
+        "title": "Consumer sequences and barriers",
+        "detail": "Each consumer holds its own sequence (last processed). To proceed it asks its SequenceBarrier for the highest available sequence it may read — that's min(producer cursor, the sequences of any upstream consumers it depends on). It then processes the batch [mySeq+1 .. available] and publishes its own sequence."
+      },
+      {
+        "title": "Dependency graphs",
+        "detail": "You wire consumers into a DAG: e.g., journal and replicate run in parallel after receive; business logic runs only after both finish (its barrier depends on their sequences); the marshaller runs after business logic. This expresses real pipelines (validate → book → strategy → risk → send) without copying events between queues."
+      },
+      {
+        "title": "Wait strategies",
+        "detail": "How a consumer waits when caught up is a tunable trade-off: busy-spin (lowest latency, burns a core), spin-then-yield, or blocking with a lock/condvar (lowest CPU, higher latency/jitter). HFT typically busy-spins (often with PAUSE) on pinned, isolated cores."
+      }
+    ],
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "disruptor_sketch.cpp — the essence (single producer)",
+        "source": "#include <atomic>\n#include <vector>\n#include <new>\n\ntemplate <class Event>\nstruct Ring {\n    explicit Ring(size_t n) : mask(n - 1), slots(n) {}\n    size_t mask;\n    std::vector<Event> slots;                 // pre-allocated, reused forever\n    alignas(64) std::atomic<long> cursor{-1};  // last published sequence\n    Event& at(long seq) { return slots[seq & mask]; }\n};\n\n// Producer: claim -> fill in place -> publish (release)\ntemplate <class Event>\nvoid publish(Ring<Event>& r, long& nextSeq, const Event& src) {\n    long seq = ++nextSeq;                      // single producer: just increment\n    r.at(seq) = src;                           // fill the existing slot, no alloc\n    r.cursor.store(seq, std::memory_order_release);\n}\n\n// Consumer with its own sequence + a barrier (here: just the producer cursor)\ntemplate <class Event, class Handler>\nvoid consume(Ring<Event>& r, std::atomic<long>& mySeq, Handler&& h) {\n    long next = mySeq.load(std::memory_order_relaxed) + 1;\n    long avail = r.cursor.load(std::memory_order_acquire);   // barrier\n    for (; next <= avail; ++next)               // BATCH: catch up in one loop\n        h(r.at(next), next, next == avail /*endOfBatch*/);\n    mySeq.store(avail, std::memory_order_release);\n}"
+      }
+    ],
+    "notes": [
+      { "title": "Single vs multi producer", "detail": "Single-producer is fastest (increment + release). Multi-producer needs a CAS to claim sequences and an 'availability' structure so consumers don't read a claimed-but-unfilled slot — more overhead, so prefer single-producer feeds where possible." },
+      { "title": "Padding the sequences", "detail": "Every Sequence is cache-line padded (often 7 longs of padding around the value). Without it, the producer cursor and consumer sequences false-share and the whole benefit collapses." },
+      { "title": "Compared to SPSC", "detail": "An SPSC ring is the 1-producer/1-consumer special case. The Disruptor adds multicast, multiple consumers, and dependency barriers — choose it when you have a fan-out pipeline, not just a single handoff." }
+    ],
+    "complexity": {
+      "time": "O(1) amortized per event; batches under load",
+      "timeReason": "Publishing and consuming are counter updates plus an in-place write/read. Batching means per-event cost drops as the consumer catches up, so throughput rises under load.",
+      "space": "O(ring size)",
+      "spaceReason": "One pre-allocated ring of fixed size shared by all consumers; no per-message or per-consumer queue allocation."
+    },
+    "pitfalls": [
+      "Forgetting to cache-line pad the sequences → false sharing kills the design.",
+      "Using a blocking wait strategy on a latency-critical consumer (adds jitter) — or busy-spinning on a non-pinned core (steals CPU).",
+      "Multi-producer claim without an availability check → consumers read unfilled slots.",
+      "Sizing the ring too small so the producer stalls waiting for the slowest consumer to free slots.",
+      "Treating it as a queue with removal semantics — entries are reused, not dequeued/freed."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-vs-queue",
+        "q": "How does the Disruptor differ from using N lock-free queues to fan out events to N consumers?",
+        "tag": "Systems",
+        "a": [
+          "With N queues you copy each event into each queue and each consumer dequeues independently; that's N copies, N sets of head/tail with their own contention, and no easy way to express ordering dependencies between consumers. Memory churns and cache locality suffers.",
+          "The Disruptor uses one pre-allocated ring shared by all consumers: each event is written once and read in place by every consumer (no copies), coordination is just reading sequence counters, and dependencies are expressed with sequence barriers (consumer B can be made to trail consumer A). Plus batching makes it more efficient under load. Net: less allocation, better cache behavior, and a natural way to model a processing pipeline."
+        ],
+        "followups": ["What is a sequence barrier?", "Why is batching a throughput win rather than a latency cost?"]
+      },
+      {
+        "id": "q-mechanical",
+        "q": "What does 'mechanical sympathy' mean in the Disruptor, concretely?",
+        "tag": "Systems",
+        "a": [
+          "It means designing the software to match how the hardware actually works. In the Disruptor: pre-allocating and reusing entries avoids allocation and (in Java) GC pauses and keeps data cache-hot; a power-of-two ring lets indexing use a mask instead of modulo; sequence counters are cache-line padded to prevent false sharing; sequential access through the ring is prefetcher-friendly; and batching amortizes per-event overhead and reuses warm instructions/data.",
+          "The result is predictable, low-jitter latency at very high throughput because almost every memory access hits cache and there are no locks or kernel transitions on the hot path."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-pipeline",
+        "title": "Model a tick-to-trade pipeline with sequences",
+        "difficulty": "Advanced",
+        "statement": "You must process market events through stages: (1) parse, (2) update book, (3) run strategy, (4) risk-check, (5) send order. Stages 2 and an independent 'journal/log' can run in parallel after parse, and strategy must wait for both. Describe how you'd lay this out as a Disruptor dependency graph using sequences and barriers, and where you'd busy-spin vs block.",
+        "hint": "Each stage is a consumer with its own sequence; downstream barriers = min of upstream sequences it depends on.",
+        "tests": "Designing a consumer DAG over one ring.",
+        "solution": {
+          "approach": [
+            "Use one ring of pre-allocated Event slots. Producer = the feed handler, publishing parsed events (or publish raw and make 'parse' the first consumer). Each stage is a consumer with its own padded Sequence: BookBuilder and Journal both depend only on the producer cursor, so they run in parallel. Strategy's SequenceBarrier depends on min(BookBuilder.seq, Journal.seq) — it can only process event n once both have finished n. Risk depends on Strategy.seq; the Sender depends on Risk.seq.",
+            "Each consumer loops: ask its barrier for the highest available sequence (= min of its dependencies), process the batch up to it in place, then publish its own sequence. No event is copied between stages; they all read the same ring slot.",
+            "Latency-critical consumers (strategy, risk, sender) busy-spin (with PAUSE) on dedicated pinned, isolated cores for lowest, most predictable latency. The journal/logger, which is not on the critical path and is I/O-bound, can use a yielding or blocking wait strategy to save CPU. Size the ring for your worst-case burst so the producer never stalls on the slowest consumer."
+          ],
+          "complexity": { "time": "O(1) amortized per event per stage", "space": "O(ring size), shared by all stages" }
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "LMAX Disruptor Technical Paper", "by": "Thompson, Farley, Barker, Gee, Stewart", "note": "The original design rationale and benchmarks — essential reading." },
+    { "title": "Mechanical Sympathy blog", "by": "Martin Thompson", "note": "Deep posts on cache, queues, and low-latency design." },
+    { "title": "Disruptor C++ ports (e.g. Disruptor--, concurrentqueue Disruptor designs)", "note": "Study a C++ implementation of sequences and barriers." }
+  ]
+}

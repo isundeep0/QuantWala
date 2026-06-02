@@ -1,0 +1,150 @@
+{
+  "slug": "api-gateway-rate-limiting",
+  "sectionId": "building-blocks",
+  "order": 7,
+  "title": "API Gateway & Rate Limiting",
+  "tagline": "The single front door to your microservices — and how to throttle abusive traffic before it hurts.",
+  "summary": "Gateway responsibilities, plus token bucket & other rate-limit algorithms.",
+  "difficulty": "Intermediate",
+  "estMinutes": 16,
+  "tags": ["infra", "api"],
+  "prereqs": ["load-balancers", "api-design"],
+  "sections": [
+    {
+      "id": "gateway",
+      "title": "What an API gateway does",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "An **API gateway** is the single entry point that sits between clients and your backend services. Instead of clients knowing about dozens of microservices, they call the gateway, which routes each request to the right service and handles all the cross-cutting concerns in one place."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Responsibilities it centralizes",
+          "items": [
+            { "term": "Routing", "detail": "Map paths/hosts to backend services (`/users/*` → user service)." },
+            { "term": "Authentication & authorization", "detail": "Validate tokens/API keys once at the edge so services don't each re-implement it." },
+            { "term": "Rate limiting & throttling", "detail": "Protect backends from abuse and overload (covered below)." },
+            { "term": "TLS termination", "detail": "Terminate HTTPS centrally." },
+            { "term": "Request/response transformation", "detail": "Aggregate, reshape, compress, add headers; can act as a Backend-for-Frontend." },
+            { "term": "Observability", "detail": "One place to log, trace, and meter all traffic." }
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "One front door authenticates, rate-limits, and routes to internal services.",
+          "groups": [
+            { "label": "Clients", "nodes": [{ "label": "Web / Mobile", "icon": "Smartphone", "accent": "#0ea5e9" }] },
+            { "label": "Gateway", "nodes": [{ "label": "API Gateway", "sub": "auth · rate limit · route", "icon": "Shield", "accent": "#ef4444" }] },
+            { "label": "Services", "nodes": [{ "label": "User Svc", "icon": "Server", "accent": "#d97706" }, { "label": "Order Svc", "icon": "Server", "accent": "#d97706" }, { "label": "Feed Svc", "icon": "Server", "accent": "#d97706" }] }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "text": "A gateway adds a hop (slight latency) and is a potential SPOF/bottleneck — so run it redundantly and keep its per-request work light. It's not a place for heavy business logic; it does cross-cutting concerns only."
+        }
+      ]
+    },
+    {
+      "id": "why-rate-limit",
+      "title": "Why rate limit",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Prevent abuse & DoS", "detail": "Stop a single client from overwhelming the system." },
+            { "term": "Ensure fairness", "detail": "One noisy tenant shouldn't starve everyone else." },
+            { "term": "Control cost", "detail": "Cap expensive operations (e.g., LLM calls, search)." },
+            { "term": "Protect backends", "detail": "Shed load before it cascades into failure." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "When a limit is exceeded, return HTTP 429 (Too Many Requests), ideally with a Retry-After header so well-behaved clients back off."
+        }
+      ]
+    },
+    {
+      "id": "algorithms",
+      "title": "Rate-limiting algorithms",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Token bucket", "detail": "A bucket holds up to N tokens, refilled at a steady rate; each request consumes one. Allows short bursts (up to bucket size) while capping the average rate. The most popular choice — simple and burst-friendly." },
+            { "term": "Leaky bucket", "detail": "Requests queue and are processed at a fixed rate (like water leaking from a bucket). Smooths bursts into a steady stream; extra requests overflow (rejected)." },
+            { "term": "Fixed window counter", "detail": "Count requests per fixed time window (e.g., 100/min). Simple, but allows a 2x burst at the window boundary (end of one window + start of the next)." },
+            { "term": "Sliding window log / counter", "detail": "Track timestamps (or a weighted blend of adjacent windows) for a smooth rolling limit without the boundary spike. More accurate, slightly more memory/CPU." }
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["Algorithm", "Bursts?", "Accuracy", "Cost"],
+          "rows": [
+            ["Token bucket", "Allows bursts up to bucket size", "Good", "Low"],
+            ["Leaky bucket", "Smooths to fixed rate", "Good", "Low"],
+            ["Fixed window", "Boundary 2x burst", "Rough", "Lowest"],
+            ["Sliding window", "No boundary spike", "Best", "Higher"]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "distributed",
+      "title": "Rate limiting across many servers",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "If each gateway instance counts independently, a user spread across 10 instances effectively gets 10x the limit. So counters must be **shared**. The standard approach is a central fast store — usually **Redis** — holding the per-key counters/buckets, updated atomically (e.g., Lua script or `INCR` with expiry).",
+            "The trade-off is a network call to Redis per request (latency + a dependency). Optimizations: keep a small local allowance and only sync to Redis periodically (sacrificing a little precision for speed), or shard limit keys across Redis. Also choose the **key** deliberately — limit per API key, per user, per IP, or a combination, depending on what you're protecting against."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "text": "In an interview: 'Token bucket stored in Redis, keyed per user/API key, updated atomically; return 429 + Retry-After on exceed.' That single sentence answers the common 'design a rate limiter' warm-up."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "API gateway = single front door: routing, auth, rate limiting, TLS termination, transformation, observability.",
+    "Keep the gateway light (cross-cutting only), redundant (avoid SPOF), and aware it adds a hop.",
+    "Rate limit to prevent abuse/DoS, ensure fairness, cap cost, and protect backends; return 429 + Retry-After.",
+    "Token bucket (burst-friendly, most popular), leaky bucket (smooths), fixed window (boundary burst), sliding window (most accurate).",
+    "Distributed limits need a shared atomic counter (Redis), keyed per user/API key/IP."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "Why is the token bucket algorithm usually preferred, and how does it differ from a fixed-window counter?",
+      "hint": "Think about bursts and the window-boundary problem.",
+      "answer": [
+        "Token bucket caps the *average* rate via a steady refill while still allowing short **bursts** up to the bucket capacity — which matches real client behaviour (occasional spikes within an overall limit). It's also simple and cheap to implement.",
+        "A fixed-window counter (e.g., max 100 requests per minute) is even simpler but suffers the **boundary problem**: a client can send 100 at 0:59 and another 100 at 1:00, getting 200 requests in ~1 second across the window edge — double the intended rate. Token bucket (and sliding window) avoid that by smoothing over time rather than resetting hard at fixed boundaries."
+      ],
+      "keyPoints": ["Token bucket: average rate + controlled bursts, simple", "Fixed window: simplest but allows ~2x burst at the boundary", "Token bucket/sliding window smooth over time", "Match limiter to expected client burstiness"],
+      "followUps": ["How would you implement token bucket atomically in Redis?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "You run 8 gateway instances behind a load balancer, each enforcing '100 req/min per user' locally. Users report the limit doesn't work. Why, and how do you fix it?",
+      "hint": "Where is each instance's counter stored?",
+      "answer": [
+        "Each instance keeps its *own* local counter, and the load balancer spreads a user's requests across all 8. So the user effectively gets up to 8 × 100 = 800 req/min — the limit isn't global. Local counters can't enforce a system-wide limit.",
+        "Fix it with a **shared counter store**, typically Redis, keyed by user, updated atomically (e.g., a Lua script implementing token bucket) so all instances read/write the same bucket. To cut the per-request Redis round trip, you can give each instance a small local lease/allowance synced periodically with Redis, trading a little precision for latency. Alternatively, route a given user consistently to the same instance (sticky/hashing), but a shared store is the robust answer."
+      ],
+      "keyPoints": ["Independent local counters → limit multiplied by instance count", "Use a shared atomic store (Redis) keyed per user", "Atomic update (Lua/INCR+expiry)", "Optimize with local lease syncing or consistent routing"],
+      "followUps": ["What's the latency/availability risk of depending on Redis for every request, and how do you mitigate it?"]
+    }
+  ]
+}

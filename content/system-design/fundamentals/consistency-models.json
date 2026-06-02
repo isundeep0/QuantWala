@@ -1,0 +1,112 @@
+{
+  "slug": "consistency-models",
+  "sectionId": "fundamentals",
+  "order": 4,
+  "title": "Consistency Models",
+  "tagline": "Strong, eventual, causal, read-your-writes — what each promises and when 'good enough' is good enough.",
+  "summary": "Strong vs eventual consistency and the useful models in between.",
+  "difficulty": "Intermediate",
+  "estMinutes": 16,
+  "tags": ["core", "consistency", "distributed"],
+  "prereqs": ["latency-throughput"],
+  "sections": [
+    {
+      "id": "why",
+      "title": "Why consistency is a spectrum",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The moment you replicate data across multiple nodes (for scale and availability), a hard question appears: if you write to one copy, what do *other* copies return before the update propagates? **Consistency models** are the precise contracts that answer 'which value will a reader see, and when?'.",
+            "It's a spectrum. At one end, **strong consistency** behaves as if there's a single up-to-date copy — every read sees the latest write. At the other, **eventual consistency** only promises that *if writes stop, all replicas converge to the same value eventually*. In between sit several practical models. Stronger guarantees cost latency and availability; weaker ones buy speed and uptime."
+          ]
+        },
+        {
+          "type": "analogy",
+          "text": "Think of a shared Google Doc vs a group chat rumor. The Doc shows everyone the same latest text the instant it's typed (strong). A rumor spreads person to person — for a while different people 'know' different versions, but eventually everyone hears the final story (eventual)."
+        }
+      ]
+    },
+    {
+      "id": "models",
+      "title": "The models you should know",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Strong (linearizable) consistency", "detail": "Every read returns the most recent committed write; the system behaves like one copy. Easiest to reason about, but requires coordination (slower, and unavailable during partitions). Needed for bank balances, inventory, unique usernames." },
+            { "term": "Eventual consistency", "detail": "Replicas may temporarily disagree but converge if writes stop. Fast and highly available. Fine for like counts, view counts, social feeds, DNS." },
+            { "term": "Read-your-own-writes", "detail": "A user always sees their *own* updates immediately, even if others see them later. Prevents the jarring 'I posted but it vanished' bug. Often done by routing a user's reads to the primary or their own session's replica." },
+            { "term": "Monotonic reads", "detail": "Once you've seen a value, you won't later see an *older* one (no going back in time). Prevents data 'flickering' between versions across requests." },
+            { "term": "Causal consistency", "detail": "Operations that are causally related (a reply must come after its message) are seen in the right order everywhere, while unrelated operations may be seen in any order. A practical middle ground for chat/comments." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Most large systems are *not* uniformly strong or eventual — they pick consistency per data type. Strong for money and inventory; eventual for counters and feeds; read-your-writes for a user's own profile edits. Saying this in an interview signals maturity."
+        }
+      ]
+    },
+    {
+      "id": "choosing",
+      "title": "Choosing the right model",
+      "blocks": [
+        {
+          "type": "compare",
+          "columns": ["Use case", "Acceptable model", "Why"],
+          "rows": [
+            ["Bank balance / payments", "Strong", "Double-spend / lost money is unacceptable"],
+            ["Inventory / seat booking", "Strong (for the decrement)", "Can't sell the same seat twice"],
+            ["Unique username/email signup", "Strong", "Two people can't claim the same handle"],
+            ["Like / view counts", "Eventual", "Off-by-a-few for a moment is harmless"],
+            ["Social feed / timeline", "Eventual + read-your-writes", "Your own post must appear; others can lag"],
+            ["Chat message ordering", "Causal", "Replies must follow their message"],
+            ["DNS, product catalog", "Eventual", "Propagation delay is fine"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "title": "The trade-off to verbalise",
+          "text": "'Strong consistency requires cross-node coordination, which adds latency and forces a choice between consistency and availability during a network partition (CAP). Where users can tolerate brief staleness, I'll choose eventual consistency to keep the system fast and always-on, and reserve strong consistency for data where correctness is non-negotiable.'"
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Consistency models define which value a reader sees after a write across replicas.",
+    "Strong = always latest (needs coordination, slower, less available); eventual = converges if writes stop (fast, available).",
+    "Useful middles: read-your-writes, monotonic reads, causal consistency.",
+    "Pick consistency *per data type*: strong for money/inventory/unique IDs; eventual for counts/feeds.",
+    "Stronger consistency trades latency + availability; this is the heart of the CAP theorem."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "A user updates their profile bio, refreshes, and sees the OLD bio. Which consistency guarantee is missing, and how do you fix it without making the whole system strongly consistent?",
+      "hint": "They need to see their own writes — but others can lag.",
+      "answer": [
+        "The missing guarantee is **read-your-own-writes**. Their write went to the primary, but their refresh read from a replica that hadn't received the update yet (replication lag).",
+        "Fix it narrowly instead of making everything strong: route a user's reads to the primary for a short window after they write, or pin their reads to a replica known to be caught up, or read from a write-through cache updated on their write. This gives that user immediate consistency for their own data while everyone else can still read cheaply from lagging replicas (eventual)."
+      ],
+      "keyPoints": ["Identify read-your-own-writes violation", "Caused by replica lag", "Route own reads to primary / caught-up replica / write-through cache", "Keep others eventual — don't make everything strong"],
+      "followUps": ["What is monotonic-reads consistency and when would the same user need it?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "Give one example each where eventual consistency is perfectly fine and where it is dangerous.",
+      "hint": "Where does a brief disagreement between replicas matter to correctness?",
+      "answer": [
+        "Fine: a YouTube view count or a tweet's like count. If two replicas briefly show 1,000 vs 1,003, no one is harmed and they'll converge. The win is speed and always-on availability.",
+        "Dangerous: a bank account balance or remaining flight seats. If two replicas disagree, you could allow a double withdrawal or sell the same seat twice. These need strong consistency (or at least a single authoritative decision point) so a write is globally agreed before it's acted on."
+      ],
+      "keyPoints": ["Fine for counts/feeds where brief disagreement is harmless", "Dangerous for money/inventory where it causes double-spend/oversell", "The distinguisher is whether stale reads cause incorrect actions"],
+      "followUps": ["How would you make just the 'decrement seats' operation strongly consistent in an otherwise eventual system?"]
+    }
+  ]
+}

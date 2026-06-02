@@ -1,0 +1,181 @@
+{
+  "slug": "payment-system",
+  "sectionId": "case-studies",
+  "order": 13,
+  "title": "Design a Payment System",
+  "tagline": "Where 'eventually correct' is unacceptable — money demands idempotency, reconciliation, and exactly-once effects.",
+  "summary": "Idempotency, ledgers, exactly-once effects, reconciliation, sagas.",
+  "difficulty": "Advanced",
+  "estMinutes": 28,
+  "tags": ["case-study", "must-know"],
+  "prereqs": ["idempotency", "distributed-transactions", "message-queues"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Clarify requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Pay-in: accept a customer's payment for an order (via a payment service provider like Stripe/Adyen).",
+            "Pay-out: settle funds to sellers/merchants.",
+            "Record every money movement so balances are always provable."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional (money is special)",
+          "items": [
+            "Correctness above all — no double charges, no lost payments, balances must always reconcile.",
+            "Strong consistency / durability for financial state (ACID where money is recorded).",
+            "Auditable — every change traceable for compliance and dispute resolution.",
+            "Resilient to failures and retries (networks fail mid-payment all the time)."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Payments flip the usual priorities: availability/latency take a back seat to correctness and auditability. The three words to say early: idempotency, double-entry ledger, and reconciliation."
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "2. High-level design",
+      "blocks": [
+        {
+          "type": "diagram",
+          "caption": "A payment request flows through the payment service to an external PSP; the ledger records the truth.",
+          "direction": "lr",
+          "groups": [
+            { "label": "User", "nodes": [{ "label": "Checkout", "icon": "Smartphone", "accent": "#0ea5e9" }] },
+            { "label": "Service", "nodes": [{ "label": "Payment Service", "sub": "idempotency keys", "icon": "Server", "accent": "#d97706" }] },
+            { "label": "External", "nodes": [{ "label": "PSP", "sub": "Stripe / Adyen", "icon": "CreditCard", "accent": "#8b5cf6" }] },
+            { "label": "Record", "nodes": [{ "label": "Ledger DB", "sub": "double-entry, ACID", "icon": "BookOpen", "accent": "#10b981" }, { "label": "Wallet / balances", "icon": "Database" }] },
+            { "label": "Verify", "nodes": [{ "label": "Reconciliation", "sub": "vs PSP statements", "icon": "CheckCircle", "accent": "#ef4444" }] }
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Initiate", "detail": "Checkout calls the payment service with an order and a client-generated idempotency key." },
+            { "title": "Record intent", "detail": "Create a payment record in 'pending' state in the ledger DB before calling out — so a crash leaves a trace, not a mystery." },
+            { "title": "Call the PSP", "detail": "Charge the card via the payment service provider. Never handle raw card numbers yourself (PCI scope) — tokenize via the PSP." },
+            { "title": "Update ledger", "detail": "On PSP success, write the money movement as a double-entry transaction and mark the payment 'completed'. On failure, mark 'failed'." },
+            { "title": "Reconcile", "detail": "A background job compares your ledger against the PSP's settlement statements daily to catch any discrepancies." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idempotency",
+      "title": "3. Idempotency — never double-charge",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Networks fail. A client submits a payment, the request times out, and the user (or a retry policy) tries again — but the first one may have actually succeeded. Without protection, you charge twice. The fix is an idempotency key."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Idempotency key", "detail": "The client generates a unique key per payment attempt and sends it with every retry. The server stores it; if a request with a key it has already processed arrives, it returns the original result instead of charging again." },
+            { "term": "Enforce at the database", "detail": "Make the idempotency key (or a derived constraint) a UNIQUE column. Concurrent duplicate requests then collide at the DB, and only one wins — the others read back the existing result. This is bulletproof even under races." },
+            { "term": "Propagate to the PSP", "detail": "Pass the idempotency key to the payment provider too — they deduplicate on their side, so even a retry that reaches them twice charges once." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Exactly-once is an effect, not magic",
+          "text": "You can't guarantee exactly-once *delivery* over a network — messages get duplicated. You guarantee exactly-once *effect*: at-least-once delivery (retries) + idempotent processing (dedup on the key). For money, this distinction is the whole ballgame."
+        }
+      ]
+    },
+    {
+      "id": "ledger",
+      "title": "4. The double-entry ledger",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Don't store money as a single mutable 'balance' number you increment — that loses history and is impossible to audit. Use a double-entry ledger: every transaction is recorded as balanced debit and credit entries across accounts, and the sum of all entries is always zero."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Append-only", "detail": "Ledger entries are immutable; you never edit, only append. A balance is *derived* by summing entries (often with periodic snapshots for speed). This gives a complete, tamper-evident audit trail." },
+            { "term": "Balanced by construction", "detail": "Every movement debits one account and credits another by the same amount. If the books don't balance, you have a bug — the invariant is your safety net." },
+            { "term": "Corrections via reversal", "detail": "To fix a mistake you don't delete an entry — you append a compensating reversal entry. History stays intact." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "The double-entry model is centuries old because it's self-checking: the zero-sum invariant lets you detect errors automatically. Combined with append-only immutability, it makes the system auditable and provably correct — exactly what money requires."
+        }
+      ]
+    },
+    {
+      "id": "consistency-failures",
+      "title": "5. Consistency, sagas & reconciliation",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Strong consistency for money", "detail": "The ledger uses an ACID database with transactions. Within a service, wrap the money movement and status update in one DB transaction so they're atomic." },
+            { "term": "Distributed steps → Saga", "detail": "A payment spans services (payment, wallet, notification) and the external PSP — you can't hold one ACID transaction across all of them. Use a Saga: a sequence of local transactions with compensating actions (e.g., if payout fails after capture, issue a refund). An orchestrator tracks the flow." },
+            { "term": "Transactional outbox", "detail": "To reliably emit events (e.g., 'payment completed') without the dual-write problem, write the event to an outbox table in the same DB transaction as the ledger update; a relay publishes it to the queue. Guarantees the event fires iff the payment was recorded." },
+            { "term": "Reconciliation", "detail": "Even with all this, external systems drift. A daily reconciliation job compares your ledger to the PSP's and bank settlement files, flagging mismatches for manual/automated resolution. This is the final safety net — assume something will eventually disagree." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "title": "Senior framing",
+          "text": "Lead with the failure modes: 'what if the charge succeeds but my DB write fails?', 'what if the client retries?', 'what if the PSP says success but we recorded failure?'. Answer each with idempotency keys, pending-state-before-call, the outbox pattern, sagas for compensation, and reconciliation as the backstop. Demonstrating paranoia about money is the signal here."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Payments prioritize correctness & auditability over availability/latency — strong consistency for money state.",
+    "Idempotency key per payment (UNIQUE-constrained in the DB, also passed to the PSP) → retries never double-charge.",
+    "Exactly-once is an *effect*: at-least-once delivery (retries) + idempotent processing (dedup on key).",
+    "Record a 'pending' payment before calling the PSP so a crash leaves a trace, not a mystery.",
+    "Double-entry, append-only ledger: balanced debit/credit, zero-sum invariant, corrections via reversal — fully auditable.",
+    "Cross-service flows use Sagas with compensating transactions (e.g., refund); emit events via the transactional outbox.",
+    "Never handle raw card data (PCI) — tokenize via the PSP; run daily reconciliation against PSP/bank statements as the backstop."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Scenario",
+      "difficulty": "Hard",
+      "prompt": "A user clicks 'Pay' and the request times out. They click again. How do you guarantee they're charged exactly once?",
+      "hint": "Idempotency key + DB uniqueness + pass it to the PSP.",
+      "answer": [
+        "The client generates a single idempotency key for this payment attempt and includes it on the *first* request and every retry (the timeout doesn't mean it failed — the charge may have gone through). On the server, the idempotency key is stored with a UNIQUE constraint in the database. When the retry arrives: if we've already processed that key, we return the stored result of the original attempt — we do not initiate a second charge. If two retries race concurrently, the UNIQUE constraint ensures only one insert wins; the loser reads back the existing record. That makes dedup correct even under concurrency, not just sequential retries.",
+        "We also pass the same idempotency key to the payment service provider, so even if a request reaches them twice (e.g., our service crashed after they charged but before we recorded it), the PSP deduplicates and charges once. And we record the payment in a 'pending' state *before* calling the PSP, so a crash mid-flight leaves a recoverable record we can reconcile rather than an unknown state. Net effect: at-least-once delivery (safe retries) + idempotent processing (dedup on the key) = exactly-once *effect*, which is the strongest guarantee achievable over an unreliable network."
+      ],
+      "keyPoints": ["One idempotency key reused across all retries (timeout ≠ failure)", "UNIQUE constraint in DB → correct dedup even under concurrent retries", "Pass the key to the PSP so they dedup too", "Record 'pending' before calling out; exactly-once effect = retries + idempotent dedup"],
+      "followUps": ["How long do you retain idempotency keys, and what happens if a retry arrives after they expire?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "Why use a double-entry ledger instead of just storing and updating a balance column per account?",
+      "hint": "Think auditability, history, and self-checking invariants.",
+      "answer": [
+        "A single mutable balance column is fragile and unauditable: when a balance is wrong, you have no record of how it got there, no way to prove correctness, and a missed or duplicated update silently corrupts the truth with no trace. For money, that's unacceptable — regulators, disputes, and debugging all demand a full history.",
+        "A double-entry ledger records every money movement as immutable, append-only entries: each transaction debits one account and credits another by the same amount, so the books are balanced by construction and the sum of all entries is zero. The balance of any account is *derived* by summing its entries (with periodic snapshots so it's fast). This gives three big wins: (1) a complete audit trail — you can replay exactly how any balance was reached; (2) a self-checking invariant — if total debits ≠ total credits, you have a detectable bug, not a silent one; and (3) safe corrections — you never edit history, you append a compensating reversal. It's the centuries-old accounting model precisely because it makes financial correctness provable."
+      ],
+      "keyPoints": ["Mutable balance = no history, no audit trail, silent corruption", "Double-entry: immutable append-only debit/credit entries, balance derived", "Zero-sum invariant is self-checking → errors are detectable, not silent", "Corrections via reversal entries; full auditability for compliance/disputes"],
+      "followUps": ["How do you keep balance reads fast when they're derived from millions of ledger entries?"]
+    }
+  ]
+}

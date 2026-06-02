@@ -1,0 +1,154 @@
+{
+  "slug": "gathering-requirements",
+  "sectionId": "interview-playbook",
+  "order": 2,
+  "title": "Step 1: Gathering Requirements & Scoping",
+  "tagline": "The highest-ROI five minutes of the whole interview. Get this wrong and everything downstream is wrong.",
+  "summary": "Functional vs non-functional requirements; the questions to ask.",
+  "difficulty": "Beginner",
+  "estMinutes": 20,
+  "tags": ["interview", "requirements", "must-know"],
+  "prereqs": ["the-framework"],
+  "sections": [
+    {
+      "id": "why",
+      "title": "Why requirements come first",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "You cannot design a system without knowing what it must do and how much load it must handle. Skipping this step is the single most common reason candidates fail — they design an elegant system for the wrong problem.",
+            "Interviewers deliberately give vague prompts to see if you'll narrow the scope yourself. Asking sharp clarifying questions is not a sign of weakness; it's the first thing they're grading."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "You're scoping, not interrogating",
+          "text": "Spend ~3–5 minutes. Ask focused questions, propose reasonable assumptions ('I'll assume we need photo upload and a feed, not video — sound good?'), and lock the scope. Don't ask 20 open questions; ask the few that change the design, then commit."
+        }
+      ]
+    },
+    {
+      "id": "functional",
+      "title": "Functional requirements (what it does)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Functional requirements are the concrete features — the verbs of the system. Enumerate the core ones, then deliberately cut scope to the 2–4 that matter, deferring the rest."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Questions to ask",
+          "items": [
+            { "term": "Core actions", "detail": "What are the main things a user does? (e.g., for a chat app: send/receive messages, see online status, group chats.)" },
+            { "term": "Who are the users", "detail": "End users? Internal services? Mobile vs web (affects offline/sync, connection handling)?" },
+            { "term": "Scope cut", "detail": "'Should I include search / notifications / analytics, or focus on the core read/write path?' Explicitly defer features to keep the design focused." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Write the agreed functional requirements in a corner of the whiteboard as a short list. It anchors the conversation and gives you something to revisit in the wrap-up ('we covered upload and feed; DMs were out of scope')."
+        }
+      ]
+    },
+    {
+      "id": "nonfunctional",
+      "title": "Non-functional requirements (the qualities)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Non-functional requirements are where senior candidates shine. These are the system *qualities* — scale, speed, reliability — and they drive almost every architectural decision. This is where you decide what you're optimizing for."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "The dimensions to pin down",
+          "items": [
+            { "term": "Scale", "detail": "How many users / DAU? Reads vs writes ratio? This determines whether you even need distribution, caching, or sharding." },
+            { "term": "Latency", "detail": "What's an acceptable response time? Is this user-facing (needs ms) or a background job (seconds/minutes ok)?" },
+            { "term": "Availability", "detail": "How bad is downtime? A payment system vs an internal dashboard have very different targets (and costs)." },
+            { "term": "Consistency", "detail": "Is stale data acceptable for a few seconds (a like count) or never (an account balance)? This is the CAP/PACELC decision and it shapes your whole data layer." },
+            { "term": "Durability", "detail": "Can you ever lose data? (A draft tweet vs a financial transaction.)" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "title": "The framing that earns points",
+          "text": "Don't list non-functional requirements neutrally — prioritize them and say so: 'This is read-heavy and user-facing, so I'll optimize for low read latency and high availability, and accept eventual consistency on counts.' Naming the trade-off you're choosing is exactly the senior signal interviewers look for."
+        }
+      ]
+    },
+    {
+      "id": "read-write",
+      "title": "The read/write characterization",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "One characterization shapes more of your design than any other: is the system read-heavy, write-heavy, or balanced? Establish it early — it's the lever for caching, replication, and data-store choices."
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "How the characterization drives design",
+          "columns": ["Type", "Examples", "Design implications"],
+          "rows": [
+            ["Read-heavy", "URL shortener, news feed, product catalog", "Cache aggressively, read replicas, CDN, denormalize/precompute for reads"],
+            ["Write-heavy", "Analytics ingestion, logging, IoT, metrics", "Buffer with queues, batch writes, LSM-tree stores (Cassandra), shard by write key"],
+            ["Balanced / consistency-critical", "Banking, inventory, ticketing", "Strong consistency, transactions, careful concurrency control over raw speed"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Don't skip estimation to 'get to the design'",
+          "text": "The read/write ratio and rough QPS justify your decisions with numbers. Saying 'reads are 100× writes, so the cache is the centerpiece' is far stronger than asserting you'll cache without knowing why. Requirements and estimation are a package."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Spend ~3–5 min: ask the few questions that change the design, propose assumptions, then lock scope.",
+    "Functional = the features (verbs). List the core ones; explicitly defer the rest to keep focus.",
+    "Non-functional = qualities: scale, latency, availability, consistency, durability.",
+    "Prioritize the non-functional requirements out loud — name what you're optimizing for and the trade-off.",
+    "Characterize read-heavy vs write-heavy vs consistency-critical — it drives caching, replication, and store choice.",
+    "Write the agreed requirements on the board; revisit them in the wrap-up.",
+    "Asking sharp clarifying questions is graded positively — it's not a sign of weakness."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "What's the difference between functional and non-functional requirements, and why do non-functional ones matter more for the architecture?",
+      "hint": "Features vs qualities.",
+      "answer": [
+        "Functional requirements describe *what the system does* — the concrete features and behaviors, like 'a user can post a photo' or 'a user can search messages'. They're the verbs. Non-functional requirements describe the *qualities* the system must have while doing those things: how much scale it handles, how fast it responds (latency), how available it is, how consistent the data needs to be, and how durable it is.",
+        "Non-functional requirements drive the architecture more because two systems with identical features can have radically different designs depending on their qualities. A photo app for 100 users is a single server and a database; the same features for 500M users read-heavy with low-latency feeds demands CDNs, caching, sharding, replication, and async fan-out. The features didn't change — the scale, latency, and availability targets did, and those dictate distribution, data stores, and consistency models. That's why strong candidates spend their clarifying time pinning down and *prioritizing* the non-functional requirements, then justify every later decision against them."
+      ],
+      "keyPoints": ["Functional = features/behaviors (verbs); non-functional = qualities", "Same features + different scale/latency/availability = very different architecture", "Non-functional requirements drive distribution, caching, data stores, consistency", "Prioritize them and trace design decisions back to them"],
+      "followUps": ["Give an example where a strict consistency requirement forces you to give up some availability."]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "An interviewer gives you only 'Design a system to store and retrieve user files.' List the clarifying questions you'd ask before designing.",
+      "hint": "Cover both functional scope and non-functional scale/quality.",
+      "answer": [
+        "I'd split my questions into functional and non-functional. Functional: What operations — just upload/download, or also sync across devices, sharing, versioning, search? What file types and size limits (a 10 KB text file vs a 4 GB video changes everything)? Single-user storage, or collaborative/shared access? Do we need offline access?",
+        "Non-functional: What's the scale — number of users, total storage, upload/download QPS? Is it read-heavy or write-heavy? What latency is acceptable for upload vs download? How critical is durability — can we ever lose a file (almost certainly not)? What availability target? Any consistency requirements when the same file is edited from two devices? Any geographic/compliance constraints (data residency)?",
+        "I'd then propose a scoped version — 'Let's focus on upload, download, and cross-device sync for files up to a few GB, optimizing for durability and bandwidth-efficient sync, and treat real-time collaborative editing as out of scope' — and confirm before designing. The point is to ask the handful of questions that genuinely change the design (size limits, sync, durability) rather than an exhaustive list."
+      ],
+      "keyPoints": ["Functional: operations, sync/share/version, file sizes/types, offline", "Non-functional: scale/QPS, read vs write, latency, durability, availability, consistency", "Surface constraints that change design (size, sync, durability, compliance)", "Propose a scoped version and confirm before designing"],
+      "followUps": ["How would a 4 GB max file size change your upload design versus a 1 MB limit?"]
+    }
+  ]
+}

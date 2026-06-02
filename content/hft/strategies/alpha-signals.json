@@ -1,0 +1,120 @@
+{
+  "slug": "alpha-signals",
+  "sectionId": "strategies",
+  "order": 3,
+  "title": "Alpha Signals from Order Flow",
+  "tagline": "How researchers turn the raw torrent of book updates into a tiny, exploitable edge on the next price move.",
+  "level": "Advanced",
+  "track": ["research", "trader", "dev"],
+  "estMinutes": 18,
+  "concept": {
+    "analogy": "A signal is like reading body language at a poker table. No single tell guarantees the next move, but a player's hesitation, chip-handling, and breathing each shift the odds a little. A quant researcher reads the market's 'body language' — the imbalance of resting orders, the recent trade flow, the speed of cancels — to nudge their estimate of the next tick. Each tell is weak and noisy; combined and acted on fast enough, they're an edge.",
+    "paragraphs": [
+      "An 'alpha signal' is a feature that predicts future returns better than chance over some horizon. In HFT, horizons are tiny (microseconds to seconds) and individual signals have very low predictive power (a small positive correlation with the next move) — but applied across millions of events with low costs and fast execution, a small edge is highly profitable.",
+      "The richest signals come from the order book and order flow itself: order-book imbalance (more size on one side predicts a move toward the thin side), order-flow imbalance (the net of aggressive buys vs. sells), trade sign autocorrelation (trades cluster directionally), the microprice, and lead-lag relationships (a faster instrument/venue predicting a slower one). Volatility and recent realized moves modulate all of these.",
+      "Research turns candidate features into signals: define the feature precisely, choose a prediction horizon, measure predictive power out-of-sample (information coefficient, hit rate, markout P&L), and combine multiple weak signals (e.g., via a linear model) into a forecast — always guarding against overfitting and lookahead bias.",
+      "Crucially, a signal must survive transaction costs and latency. A predictive feature that requires acting faster than you can, or whose edge is smaller than the spread you'd pay to trade it, is worthless in production. The bar is 'predictive AND tradeable after costs.'"
+    ],
+    "points": [
+      "Alpha = a feature predicting future returns above chance; in HFT the edge per event is tiny but repeated.",
+      "Order-flow signals: book imbalance, order-flow imbalance, trade-sign autocorrelation, microprice, lead-lag.",
+      "Evaluate out-of-sample with information coefficient, hit rate, and markout P&L — not in-sample fit.",
+      "Combine weak signals carefully (regularized/linear), guarding against overfitting.",
+      "Must be predictive AND profitable after spread, fees, and latency — tradeability is the real bar."
+    ],
+    "keyIdea": "HFT alpha is a portfolio of weak, fast-decaying, order-flow-based predictors. The skill is finding features that are genuinely predictive out-of-sample and still profitable after costs and latency — not just fitting the past."
+  },
+  "deepDive": {
+    "intro": "The research workflow that separates a real signal from a backtest mirage.",
+    "steps": [
+      {
+        "title": "Define the feature and horizon precisely",
+        "detail": "E.g., feature = book imbalance I = bidSize/(bidSize+askSize) at time t; target = sign or size of the mid-price change over the next 500ms. Both must be computable from data available at time t only (no peeking ahead). The horizon must match how fast you can actually act."
+      },
+      {
+        "title": "Measure predictive power out-of-sample",
+        "detail": "Split data by time (never shuffle time series). On held-out data, compute the information coefficient (correlation between signal and forward return), the hit rate (how often the sign is right), and — most importantly — the markout P&L: if you'd traded on this signal, what would the price have done after, net of costs? In-sample fit is meaningless; only out-of-sample, cost-aware performance counts."
+      },
+      {
+        "title": "Combine weak signals",
+        "detail": "Single features are weak; a forecast often linearly combines several (imbalance + recent flow + volatility + lead-lag), with weights fit by regularized regression to avoid overfitting. Simpler, robust models generalize better than complex ones at these noise levels. Watch for multicollinearity (signals that say the same thing)."
+      },
+      {
+        "title": "Decay and capacity",
+        "detail": "HFT signals decay fast — predictive power falls off within seconds — and have limited capacity (trading more moves the price and erodes the edge). Researchers measure the decay curve (how IC falls with horizon) and the capacity (how much size before impact kills it)."
+      },
+      {
+        "title": "From signal to action",
+        "detail": "A signal feeds quoting (skew/widen) or taking (cross when the edge exceeds the cost). The threshold to act must clear the spread + fees + expected adverse selection. The same signal can be 'real' yet untradeable if costs exceed its edge — the production bar is higher than the research bar."
+      }
+    ],
+    "notes": [
+      {
+        "title": "Why not just throw deep learning at it?",
+        "detail": "ML/DL is used, but the signal-to-noise ratio is brutally low and non-stationary, so naive complex models overfit spectacularly. Careful feature engineering, strict out-of-sample/time-series validation, regularization, and economic priors usually beat black-box complexity here. Interviewers probe whether you understand overfitting and validation, not whether you can name architectures."
+      }
+    ],
+    "pitfalls": [
+      "Lookahead bias — using information not available at decision time inflates every metric.",
+      "In-sample evaluation / shuffling time series — always validate out-of-sample, time-ordered.",
+      "Ignoring costs and latency — a predictive signal that loses to the spread/fees is not alpha.",
+      "Overfitting with too many features on too little data — at low signal-to-noise, simpler is safer."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-ic",
+        "q": "A researcher shows you a signal with a 0.02 information coefficient. Is that good or bad, and what else do you need to know before trading it?",
+        "tag": "Research",
+        "a": [
+          "A 0.02 IC (correlation with forward returns) sounds tiny, and for a long-horizon equity factor it would be modest — but for a high-frequency signal applied to millions of events with low costs, even a small, stable IC can be very profitable. So 0.02 isn't inherently good or bad; it depends on horizon, breadth, and cost.",
+          "Before trading it you need: is the IC out-of-sample and time-ordered (not in-sample/shuffled)? Is it stable across time/regimes or driven by a few periods? What's the horizon and decay (how fast does the edge fade)? What's the capacity (does impact kill it at size)? And the decisive question — after spread, fees, and realistic latency/adverse selection, is the markout P&L still positive? A 0.02 IC that doesn't clear costs is not tradeable."
+        ],
+        "followups": ["How would you test stability across regimes?", "Why is markout P&L a better metric than IC here?"]
+      },
+      {
+        "id": "q-lookahead",
+        "q": "What is lookahead bias, and give a concrete example of how it can sneak into an order-flow signal study.",
+        "tag": "Research",
+        "a": [
+          "Lookahead bias is using information in your features or evaluation that wouldn't have been available at the moment of the decision, which makes a strategy look predictive when it isn't.",
+          "Concrete example: computing a signal's normalization (mean/std for a z-score) over the *entire* dataset, including future data, and then 'predicting' past points — the future leaks into the past statistics. Another: aligning a feature at time t with the target using a timestamp that includes the very move you're trying to predict (e.g., using the trade that caused the price change as a feature for predicting that change). Both inflate results; the fix is strict point-in-time data and rolling, backward-only statistics with time-ordered train/test splits."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-ofi",
+        "title": "Order-flow imbalance (OFI) over a window",
+        "difficulty": "Intermediate",
+        "statement": "Given a chronological list of events, each either an aggressive BUY or aggressive SELL with a size, compute the order-flow imbalance over the last w events as OFI = (sum of buy sizes − sum of sell sizes) / (sum of all sizes). Return a signal: +1 if OFI > 0.3, −1 if OFI < −0.3, else 0. Empty/zero-size window → 0.",
+        "hint": "Net signed flow over total flow in the trailing window; threshold the ratio.",
+        "tests": "Constructing a canonical short-horizon flow signal.",
+        "solution": {
+          "approach": [
+            "Take the last w events. Sum buy sizes and sell sizes separately. OFI = (buys − sells)/(buys + sells) ∈ [−1, 1]: strongly positive means aggressive buying dominates (predict up), strongly negative the reverse.",
+            "Guard the empty/zero-volume case, then threshold OFI into {−1, 0, +1}. In practice you'd weight recent events more and validate the threshold out-of-sample."
+          ],
+          "complexity": { "time": "O(w)", "space": "O(1)" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "ofi.cpp",
+              "source": "#include <vector>\n#include <string>\nstruct Ev { bool buy; long long size; };\nint ofiSignal(const std::vector<Ev>& ev, int w){\n    int n = ev.size();\n    long long buys = 0, sells = 0;\n    for (int i = std::max(0, n - w); i < n; i++){\n        if (ev[i].buy) buys += ev[i].size; else sells += ev[i].size;\n    }\n    long long tot = buys + sells;\n    if (tot == 0) return 0;\n    double ofi = (double)(buys - sells) / tot;\n    if (ofi > 0.3) return 1;\n    if (ofi < -0.3) return -1;\n    return 0;\n}"
+            },
+            {
+              "language": "python",
+              "title": "ofi.py",
+              "source": "def ofi_signal(events, w):\n    # events: list of (is_buy: bool, size: int)\n    window = events[-w:]\n    buys = sum(s for b, s in window if b)\n    sells = sum(s for b, s in window if not b)\n    tot = buys + sells\n    if tot == 0:\n        return 0\n    ofi = (buys - sells) / tot\n    if ofi > 0.3:\n        return 1\n    if ofi < -0.3:\n        return -1\n    return 0"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "'The Price Impact of Order Book Events'", "by": "Cont, Kukanov & Stoikov", "note": "Foundational empirical work linking order-flow imbalance to price moves." },
+    { "title": "Advances in Financial Machine Learning", "by": "Marcos López de Prado", "note": "On avoiding overfitting and doing time-series validation properly." }
+  ]
+}

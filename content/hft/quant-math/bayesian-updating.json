@@ -1,0 +1,95 @@
+{
+  "slug": "bayesian-updating",
+  "sectionId": "quant-math",
+  "order": 2,
+  "title": "Bayesian Updating",
+  "tagline": "Start with a belief, see evidence, update rationally — the mental engine of both trading and good answers.",
+  "level": "Core",
+  "track": ["trader", "research"],
+  "estMinutes": 16,
+  "concept": {
+    "analogy": "A good doctor doesn't diagnose from a single test. They start with how common a disease is (the base rate), then adjust based on the test result and how reliable that test is. A scary positive on a rare disease with an imperfect test often still means you're probably fine — because the base rate dominates. Bayesian updating is just doing that adjustment with arithmetic instead of gut feel, and it's exactly how a trader updates a price when news arrives.",
+    "paragraphs": [
+      "Bayes' theorem tells you how to update the probability of a hypothesis H after seeing evidence E: P(H | E) = P(E | H)·P(H) / P(E). In words: posterior ∝ likelihood × prior. Your prior P(H) is your belief before the evidence; the likelihood P(E | H) is how well the hypothesis explains the evidence; the posterior P(H | E) is your updated belief.",
+      "The denominator P(E) = Σ P(E | H_i)·P(H_i) is the total probability of the evidence across all hypotheses (law of total probability). A handy equivalent form uses odds: posterior odds = prior odds × likelihood ratio. Updating in odds is often faster mentally.",
+      "The classic trap is base-rate neglect: people anchor on the test's accuracy and ignore how rare the condition is. With a rare disease, even a 99%-accurate test produces mostly false positives, so a positive result may leave you more likely healthy than sick. Interviewers use medical-test and similar problems precisely to see if you respect base rates.",
+      "In trading, Bayesian thinking is everywhere: your prior is the current fair value; a new trade, quote, or news item is evidence; you update your estimate of value and your quotes accordingly. Market-making games explicitly grade your Bayesian updating — do you revise your market as information arrives?"
+    ],
+    "points": [
+      "Bayes: P(H|E) = P(E|H)·P(H)/P(E); posterior ∝ likelihood × prior.",
+      "P(E) = Σ P(E|H_i)·P(H_i) — total probability across hypotheses.",
+      "Odds form: posterior odds = prior odds × likelihood ratio (fast for mental math).",
+      "Base-rate neglect: don't ignore how rare H is — rare priors dominate noisy evidence.",
+      "Trading = continuous Bayesian updating of fair value as evidence (flow, news) arrives."
+    ],
+    "keyIdea": "Update beliefs as posterior ∝ likelihood × prior, and never neglect the base rate. Whether diagnosing a disease or repricing an asset, the math is the same: weigh how surprising the evidence is against how likely the hypothesis was to begin with."
+  },
+  "deepDive": {
+    "intro": "The mechanics, the odds shortcut, and the trader's framing.",
+    "steps": [
+      {
+        "title": "The formula and a worked medical test",
+        "detail": "Disease prevalence (prior) = 1%. Test: 99% true-positive, 5% false-positive. P(disease | positive) = (0.99·0.01)/(0.99·0.01 + 0.05·0.99) = 0.0099/(0.0099+0.0495) ≈ 0.167. A positive test still means only ~17% chance of disease — the rare base rate dominates."
+      },
+      {
+        "title": "The odds shortcut",
+        "detail": "Prior odds of disease = 1:99. Likelihood ratio = P(+|disease)/P(+|healthy) = 0.99/0.05 ≈ 19.8. Posterior odds = (1:99)·19.8 ≈ 19.8:99 ≈ 1:5, i.e., ~1/6 ≈ 17%. Updating in odds avoids the denominator and is fast in your head."
+      },
+      {
+        "title": "Sequential updating",
+        "detail": "Today's posterior becomes tomorrow's prior. Independent pieces of evidence multiply their likelihood ratios. This is how you incorporate a stream of signals — each one nudges the odds, and they compound."
+      },
+      {
+        "title": "Calibration and overconfidence",
+        "detail": "Good Bayesians are calibrated: when they say 70%, they're right about 70% of the time. Interviewers (especially for trading) probe whether you update the right amount — not too little (anchoring) and not too much (overreacting to weak evidence). State your prior, state the evidence's strength, and move proportionally."
+      },
+      {
+        "title": "The trading translation",
+        "detail": "Prior = current fair value / probability the price goes up. Evidence = a large buy print, a shift in book imbalance, a news headline. You ask 'how likely is this evidence if the price is about to rise vs. not?' and shift your estimate by that likelihood ratio. Overreact and you get whipsawed; underreact and you get picked off."
+      }
+    ],
+    "pitfalls": [
+      "Base-rate neglect — anchoring on test accuracy and ignoring a rare prior.",
+      "Treating dependent evidence as independent (double-counting correlated signals).",
+      "Confusing P(E|H) with P(H|E) (the 'prosecutor's fallacy').",
+      "Over- or under-updating: the size of the move should match the strength of the evidence."
+    ]
+  },
+  "practice": {
+    "intro": "Bayes problems are a staple. Do the arithmetic; the odds form is your friend under time pressure.",
+    "interviewQuestions": [
+      {
+        "id": "q-disease",
+        "q": "A disease affects 1 in 1000 people. A test is 99% accurate (1% false-positive rate, and detects all true cases). You test positive. What's the probability you have the disease?",
+        "tag": "Bayes",
+        "a": [
+          "Prior P(disease) = 0.001. P(+|disease) = 1 (detects all cases). P(+|healthy) = 0.01. By Bayes: P(disease|+) = (1·0.001)/(1·0.001 + 0.01·0.999) = 0.001/(0.001 + 0.00999) = 0.001/0.01099 ≈ 0.091.",
+          "So about 9% — despite a '99% accurate' test, a positive result more likely than not is a false alarm, because the disease is so rare. Odds check: prior odds 1:999, likelihood ratio 1/0.01 = 100, posterior odds ≈ 100:999 ≈ 1:10 ≈ 9%. Always respect the base rate."
+        ],
+        "followups": ["What if you test positive twice with independent tests?", "How accurate must the test be for a positive to mean >50%?"]
+      },
+      {
+        "id": "q-coin",
+        "q": "A bag has two coins: one fair, one double-headed. You pick one at random and flip it; it lands heads. What's the probability it's the double-headed coin?",
+        "tag": "Bayes",
+        "a": [
+          "Prior: P(double) = P(fair) = 1/2. Likelihoods: P(heads|double) = 1, P(heads|fair) = 1/2.",
+          "P(double|heads) = (1·½)/(1·½ + ½·½) = (½)/(½ + ¼) = (½)/(¾) = 2/3. The heads result is evidence favoring the coin that always shows heads, lifting it from 1/2 to 2/3."
+        ]
+      },
+      {
+        "id": "q-trade-update",
+        "q": "How is placing a tighter quote after seeing a burst of aggressive buying an act of Bayesian updating?",
+        "tag": "Trading",
+        "a": [
+          "Your prior is the current fair value (say the mid/microprice) and your belief about the next move's direction. A burst of aggressive buying is evidence: it's much more likely to occur if the price is about to rise than if it isn't (a high likelihood ratio for 'up').",
+          "So you update your posterior toward 'price rising' and shift your fair value up. Acting on it, you raise/skew your quotes (lift your ask, maybe pull your bid) to avoid selling cheaply right before the rise — that's adverse-selection avoidance driven by a Bayesian update. The discipline is moving proportionally to the evidence's strength: a small flicker shouldn't move you much; a strong, sustained signal should."
+        ]
+      }
+    ]
+  },
+  "resources": [
+    { "title": "A Practical Guide to Quantitative Finance Interviews", "by": "Xinfeng Zhou", "note": "Has the canonical Bayes/medical-test style problems." },
+    { "title": "Thinking in Bets", "by": "Annie Duke", "note": "Intuition for probabilistic, calibrated decision-making under uncertainty." }
+  ]
+}

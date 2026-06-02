@@ -164,15 +164,11 @@ interactive simulator. Possible future enhancements:
 - Per‑problem notes and a spaced‑repetition "review queue".
 - Expand the intentionally lean categories (greedy, stacks/queues) with more lessons.
 
-**Module 2 — System Design (content):**
-- Fill the placeholder panels with real concept text, diagrams (consider an
-  Excalidraw‑style embed), key interview points, and question banks.
-- Add an interactive "design canvas" for drawing architectures.
-
-**Module 3 — HFT / Low Latency (content):**
-- Real C++/Python snippets with syntax highlighting, runnable benchmarks, and the
-  benchmark/comparison tables.
-- Firm‑specific interview tracks (Jane Street, Citadel, Tower, HRT, Optiver).
+**Module 2 — System Design — done.** 47 lessons across 6 sections, each with diagrams,
+an interview cheat sheet, and a practice question set. Possible future enhancements:
+- More case studies (e.g., distributed message queue, ad click aggregator, ticketing).
+- An interactive "design canvas" for drawing architectures.
+- Spaced‑repetition review queue across the practice questions.
 
 **Platform:**
 - Optional accounts + DB to sync progress across devices (the current `localStorage`

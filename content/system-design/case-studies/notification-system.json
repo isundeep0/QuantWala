@@ -1,0 +1,149 @@
+{
+  "slug": "notification-system",
+  "sectionId": "case-studies",
+  "order": 6,
+  "title": "Design a Notification System",
+  "tagline": "Deliver push, SMS, and email at scale — reliably, without duplicates, and without spamming users.",
+  "summary": "Multi-channel delivery, queues, retries, dedup, rate/preferences.",
+  "difficulty": "Intermediate",
+  "estMinutes": 20,
+  "tags": ["case-study", "async"],
+  "prereqs": ["message-queues", "idempotency"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Send notifications across channels: mobile push (APNs/FCM), SMS, email, in-app.",
+            "Triggered by events (someone liked your post) or campaigns (marketing blast).",
+            "Respect user preferences (opt-outs, channel choice) and quiet hours.",
+            "Templating + personalization."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Reliable delivery with retries; no lost notifications.",
+            "Avoid duplicates (don't notify the same thing twice).",
+            "High throughput (millions/min for campaigns) with spike absorption.",
+            "Low latency for transactional notifications (OTP, alerts)."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "2. High-level design",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "This is fundamentally an **asynchronous, queue-driven** system. A producer (any service) calls a Notification API; the system enriches, applies preferences/rate limits, then fans the request to per-channel queues, where channel workers call the external providers. Queues decouple bursty producers from rate-limited providers and provide retry/buffering."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "API → enrich + apply preferences → per-channel queues → workers → external providers.",
+          "groups": [
+            { "label": "Trigger", "nodes": [{ "label": "Services / Campaigns", "icon": "Send", "accent": "#d97706" }] },
+            { "label": "Service", "nodes": [{ "label": "Notification Service", "sub": "prefs · dedup · template", "icon": "Bell", "accent": "#ef4444" }] },
+            { "label": "Queues", "nodes": [{ "label": "Push Q", "icon": "Inbox", "accent": "#0ea5e9" }, { "label": "SMS Q", "icon": "Inbox", "accent": "#0ea5e9" }, { "label": "Email Q", "icon": "Inbox", "accent": "#0ea5e9" }] },
+            { "label": "Workers→Providers", "nodes": [{ "label": "Channel Workers", "sub": "APNs/FCM, Twilio, SES", "icon": "Cpu", "accent": "#10b981" }] }
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Ingest", "detail": "A request hits the Notification API: {user_id, event_type, payload}. Validate and dedup (idempotency key per logical notification)." },
+            { "title": "Resolve", "detail": "Look up the user's preferences, devices/contact info, and channel choices; drop opted-out channels; apply quiet hours and rate caps." },
+            { "title": "Template & enqueue", "detail": "Render the message per channel and enqueue to that channel's queue." },
+            { "title": "Deliver", "detail": "Channel workers pull from the queue and call the provider (APNs/FCM for push, Twilio for SMS, SES/SendGrid for email), respecting provider rate limits." },
+            { "title": "Track", "detail": "Record status (sent/delivered/failed/opened) via provider callbacks for analytics and retry decisions." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reliability",
+      "title": "3. Reliability: retries, dedup, DLQ",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "At-least-once + idempotency", "detail": "Queues deliver at-least-once, so workers may retry — make delivery idempotent with a dedup key (notification_id) so a user isn't notified twice for the same event." },
+            { "term": "Retries with backoff", "detail": "Provider failures are common (transient). Retry with exponential backoff + jitter; cap attempts." },
+            { "term": "Dead-letter queue", "detail": "After max retries, move to a DLQ for inspection rather than retrying forever or dropping silently." },
+            { "term": "Provider failover", "detail": "Have a secondary provider for critical channels (e.g., two SMS vendors) so one provider's outage doesn't stop OTPs." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "The duplicate-notification trap",
+          "text": "Without dedup, a retried or re-emitted event sends two 'You have a new message' pushes — a common, annoying bug. Key every logical notification with an idempotency id and check before sending."
+        }
+      ]
+    },
+    {
+      "id": "scale-policy",
+      "title": "4. Scale, throttling & user respect",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Spike absorption", "detail": "A campaign to 50M users floods the system; the queues buffer it and workers drain at the providers' allowed rate. Scale workers horizontally per channel." },
+            { "term": "Rate limiting per user", "detail": "Cap notifications per user per time window so a noisy event source can't spam someone — protects user experience and your sender reputation." },
+            { "term": "Priority lanes", "detail": "Separate transactional (OTP, security — low latency, high priority) from marketing (bulk, best-effort) using separate queues/priorities so a campaign never delays an OTP." },
+            { "term": "Preferences as source of truth", "detail": "A preference service decides eligibility before enqueueing; respecting opt-outs/quiet hours is both UX and legal (CAN-SPAM/GDPR)." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Key talking points: 'Async, queue-driven, per-channel workers; at-least-once + idempotent dedup; retries with backoff + DLQ; separate priority lanes for transactional vs marketing; preference/rate checks before send.' Mentioning provider rate limits and the duplicate trap shows production awareness."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Notifications = async, queue-driven, multi-channel (push/SMS/email/in-app) with per-channel workers calling providers.",
+    "Flow: API → dedup + resolve preferences/devices → template → per-channel queue → worker → provider → track status.",
+    "At-least-once delivery → make sending idempotent with a notification-id dedup key (avoid double notifications).",
+    "Retries with exponential backoff + jitter; dead-letter queue after max attempts; secondary providers for critical channels.",
+    "Queues absorb campaign spikes; separate priority lanes so OTP/transactional never wait behind marketing.",
+    "Check user preferences/opt-outs/quiet hours + per-user rate caps before sending (UX + legal)."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "A marketing campaign to 50M users is queued at the same time OTP login codes need to go out instantly. How do you ensure OTPs aren't delayed?",
+      "hint": "Don't let bulk traffic share a lane with time-critical traffic.",
+      "answer": [
+        "Separate the traffic into **priority lanes / distinct queues**: a high-priority transactional queue (OTPs, security alerts) and a low-priority bulk queue (marketing). Workers service the transactional queue first (or it has dedicated, reserved worker capacity and provider quota), so a 50M-message campaign sitting in the bulk queue can't head-of-line-block an OTP. The campaign drains in the background at the providers' allowed rate.",
+        "Reinforce with: dedicated provider throughput/short codes for OTP, rate-limit/spread the campaign so it doesn't exhaust shared provider quota, and autoscale workers. The core principle is isolating latency-critical traffic from bulk best-effort traffic — a bulkhead applied to notifications."
+      ],
+      "keyPoints": ["Separate priority queues: transactional vs marketing", "Dedicated/reserved capacity + provider quota for OTP", "Campaign drains in background; can't block OTP (no head-of-line blocking)", "Bulkhead isolation principle"],
+      "followUps": ["How would you smooth a 50M campaign so it doesn't exhaust the email provider's rate limit?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "Why might a user receive the same push notification twice, and how do you prevent it?",
+      "hint": "At-least-once delivery + retries.",
+      "answer": [
+        "Queues deliver at-least-once and workers retry on transient failures, so the same notification can be processed more than once — e.g., a worker sends the push successfully but crashes before acking the message, so it's redelivered and sent again. The triggering event itself might also be emitted twice upstream.",
+        "Prevent it by making send **idempotent**: assign each logical notification a unique idempotency id (derived from the event, e.g., `notif:{user}:{event_id}`), and before sending, check a dedup store for that id; if already sent, skip. Record the id atomically with the send. This way retries and duplicate events result in exactly one notification reaching the user."
+      ],
+      "keyPoints": ["At-least-once + retries (and duplicate events) cause double sends", "Idempotency id per logical notification", "Check dedup store before sending; record atomically", "Duplicates become no-ops → exactly one notification"],
+      "followUps": ["What would you use as the idempotency key for a 'new message' push?"]
+    }
+  ]
+}

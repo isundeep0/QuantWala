@@ -1,0 +1,101 @@
+{
+  "slug": "cpp-cost-model",
+  "sectionId": "cpp",
+  "order": 1,
+  "title": "Value Semantics, RAII & the Cost Model",
+  "tagline": "Know what every line costs — where copies, allocations, and indirections hide in 'innocent' C++.",
+  "level": "Core",
+  "track": ["dev", "systems"],
+  "estMinutes": 20,
+  "concept": {
+    "analogy": "Driving a manual car forces you to feel the engine — you know exactly when you're burning fuel. C++ is the manual transmission of programming: nothing happens that you didn't ask for, but you have to know what each gesture costs. A stray copy or heap allocation is like riding the clutch — invisible to the careless, obvious and avoidable to someone who understands the machine.",
+    "paragraphs": [
+      "C++ gives you a transparent, zero-overhead-by-default cost model: you generally don't pay for what you don't use, but you must know what each construct actually does. On the HFT hot path, the difference between a fast and a slow function is usually hidden copies, hidden heap allocations, and hidden indirections (pointer chasing, virtual calls) — not the obvious arithmetic.",
+      "Value semantics is the default: assigning or passing an object copies it. That's safe and local, but copying a std::vector or std::string copies its heap buffer — potentially an allocation and a memcpy. Reference semantics (pass by const reference, or by pointer) avoids the copy. Knowing when a copy happens is fundamental.",
+      "RAII (Resource Acquisition Is Initialization) is C++'s core idiom: tie a resource's lifetime to an object's scope, so the destructor releases it automatically (memory, locks, file handles, sockets). It gives deterministic, exception-safe cleanup with no garbage collector — crucial when you can't afford GC pauses and need predictable latency.",
+      "The mental model to build: for each line, ask 'does this copy? does this allocate? does this branch or indirect?' On the hot path, you want no heap allocation, minimal copying, and predictable control flow. Most C++ performance work is removing surprises from this cost model."
+    ],
+    "points": [
+      "C++ is zero-overhead by default but you must know each construct's true cost.",
+      "Value semantics copies by default; copying containers (vector/string) can allocate + memcpy.",
+      "Pass by const reference to avoid copies; pass by value only when you'll keep/modify a copy.",
+      "RAII ties resource lifetime to scope — deterministic, exception-safe cleanup, no GC pauses.",
+      "Hot-path discipline: no heap allocation, minimal copies, predictable control flow."
+    ],
+    "keyIdea": "Performance in C++ comes from understanding the cost model: where copies, allocations, and indirections hide. RAII gives you deterministic cleanup without GC, which is exactly what predictable low latency requires."
+  },
+  "deepDive": {
+    "intro": "Let's make the costs concrete — these are the things interviewers point at and ask 'what does this do?'",
+    "steps": [
+      {
+        "title": "When does a copy happen?",
+        "detail": "Passing a std::string/std::vector by value copies its heap buffer (allocation + copy). Returning by value may be elided (RVO/NRVO) or moved. `auto x = container[i];` copies the element; `auto& x = container[i];` doesn't. `for (auto s : strings)` copies each string; `for (const auto& s : strings)` doesn't. These tiny differences dominate hot-path cost."
+      },
+      {
+        "title": "Pass-by-reference vs by-value",
+        "detail": "Default to `const T&` for read-only parameters of non-trivial types to avoid copies. Pass by value for cheap types (int, pointers, small trivially-copyable structs) or when you intend to take ownership (then std::move into place). 'Pass by value and move' is a clean idiom for sink parameters."
+      },
+      {
+        "title": "RAII in action",
+        "detail": "std::lock_guard locks a mutex in its constructor and unlocks in its destructor — no manual unlock, exception-safe. std::unique_ptr frees memory on scope exit. A custom RAII wrapper can manage a socket, a file, or a hardware buffer. The pattern: acquire in constructor, release in destructor, and the compiler guarantees release on every exit path."
+      },
+      {
+        "title": "Deterministic destruction vs GC",
+        "detail": "Garbage-collected languages free memory 'eventually', causing unpredictable pauses — fatal for tail latency. C++ frees deterministically at scope end. This determinism is a primary reason HFT uses C++: you control exactly when work (including cleanup) happens, so you can keep it off the hot path."
+      },
+      {
+        "title": "The rule of zero / three / five",
+        "detail": "Rule of zero: design types so you don't need to write destructors/copy/move (let members manage themselves) — simplest and safest. If you must manage a resource manually, the rule of three/five says define the full set (destructor, copy ctor/assign, and move ctor/assign) consistently, or you'll get leaks/double-frees."
+      }
+    ],
+    "notes": [
+      {
+        "title": "Profile, don't guess",
+        "detail": "The cost model tells you what's possible; a profiler tells you what's actual. Optimize the hot path you've measured, not the code you assume is slow. We cover measurement in the systems section, but the discipline starts here: reason about cost, then verify."
+      }
+    ],
+    "pitfalls": [
+      "`for (auto x : container)` copying every element — use `const auto&`.",
+      "Passing big objects by value 'because it's simpler' — copies + allocations on the hot path.",
+      "Manual new/delete instead of RAII — leaks and double-frees, especially under exceptions.",
+      "Writing only a destructor but not the copy/move operations (rule of three/five) — silent resource bugs.",
+      "Assuming returning a big object is expensive — RVO/move usually makes it free; don't fight the compiler with out-params unless measured."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-copy",
+        "q": "Walk through which of these copy or allocate: (a) `void f(std::string s)`, (b) `void g(const std::string& s)`, (c) `for (auto w : words)`, (d) `for (const auto& w : words)`.",
+        "tag": "C++",
+        "a": [
+          "(a) f takes the string by value → the caller's argument is copied into s (heap buffer allocation + memcpy) unless the caller passes a temporary/std::move (then it's moved, no alloc). (b) g takes by const reference → no copy, no allocation; just binds a reference. (c) copies each element w (allocation per string). (d) binds a const reference per element → no copy.",
+          "Rule of thumb: use const& for read-only non-trivial parameters and range-loop variables. Take by value only for cheap types or when you'll keep/move the argument."
+        ],
+        "followups": ["When is pass-by-value actually better?", "What is RVO and when does returning by value avoid a copy?"]
+      },
+      {
+        "id": "q-raii",
+        "q": "Explain RAII and why it's especially valuable for low-latency systems.",
+        "tag": "C++",
+        "a": [
+          "RAII ties a resource's lifetime to an object's scope: the resource is acquired in the constructor and released in the destructor, so cleanup happens automatically and deterministically on every exit path — including exceptions. Examples: std::lock_guard (mutex), std::unique_ptr (memory), custom wrappers for sockets/files/buffers.",
+          "For low latency it's doubly valuable: (1) it gives exception-safe, leak-free resource management without a garbage collector, so there are no unpredictable GC pauses wrecking tail latency; and (2) destruction is deterministic — you know exactly when cleanup runs, so you can ensure it doesn't happen on the hot path (e.g., construct/destroy pooled objects off the critical path). Predictable timing is the whole point in HFT, and RAII gives you that control."
+        ]
+      },
+      {
+        "id": "q-rule",
+        "q": "What is the 'rule of zero' and why is it preferred over the rule of three/five?",
+        "tag": "C++",
+        "a": [
+          "The rule of zero says: design classes so they need no user-declared destructor, copy/move constructors, or copy/move assignment — by composing members that already manage their own resources (e.g., std::vector, std::unique_ptr, std::string). The compiler-generated special members then do the right thing, and you write less error-prone code.",
+          "It's preferred because manually writing the destructor and the copy/move operations (the rule of three/five) is a common source of bugs: forget one and you get leaks, double-frees, or broken move semantics. By pushing resource ownership into well-tested RAII members, you get correctness 'for free'. You only fall back to the rule of three/five when you genuinely must manage a raw resource yourself — and then you must implement the whole consistent set."
+        ]
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Effective Modern C++", "by": "Scott Meyers", "note": "Items on value semantics, copies, and resource management — essential." },
+    { "title": "CppCon talks on 'the cost of abstraction'", "note": "Several talks demonstrate hidden copies/allocations and how to find them." }
+  ]
+}

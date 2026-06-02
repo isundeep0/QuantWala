@@ -1,0 +1,140 @@
+{
+  "slug": "order-book-engine",
+  "sectionId": "architecture",
+  "order": 3,
+  "title": "Building a Fast Order Book",
+  "tagline": "The data structure at the heart of every trading system: O(1) updates, instant top-of-book, exchange-exact correctness.",
+  "level": "Advanced",
+  "track": ["dev", "systems"],
+  "estMinutes": 22,
+  "visualizer": "order-book",
+  "concept": {
+    "analogy": "An order book is like a stadium with numbered seat-rows (price levels). Buyers fill rows below the stage and sellers fill rows above; each row has a queue of people who arrived in order (time priority). Your job is to keep a live seating chart as people constantly join, leave, and get called to the stage — and to instantly answer 'who's in the front row on each side?' (best bid/ask). If your chart ever disagrees with the stadium's real seating, every decision you make is wrong.",
+    "paragraphs": [
+      "The order book is the in-memory representation of the market: for each instrument, the resting buy orders (bids) and sell orders (asks) organized by price level, with each level holding aggregated size (and, for a full book, the time-ordered queue of individual orders). The strategy reads it to see the best bid/ask, the depth, and imbalance. It is updated on every feed event — adds, cancels, modifies, trades — often millions of times per second.",
+      "The engineering tension is between fast updates and fast queries with exact correctness. The hot operations are: add an order at a price, cancel/reduce an order, execute (trade) against the front of a level, and read top-of-book. You want each to be O(1) or close to it, with the data laid out for cache locality — not a textbook std::map<price, level> whose red-black tree pointer-chasing causes cache misses on every update.",
+      "The standard fast design exploits that prices are discrete ticks within a bounded range near the touch. You keep a dense array indexed by price (or by tick offset from a reference), where each slot is a price level holding total size and a queue (often an intrusive doubly-linked list of order nodes drawn from a pre-allocated pool). A separate hash map from order-id → node lets cancels/modifies find their order in O(1). Best bid/ask are tracked incrementally (or found by scanning a small window / bitset of populated levels). This gives O(1) add/cancel/execute and O(1) top-of-book with contiguous, allocation-free memory.",
+      "Above all, the book must exactly mirror the exchange's matching semantics — price-time priority (or pro-rata where applicable), the same tick size, the same handling of modifies (does a modify lose queue priority?) and partial fills. A book that is fast but subtly wrong is dangerous: the strategy quotes against a market that isn't there. Build it correct against the exchange spec first, then optimize the layout within that correctness envelope."
+    ],
+    "points": [
+      "Order book = bids/asks by price level (aggregated size, and for full depth the time-ordered order queue).",
+      "Hot ops: add, cancel/reduce, execute at front, read top-of-book — want O(1) and cache-friendly.",
+      "Fast design: dense price-indexed array of levels + intrusive list from a pool + order-id → node hash map.",
+      "Track best bid/ask incrementally; avoid pointer-heavy std::map (cache misses on every update).",
+      "Must exactly mirror the exchange's matching (price-time/pro-rata, tick size, modify rules) — correctness first."
+    ],
+    "callouts": [
+      { "type": "tip", "title": "Index by tick, not raw price", "body": "Convert price to an integer tick offset from a reference (e.g., (price - base) / tickSize) and index a dense array. Integer indexing is branchless and cache-friendly; floating-point prices and maps are not." },
+      { "type": "warn", "title": "Queue priority is subtle", "body": "On most exchanges a price-improving modify or a size increase loses time priority (goes to the back of the queue), while a pure size decrease keeps it. Model this exactly or your fill predictions and queue-position signals will be wrong." }
+    ],
+    "keyIdea": "A fast order book uses a dense price(tick)-indexed array of levels backed by an intrusive list of pooled order nodes plus an order-id→node hash map, giving O(1) add/cancel/execute and O(1) top-of-book with contiguous, allocation-free memory. But it must replicate the exchange's exact matching rules — correctness gates the optimization."
+  },
+  "deepDive": {
+    "intro": "Choosing the structure, the O(1) operations, tracking the touch, and matching the exchange exactly.",
+    "steps": [
+      {
+        "title": "Levels: dense array by tick",
+        "detail": "Map price to an integer tick index (tick = (price - refPrice)/tickSize) and keep a pre-sized array of PriceLevel structs covering the active range around the touch. Each level stores aggregate size and, for a full book, the head/tail of its order queue. Array indexing is O(1), branchless, and contiguous (cache-friendly), unlike a tree/map keyed by price."
+      },
+      {
+        "title": "Orders: intrusive list from a pool",
+        "detail": "Each resting order is a node with prev/next pointers living inside a pre-allocated pool (no per-order new/delete). A level's queue is an intrusive doubly-linked list of these nodes in time order; add appends to the tail (time priority), execute consumes from the head, cancel unlinks in O(1). Pool + intrusive list = allocation-free, cache-stable churn."
+      },
+      {
+        "title": "Order-id index for cancel/modify",
+        "detail": "Cancels and modifies reference an order id, so keep a fast hash map (open-addressing, pre-sized) from order-id → node pointer. Cancel: look up node O(1), unlink from its level, decrement level size, return node to the pool. Modify: depending on the exchange rule, either adjust size in place (keeps priority) or remove-and-re-add at the new price/size (loses priority)."
+      },
+      {
+        "title": "Tracking best bid/ask",
+        "detail": "Top-of-book is queried constantly, so maintain it incrementally: when a level empties or a new better level appears, update bestBidIdx/bestAskIdx. To find the next non-empty level after the touch empties, either scan a small window or keep a bitset/bitmap of populated levels and use a find-first-set (clz/ctz) — O(1)-ish to jump to the next active price."
+      },
+      {
+        "title": "Match exactly & handle edge cases",
+        "detail": "Replicate the venue's matching: price-time priority (FIFO) on most equity/futures venues, pro-rata or size-time on some options/rates venues; the exact tick size; modify/replace priority rules; partial fills; and self-trade prevention if relevant. Handle book resets, snapshots (rebuild the array), crossed/locked states, and out-of-range prices (resize/rebase the window). Validate against exchange-published examples."
+      }
+    ],
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "order_book.cpp — dense levels + pool + id map",
+        "source": "#include <vector>\n#include <unordered_map>\n#include <cstdint>\n\nstruct Order { uint64_t id; uint32_t qty; int32_t tick; Order* prev; Order* next; bool buy; };\n\nstruct Level { uint64_t total = 0; Order* head = nullptr; Order* tail = nullptr; };\n\nclass OrderBook {\npublic:\n    OrderBook(int nticks) : levels_(nticks) {}\n\n    void add(uint64_t id, bool buy, int32_t tick, uint32_t qty) {\n        Order* o = pool_.alloc();                 // pre-allocated pool, no new\n        *o = {id, qty, tick, nullptr, nullptr, buy};\n        Level& L = levels_[tick];\n        o->prev = L.tail;                         // append => time priority\n        (L.tail ? L.tail->next : L.head) = o;\n        L.tail = o; L.total += qty;\n        index_[id] = o;\n        if (buy)  best_bid_ = std::max(best_bid_, tick);\n        else      best_ask_ = std::min(best_ask_, tick);\n    }\n\n    void cancel(uint64_t id) {\n        auto it = index_.find(id); if (it == index_.end()) return;\n        Order* o = it->second; Level& L = levels_[o->tick];\n        (o->prev ? o->prev->next : L.head) = o->next;\n        (o->next ? o->next->prev : L.tail) = o->prev;\n        L.total -= o->qty; index_.erase(it); pool_.free(o);\n        if (L.total == 0) reseat_touch(o->tick, o->buy);   // advance best bid/ask\n    }\n\n    int32_t best_bid() const { return best_bid_; }\n    int32_t best_ask() const { return best_ask_; }\nprivate:\n    void reseat_touch(int32_t emptied, bool buy);   // scan/bitset to next active level\n    std::vector<Level> levels_;\n    std::unordered_map<uint64_t, Order*> index_;    // prefer a custom open-addressing map\n    int32_t best_bid_ = -1, best_ask_ = INT32_MAX;\n    struct Pool { Order* alloc(); void free(Order*); } pool_;\n};"
+      },
+      {
+        "language": "cpp",
+        "title": "modify_rules.cpp — priority semantics",
+        "source": "// Exchange-accurate modify: size-decrease keeps queue priority; price change or\n// size-increase loses priority (treated as cancel + new at the back of the queue).\nvoid OrderBook::modify(uint64_t id, int32_t newTick, uint32_t newQty) {\n    auto it = index_.find(id); if (it == index_.end()) return;\n    Order* o = it->second;\n    const bool keepsPriority = (newTick == o->tick) && (newQty <= o->qty);\n    if (keepsPriority) {                       // in-place size reduction\n        levels_[o->tick].total -= (o->qty - newQty);\n        o->qty = newQty;\n    } else {                                   // re-queue: lose time priority\n        bool buy = o->buy; cancel(id); add(id, buy, newTick, newQty);\n    }\n}"
+      }
+    ],
+    "notes": [
+      { "title": "Top-of-book vs full depth", "detail": "If your strategy only needs L1/shallow depth, a tiny fixed array of the top N levels is far cheaper than a full order-by-order book. Build the least book your strategy needs." },
+      { "title": "Bitset for the touch", "detail": "A bitmap of populated levels lets you jump to the next active price with a single find-first-set instruction when the touch empties, avoiding a linear scan in sparse books." },
+      { "title": "Rebasing the window", "detail": "Prices can drift outside your pre-sized tick window over a session. Handle a rebase/resize (or use a large enough range) so far-touch moves don't corrupt indexing." }
+    ],
+    "complexity": {
+      "time": "O(1) add/cancel/execute; O(1) top-of-book",
+      "timeReason": "Array indexing by tick, intrusive-list splice, and hash lookup are all O(1); incremental best-bid/ask (or a bitset find-first-set) keeps the touch query O(1). No tree traversal or allocation on the hot path.",
+      "space": "O(levels + resting orders), pre-allocated",
+      "spaceReason": "Dense level array sized to the active tick range plus a pooled node per resting order and a pre-sized id→node map; memory is contiguous and reused."
+    },
+    "pitfalls": [
+      "Using std::map<price, level> on the hot path — tree pointer-chasing causes a cache miss per update.",
+      "Per-order new/delete instead of a node pool — allocation jitter and fragmentation.",
+      "Getting modify/replace priority wrong, so fill and queue-position predictions are off.",
+      "Linear-scanning for the next touch in a sparse book instead of using incremental tracking / a bitset.",
+      "Not handling snapshots, resets, crossed/locked books, or prices drifting outside the tick window."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-structure",
+        "q": "How would you design an order book for O(1) updates and top-of-book, and why not just use std::map?",
+        "tag": "Architecture",
+        "a": [
+          "Represent price levels as a dense array indexed by integer tick offset from a reference (tick = (price-base)/tickSize), each slot holding aggregate size and, for full depth, an intrusive time-ordered queue of order nodes drawn from a pre-allocated pool. Keep an order-id→node hash map so cancels/modifies find their order in O(1): add appends to the level's tail, cancel unlinks the node, execute consumes from the head. Track best bid/ask incrementally (or jump via a populated-levels bitset). All hot ops are O(1) and the memory is contiguous and allocation-free.",
+          "std::map is a red-black tree: each lookup/insert chases pointers across heap-scattered nodes, costing a cache miss per step and log(n) steps — terrible on a structure updated millions of times/sec. Array indexing by tick is branchless, O(1), and cache-friendly, which is why production books use dense arrays + pools rather than node-based ordered maps."
+        ],
+        "followups": ["How do you find the next best level when the touch empties?", "How do you handle a modify that loses priority?"]
+      },
+      {
+        "id": "q-correct",
+        "q": "Why is exactly matching the exchange's semantics as important as speed in an order book?",
+        "tag": "Architecture",
+        "a": [
+          "The strategy makes decisions based on the book — best prices, depth, imbalance, and its own queue position. If your book diverges from the exchange's real state (wrong matching rule, wrong tick size, mishandled modify priority, missed cancel), the strategy quotes and hedges against a market that doesn't exist: it mis-estimates fill probability and queue position, may cross the spread unintentionally, and can take losing trades — fast.",
+          "So you must replicate the venue's exact rules: price-time vs pro-rata matching, tick size, whether a modify keeps or loses priority, partial-fill handling, and self-trade prevention, plus snapshot/reset handling. The right order of work is correctness first (validated against exchange-published examples and a known-good reference), then optimize the data layout within that envelope — a fast but subtly wrong book is worse than a slower correct one."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-build-book",
+        "title": "Implement an O(1) limit order book",
+        "difficulty": "Advanced",
+        "statement": "Implement a single-instrument limit order book supporting add(id, side, price, qty), cancel(id), execute(side, qty) against the touch, and best_bid()/best_ask(), all O(1) on the hot path with no per-operation allocation, using price-time priority. Describe your data structures, how you maintain top-of-book efficiently, and how you'd test correctness against an exchange spec.",
+        "hint": "Dense tick-indexed level array + intrusive list from a node pool + id→node map; incremental best bid/ask or a populated-levels bitset; FIFO within a level.",
+        "tests": "Core book implementation and correctness validation.",
+        "solution": {
+          "approach": [
+            "Structures: a pre-sized `std::vector<Level>` indexed by tick = (price-base)/tickSize; each Level holds total size and head/tail of an intrusive doubly-linked list of Order nodes. Orders come from a pre-allocated pool (free-list), so add/cancel never call new/delete. An open-addressing hash map id→Order* makes cancel/modify O(1). Maintain best_bid_/best_ask_ as tick indices, updated on the fly; back them with a bitset of populated levels so that when the touch empties you find the next active level with a single find-first-set instruction.",
+            "Operations: add → pool.alloc, fill fields, append to level tail (time priority), bump total, insert into id map, update touch if this price improves it. cancel → id-map lookup, unlink node O(1), decrement total, free to pool, and if the level emptied at the touch, advance best bid/ask via the bitset. execute(side, qty) → consume from the head of the best level (oldest first = FIFO), reducing/removing nodes and the level total, walking to the next level if a level is fully consumed. best_bid/ask → read the cached tick (convert back to price).",
+            "Testing: (1) unit tests for add/cancel/execute and touch maintenance including emptying/refilling levels and FIFO order; (2) replay a recorded exchange feed through the book and compare best bid/ask/depth against the exchange's published book or a reference implementation at each step; (3) targeted tests for the tricky rules — modify priority (size-decrease keeps, price/size-increase loses), partial fills, crossed/locked states, snapshots/resets, and prices near the window edge; (4) fuzz/property tests asserting invariants (total = sum of node qtys, best_bid < best_ask unless crossed). Only after correctness, benchmark add/cancel throughput and confirm no allocation/cache-miss hotspots with perf."
+          ],
+          "complexity": { "time": "O(1) add/cancel/execute; O(1) top-of-book", "space": "O(active levels + resting orders), pre-allocated" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "touch.cpp — advance best with a bitset",
+              "source": "#include <bit>\n// populated_[i] bit set iff levels_[i].total > 0. After the bid touch empties:\nint32_t OrderBook_next_bid(const uint64_t* words, int32_t from) {\n    // scan downward for the highest set bit <= from (find-last-set per word)\n    for (int32_t w = from >> 6; w >= 0; --w) {\n        uint64_t bits = words[w];\n        if (w == (from >> 6)) bits &= (~0ull >> (63 - (from & 63))); // mask above 'from'\n        if (bits) return (w << 6) + (63 - std::countl_zero(bits));\n    }\n    return -1;   // empty side\n}"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "How to Build a Fast Limit Order Book", "by": "WK Selph (classic blog post)", "note": "The canonical array-of-levels + intrusive-list + id-map design." },
+    { "title": "QuantCup limit order book challenge & winning entries", "note": "Real competitive implementations to study for speed." },
+    { "title": "Exchange matching specs (price-time vs pro-rata)", "note": "Ground truth your book must replicate exactly." }
+  ]
+}

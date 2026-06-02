@@ -1,0 +1,94 @@
+{
+  "slug": "the-roadmap",
+  "sectionId": "foundations",
+  "order": 4,
+  "title": "Your Roadmap: How to Become HFT-Ready",
+  "tagline": "A concrete, ordered study plan from complete beginner to interview-ready — and how to use this module.",
+  "level": "Core",
+  "track": ["dev", "research", "trader", "systems"],
+  "estMinutes": 14,
+  "concept": {
+    "analogy": "Becoming HFT-ready is like training for a triathlon, not a sprint. You need a base layer of general fitness (CS/math fundamentals), then sport-specific training in each discipline (probability, C++, systems), then race-specific practice (timed mental math, mock interviews, a real project). Skipping the base or only training one discipline leaves you unable to finish the race.",
+    "paragraphs": [
+      "There's no single path, but there is a sensible order. First, get the prerequisites solid: data structures & algorithms, one strong language (C++ for dev/systems, Python for research), basic probability, and operating-system/computer-architecture fundamentals. Without these, the HFT-specific material won't stick.",
+      "Then build the shared HFT core: market microstructure (how order books and matching work) and probability/expected-value reasoning. These appear in every loop and make everything else make sense.",
+      "Then specialize in your track (see the previous lesson). For dev/systems, go deep on modern C++ and low-latency systems engineering. For research, go deep on statistics and signals. For trading, drill probability, mental math, and market-making games.",
+      "Finally, convert knowledge into performance: timed practice (mental math, coding under time), a portfolio project (a mini matching engine or feed parser is gold for dev roles), and mock interviews where you narrate your reasoning out loud. Firms grade your process, not just your answer."
+    ],
+    "points": [
+      "Prerequisites first: DSA, a strong language, basic probability, OS/architecture basics.",
+      "Shared core next: microstructure + expected-value reasoning.",
+      "Then specialize by track; don't spread thin.",
+      "Then convert to performance: timed drills, a real project, and out-loud mock interviews."
+    ],
+    "keyIdea": "Sequence matters: fundamentals → shared HFT core → track specialization → timed practice + a project. Theory without timed practice and a project is why strong candidates still fail HFT loops."
+  },
+  "deepDive": {
+    "intro": "A concrete, phased plan. Treat the phases as gates, not calendar dates — move on when you can demonstrate the skill, not when a week elapses.",
+    "steps": [
+      {
+        "title": "Phase 0 — Prerequisites (gate: you can solve LeetCode mediums cleanly)",
+        "detail": "Solidify arrays/strings/trees/graphs/DP and Big-O. Get fluent in C++ (or Python for research). Learn basic probability (EV, conditional, Bayes). Skim computer architecture: what a cache is, threads vs processes, what a syscall costs. Module 1 (Algorithms) on this platform is the DSA gate."
+      },
+      {
+        "title": "Phase 1 — Shared HFT core (gate: you can explain a limit order book and compute EV fast)",
+        "detail": "Work through 'Market Microstructure' and the EV/Bayes lessons here. Be able to describe what happens when a market order hits the book, and compute expected values for simple games without hesitation."
+      },
+      {
+        "title": "Phase 2 — Track specialization (gate: depth on your track's core)",
+        "detail": "Dev/Systems: write a lock-free SPSC queue from scratch, explain false sharing and the memory model, and profile a hot loop. Research: build and critique a backtest, derive a simple signal. Trader: hit a mental-math target (e.g., Zetamac 40+/2min) and play market-making games."
+      },
+      {
+        "title": "Phase 3 — Performance & project (gate: a finished artifact + clean mock)",
+        "detail": "Build something real: a mini matching engine, an ITCH parser, a latency benchmark harness, or a backtest of a real signal. Do timed coding and timed mental math. Run mock interviews narrating aloud. Refine your resume to lead with quantitative/competition signals and the project."
+      },
+      {
+        "title": "Phase 4 — Apply strategically",
+        "detail": "Apply across a range of firms (reach + match + safety). Internship apps for the next cycle typically open in late summer and move on a rolling basis, so prepare before then and apply early. Track each firm's emphasis (dev vs trader) and tailor."
+      }
+    ],
+    "notes": [
+      {
+        "title": "The single highest-leverage habit",
+        "detail": "Practice out loud and under time. Most candidates know more than they can perform. Narrate your reasoning, get comfortable being wrong and updating, and simulate pressure — that's what separates people who pass from people who 'knew it' afterwards."
+      },
+      {
+        "title": "Build one thing end-to-end",
+        "detail": "A finished mini-project (even a single-threaded matching engine that parses a sample ITCH file and maintains a book) demonstrates more than a hundred solved problems, and gives you concrete material for the technical deep-dive and behavioral rounds."
+      }
+    ],
+    "pitfalls": [
+      "Only grinding LeetCode while ignoring probability, microstructure, and systems depth.",
+      "Studying passively and never practicing under time or out loud — the real bottleneck for most people.",
+      "Never finishing a project. An unfinished repo signals less than a small finished one.",
+      "Spreading across all four tracks instead of going deep on one."
+    ]
+  },
+  "practice": {
+    "intro": "Use this module as your Phase 1–3 curriculum. The questions below help you self-assess where you are.",
+    "interviewQuestions": [
+      {
+        "id": "q-selfcheck",
+        "q": "Self-check: for the developer track, what five things should you be able to do cold before interviewing?",
+        "tag": "Prep",
+        "a": [
+          "1) Solve a LeetCode-medium cleanly and fast, explaining complexity. 2) Write a correct lock-free SPSC ring buffer and explain its memory ordering. 3) Explain cache lines, false sharing, and fix it with alignment. 4) Reason about the C++ cost model — when does a copy/allocation/virtual call happen, and how to avoid it on the hot path. 5) Design a market-data feed handler / tick-to-trade path live, assigning a latency budget to each stage.",
+          "If any of these are shaky, that's your next study target. Bonus: be able to compute expected value quickly and explain an order book — devs get asked these too."
+        ]
+      },
+      {
+        "id": "q-project",
+        "q": "What makes a good HFT-relevant portfolio project, and why does it matter?",
+        "tag": "Prep",
+        "a": [
+          "Good projects are small, finished, performance-aware, and explainable. Examples: a single-threaded matching engine maintaining a limit order book from a sample feed; a zero-allocation message parser benchmarked with percentiles; a lock-free queue with a microbenchmark; a backtest of order-flow imbalance as a signal with honest pitfalls discussed.",
+          "It matters because it gives concrete evidence of the exact skills the role needs, generates rich material for the deep-dive round ('why did you choose a flat array over std::map?'), and shows initiative. A finished small project beats an ambitious unfinished one every time."
+        ]
+      }
+    ]
+  },
+  "resources": [
+    { "title": "A Practical Guide to Quantitative Finance Interviews ('the Green Book')", "by": "Xinfeng Zhou", "note": "The standard probability/brain-teaser prep book." },
+    { "title": "Zetamac arithmetic game", "link": "https://arithmetic.zetamac.com/", "note": "The classic mental-math trainer — aim for a consistent target score." }
+  ]
+}

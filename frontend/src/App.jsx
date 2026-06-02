@@ -5,7 +5,7 @@ import Landing from "./pages/Landing.jsx";
 import AlgorithmsHub from "./pages/algorithms/AlgorithmsHub.jsx";
 import AlgorithmDetail from "./pages/algorithms/AlgorithmDetail.jsx";
 import SystemDesign from "./pages/system-design/SystemDesign.jsx";
-import SystemDesignTopic from "./pages/system-design/SystemDesignTopic.jsx";
+import SystemDesignLesson from "./pages/system-design/SystemDesignLesson.jsx";
 import HFT from "./pages/hft/HFT.jsx";
 import HFTTopic from "./pages/hft/HFTTopic.jsx";
 import CPHub from "./pages/cp/CPHub.jsx";
@@ -22,7 +22,7 @@ export default function App() {
           <Route path="/algorithms" element={<AlgorithmsHub />} />
           <Route path="/algorithms/:slug" element={<AlgorithmDetail />} />
           <Route path="/system-design" element={<SystemDesign />} />
-          <Route path="/system-design/:topicId" element={<SystemDesignTopic />} />
+          <Route path="/system-design/:topicId" element={<SystemDesignLesson />} />
           <Route path="/hft" element={<HFT />} />
           <Route path="/hft/:topicId" element={<HFTTopic />} />
           <Route path="/cp" element={<CPHub />} />

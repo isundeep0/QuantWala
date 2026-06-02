@@ -1,0 +1,120 @@
+{
+  "slug": "hotpath-pitfalls",
+  "sectionId": "cpp",
+  "order": 6,
+  "title": "Hot-Path Pitfalls",
+  "tagline": "The 'innocent' constructs that silently allocate, branch, or stall — and how to spot them in a code review.",
+  "level": "Advanced",
+  "track": ["dev", "systems"],
+  "estMinutes": 18,
+  "concept": {
+    "analogy": "A hot path is like a race car's pit lane: anything that makes the car pause — a loose bolt, a misplaced tool, a chat with a mechanic — costs the race. Many C++ features are perfectly fine in the garage (setup code) but disastrous in the pit lane (hot path). The skill is recognizing, at a glance, which 'normal' code hides a stall.",
+    "paragraphs": [
+      "Most hot-path slowness isn't algorithmic — it's incidental: a hidden heap allocation, an exception path the compiler must keep around, a type-erased call that can't inline, an unnecessary copy, or an unpredictable branch. Each is fine in cold code and toxic in a function called millions of times per second. Interviewers love to hand you a snippet and ask 'what would you change for the hot path?'",
+      "The usual suspects: std::string and std::stringstream (allocate, and formatting is slow), std::function (type erasure → indirection + potential heap, blocks inlining; prefer templates/function pointers/CRTP), std::shared_ptr (atomic refcount increments/decrements on every copy — surprisingly expensive and a contention point), exceptions on the hot path (the throw itself is very slow and the EH machinery can inhibit optimization), virtual calls (covered earlier), unbounded data structures that reallocate (vector growth, map node inserts), and I/O or logging that touches the kernel.",
+      "Then there are micro-issues: unpredictable branches (use branchless code or make the common case predictable), false sharing (covered in systems), denormal floating-point numbers (can be 10–100× slower; flush-to-zero), and integer division/modulo (slow; avoid or replace with shifts/masks for powers of two). And the cardinal sin: doing anything that can block or take a lock on the path that must never stall.",
+      "The defensive mindset: assume nothing is free, read code asking 'does this allocate / branch unpredictably / indirect / block?', keep the hot path tiny and straight-line, push everything else (logging, allocation, setup, error handling) off it, and verify with a profiler. A clean hot path is small, allocation-free, branch-light, and inlinable end-to-end."
+    ],
+    "points": [
+      "std::string/stringstream allocate and format slowly — avoid on the hot path (use fixed buffers/string_view).",
+      "std::function & virtual calls type-erase → indirection + no inlining; prefer templates/CRTP/function pointers.",
+      "std::shared_ptr copies do atomic refcount ops — costly and a contention point; prefer unique_ptr/raw on hot path.",
+      "Exceptions: throwing is very slow; keep error handling off the hot path (return codes / expected).",
+      "Watch hidden reallocation, denormals, integer division, and any locking/I/O/logging on the critical path."
+    ],
+    "keyIdea": "Hot-path performance is mostly about removing incidental costs: hidden allocations, type-erased indirection, atomic refcounts, exceptions, and unpredictable branches. Keep the critical path tiny, allocation-free, and inlinable, and push everything else off it."
+  },
+  "deepDive": {
+    "intro": "A code-review checklist — these are the exact things to flag.",
+    "steps": [
+      {
+        "title": "Hidden allocations",
+        "detail": "std::string concatenation, std::stringstream, growing a vector past capacity, std::map/unordered_map node inserts, std::function holding a large lambda, and any `new`/make_shared all hit the heap. On the hot path, replace with fixed buffers, string_view, reserved/pooled containers, and stack/inline storage."
+      },
+      {
+        "title": "Type erasure: std::function and virtual",
+        "detail": "std::function erases the callable type: it adds an indirection, may allocate for large captures, and the compiler can't inline through it. Prefer a template parameter, a plain function pointer, or CRTP for hot-path callbacks. Same logic as avoiding virtual calls in tight loops."
+      },
+      {
+        "title": "shared_ptr's atomic refcount",
+        "detail": "Every copy/destruction of a shared_ptr atomically increments/decrements a reference count — atomic RMW operations that are far costlier than a pointer copy and become a contention hotspot if many threads touch the same control block. On the hot path use unique_ptr (no refcount), raw/observer pointers with clear ownership, or pass by reference. Reserve shared_ptr for genuine shared ownership in cold code."
+      },
+      {
+        "title": "Exceptions and error handling",
+        "detail": "On the happy path, modern zero-cost EH adds little; but actually *throwing* is extremely slow (stack unwinding, RTTI), so never use exceptions for expected, frequent conditions on the hot path. Use return codes, error enums, std::optional/std::expected, or a status flag. Keep the throwing paths cold."
+      },
+      {
+        "title": "Micro-stalls: branches, denormals, division",
+        "detail": "Unpredictable branches cost mispredict flushes — make the common case the fall-through, use [[likely]]/[[unlikely]], or go branchless. Denormal floats can be 10–100× slower — enable flush-to-zero/denormals-are-zero. Integer division/modulo are slow — for powers of two use shifts/masks; otherwise precompute reciprocals. And never log/do I/O/take a lock on the path that must not stall."
+      }
+    ],
+    "notes": [
+      {
+        "title": "Logging without stalling",
+        "detail": "You still need logs, but synchronous logging (formatting + I/O) on the hot path is fatal. The standard approach: on the hot path, write a tiny binary record (just the raw values + a format ID) into a lock-free ring buffer; a separate, low-priority thread formats and writes it out. The hot path does near-zero work; the expensive formatting happens off the critical path."
+      }
+    ],
+    "pitfalls": [
+      "Assuming 'it's just a string'/'just a shared_ptr copy' is free — both can dominate a tiny hot function.",
+      "Using std::function for hot-path callbacks instead of a template/CRTP — lost inlining + maybe heap.",
+      "Throwing exceptions for expected conditions in tight loops.",
+      "Synchronous logging/printf on the hot path — offload to a background thread via a ring buffer.",
+      "Letting containers reallocate or maps allocate nodes mid-trading — preallocate/pool."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-review",
+        "q": "You're handed this hot-path function: `void onTick(const Tick& t) { std::string sym = t.symbol; log(\"got \" + sym); auto cb = std::function<void()>([=]{ handle(sym); }); cb(); }`. List what you'd change and why.",
+        "tag": "C++",
+        "a": [
+          "Problems: (1) `std::string sym = t.symbol` copies (allocates) — use a string_view or fixed-size symbol type. (2) `log(\"got \" + sym)` builds a temporary std::string (allocation) and does synchronous formatting/I/O on the hot path — offload logging to a background thread via a ring buffer, writing a binary record. (3) `std::function<void()>` with a capturing lambda type-erases (indirection, may heap-allocate the captures, blocks inlining) — call handle(sym) directly or use a template/CRTP callback. (4) The whole thing does work that should be straight-line and allocation-free.",
+          "Rewritten intent: take the symbol as a string_view / small POD, call handle directly (inlinable), and if you must log, push a compact record to a lock-free queue for a logger thread to format later. Net effect: zero hot-path allocations, no type erasure, no synchronous I/O."
+        ]
+      },
+      {
+        "id": "q-shared",
+        "q": "Why can copying a std::shared_ptr be a performance problem on the hot path, and what would you use instead?",
+        "tag": "C++",
+        "a": [
+          "Each shared_ptr copy increments, and each destruction decrements, an atomic reference count in the shared control block. Atomic read-modify-write operations are much more expensive than a plain pointer copy, and when many threads copy/destroy shared_ptrs to the same object, they contend on that one cache line holding the refcount — causing cache-line ping-pong and serialization. So 'just passing a shared_ptr around' can quietly become a latency and scalability problem.",
+          "On the hot path, prefer clear single ownership with std::unique_ptr (no refcount) and pass non-owning references/observer (raw) pointers or references to functions that just use the object without taking ownership. Reserve shared_ptr for genuine shared-ownership scenarios in cold/setup code, and if you must, pass it by `const&` (avoiding refcount churn) rather than by value."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-branchless",
+        "title": "Branchless clamp / conditional sum",
+        "difficulty": "Core",
+        "statement": "Rewrite this conditional accumulation to be branchless: given an array of ints, sum only the elements >= threshold. The branchy version is `if (a[i] >= t) sum += a[i];`. Provide a branchless equivalent and explain when it helps.",
+        "hint": "Multiply the value by a 0/1 mask derived from the comparison, so there's no data-dependent branch.",
+        "tests": "Eliminating an unpredictable branch on the hot path.",
+        "solution": {
+          "approach": [
+            "The comparison `a[i] >= t` yields a bool (0 or 1). Instead of branching on it, multiply: `sum += a[i] * (a[i] >= t);`. There's no data-dependent branch, so the CPU can't mispredict it — the work is the same regardless of data, which is exactly what the branch-prediction visualization in the systems section demonstrates.",
+            "When it helps: when the branch is *unpredictable* (e.g., random data), branchless avoids costly mispredict flushes. When the branch is highly predictable (almost always taken or not), the branchy version may be just as fast or faster (and clearer), so always measure. Compilers sometimes auto-vectorize/auto-branchless this, but writing it explicitly guarantees it on the hot path."
+          ],
+          "complexity": { "time": "O(n)", "space": "O(1)" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "branchless.cpp",
+              "source": "#include <vector>\n// Branchy (can mispredict on random data):\nlong long sumGE_branchy(const std::vector<int>& a, int t){\n    long long s = 0;\n    for (int x : a) if (x >= t) s += x;\n    return s;\n}\n// Branchless: multiply by the 0/1 comparison result, no data-dependent branch.\nlong long sumGE_branchless(const std::vector<int>& a, int t){\n    long long s = 0;\n    for (int x : a) s += (long long)x * (x >= t);\n    return s;\n}"
+            },
+            {
+              "language": "python",
+              "title": "branchless.py",
+              "source": "def sum_ge_branchless(a, t):\n    # multiply by the boolean (0/1); no data-dependent branch\n    return sum(x * (x >= t) for x in a)"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Optimizing software in C++", "by": "Agner Fog", "note": "Free manuals on the real cost of language features and how to avoid stalls." },
+    { "title": "CppCon: 'When a Microsecond Is an Eternity' (Carl Cook)", "note": "A canonical talk on hot-path discipline in trading systems." }
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "slug": "distributed-transactions",
+  "sectionId": "distributed-systems",
+  "order": 6,
+  "title": "Distributed Transactions: 2PC, Saga & Outbox",
+  "tagline": "How to keep data consistent across multiple services and databases when there's no single transaction to wrap them.",
+  "summary": "Why cross-service transactions are hard; 2PC, Saga, outbox pattern.",
+  "difficulty": "Advanced",
+  "estMinutes": 17,
+  "tags": ["distributed", "consistency", "microservices"],
+  "prereqs": ["acid-vs-base", "idempotency"],
+  "sections": [
+    {
+      "id": "problem",
+      "title": "The problem with microservices & data",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "In a monolith with one database, a single ACID transaction can update many tables atomically. But once you split into microservices — each with its *own* database — there's no shared transaction. An action like 'place an order' might need to: reserve inventory (Inventory service), charge the card (Payment service), and create the order (Order service). If the charge succeeds but inventory reservation fails, you've taken money without reserving goods. How do you keep these consistent?",
+            "This is the distributed-transaction problem: coordinating an all-or-nothing outcome across independent systems that can each fail. There's no perfect answer — you choose between strong-but-fragile coordination and eventual-but-resilient compensation."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2pc",
+      "title": "Two-Phase Commit (2PC) — strong but fragile",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "**2PC** uses a coordinator to make all participants commit or abort together. Phase 1 (prepare): the coordinator asks every participant 'can you commit?'; each does the work tentatively and votes yes/no, locking resources. Phase 2 (commit): if *all* voted yes, the coordinator tells everyone to commit; if any voted no, everyone aborts."
+          ]
+        },
+        {
+          "type": "tradeoffs",
+          "pros": ["Provides atomicity across services (true all-or-nothing)", "Conceptually simple guarantee"],
+          "cons": ["Blocking: participants hold locks while waiting — kills throughput", "Coordinator is a SPOF; if it dies after prepare, participants are stuck holding locks", "Poor availability and scalability; latency of the slowest participant", "Rarely used in modern high-scale microservices"]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "text": "2PC trades availability for consistency (it's a CP approach) and scales poorly because of locking and the blocking coordinator. Mention you know it, but that for scalable microservices the Saga pattern is usually preferred."
+        }
+      ]
+    },
+    {
+      "id": "saga",
+      "title": "Saga — eventual consistency via compensation",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A **Saga** breaks the distributed transaction into a sequence of *local* transactions, one per service. Each step commits locally and publishes an event that triggers the next step. If a step fails, the saga runs **compensating transactions** to undo the previously-completed steps — semantically reversing them (e.g., refund the charge, release the inventory) rather than rolling back a lock.",
+            "Two coordination styles: **choreography** (services react to each other's events, no central coordinator — simple but logic is spread out and hard to trace) and **orchestration** (a central orchestrator tells each service what to do next and handles failures — clearer and easier to monitor, at the cost of a coordinator component)."
+          ]
+        },
+        {
+          "type": "diagram",
+          "direction": "lr",
+          "caption": "Each step commits locally; on failure, compensations undo prior steps in reverse.",
+          "groups": [
+            { "label": "Step 1", "nodes": [{ "label": "Create Order", "icon": "ShoppingCart", "accent": "#10b981" }] },
+            { "label": "Step 2", "nodes": [{ "label": "Reserve Inventory", "icon": "Boxes", "accent": "#10b981" }] },
+            { "label": "Step 3", "nodes": [{ "label": "Charge Payment ✗", "sub": "fails → compensate", "icon": "CreditCard", "accent": "#ef4444" }] },
+            { "label": "Undo", "nodes": [{ "label": "Release Inventory + Cancel Order", "icon": "Repeat", "accent": "#f59e0b" }] }
+          ]
+        },
+        {
+          "type": "tradeoffs",
+          "pros": ["No long-held locks → scalable and available", "Each service stays autonomous with its own DB", "Resilient to partial failure via compensations"],
+          "cons": ["Only eventually consistent (intermediate states are visible)", "Must design a compensating action for every step", "More complex to reason about; needs idempotency + careful failure handling"]
+        }
+      ]
+    },
+    {
+      "id": "outbox",
+      "title": "The dual-write problem & the Outbox pattern",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A subtle but classic bug: a service updates its database *and* publishes an event to a queue. If it writes the DB then crashes before publishing (or vice versa), the two diverge — the order exists but no 'order placed' event was sent. You can't atomically write to a DB and a separate message broker.",
+            "The **Transactional Outbox** pattern fixes this: in the *same local DB transaction* as the business change, also insert the event into an `outbox` table. A separate process (or Change Data Capture reading the DB log) reads the outbox and publishes the events to the broker, marking them sent. Because the business write and the outbox insert are one atomic transaction, you never lose an event — and at-least-once publishing plus idempotent consumers handle duplicates."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "The outbox pattern is a high-signal thing to mention whenever a design writes to a DB and emits events. The line: 'To avoid the dual-write problem, I'd write the event to an outbox table in the same transaction and relay it via CDC, with idempotent consumers.'"
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Microservices each own a DB → no shared ACID transaction; coordinating multi-service actions is the distributed-transaction problem.",
+    "2PC (prepare→commit via coordinator): true atomicity but blocking, locks, coordinator SPOF → poor scale/availability; rarely used at scale.",
+    "Saga: sequence of local transactions + compensating transactions to undo on failure; eventually consistent, scalable, autonomous.",
+    "Saga styles: choreography (event-driven, decentralized) vs orchestration (central coordinator, easier to trace).",
+    "Dual-write problem: can't atomically write DB + publish event → use the Transactional Outbox (write event in same txn, relay via CDC) + idempotent consumers."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Trade-off",
+      "difficulty": "Hard",
+      "prompt": "For an e-commerce 'place order' flow spanning Order, Inventory, and Payment services, would you use 2PC or a Saga? Justify.",
+      "hint": "Think about locking, scale, and what 'undo' means here.",
+      "answer": [
+        "Use a **Saga**. At e-commerce scale, 2PC's locking and blocking coordinator would cripple throughput and availability — holding locks across three services for the duration of a checkout is untenable, and a coordinator failure could freeze orders. Strong cross-service atomicity isn't worth that cost here.",
+        "A saga runs local transactions step by step (create order → reserve inventory → charge payment), each committing independently and emitting an event. If payment fails, compensating transactions undo the prior steps (release inventory, cancel/mark the order failed). It's eventually consistent — a brief window shows a pending order — which is acceptable for checkout. I'd use orchestration for clear failure handling and make every step idempotent (since steps/events can be retried). I'd also mention the outbox pattern to reliably emit the step events."
+      ],
+      "keyPoints": ["Saga over 2PC at scale (no long locks, no blocking coordinator)", "Local txns + compensations (release inventory, cancel order)", "Eventually consistent is acceptable for checkout", "Orchestration + idempotent steps + outbox for reliable events"],
+      "followUps": ["What compensating action would you define if the order ships before a refund is requested?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "Explain the dual-write problem and how the outbox pattern solves it.",
+      "hint": "What two systems are you writing to, and what if you crash between them?",
+      "answer": [
+        "The dual-write problem occurs when an operation must update the database *and* publish a message/event to a separate broker. These are two independent systems with no shared transaction, so a crash between them leaves an inconsistency: the DB row exists but the event was never published (or the event fired but the DB write rolled back). Retrying naively can create duplicates or still lose data.",
+        "The outbox pattern makes the two writes atomic by collapsing them into one: within the *same* DB transaction as the business change, insert a row into an `outbox` table describing the event. Since it's one local ACID transaction, the event is guaranteed to be recorded iff the business change committed. A separate relay (polling the outbox, or Change Data Capture tailing the DB log) then publishes those events to the broker and marks them done. Combined with idempotent consumers (to tolerate at-least-once publishing), you get reliable, consistent event emission."
+      ],
+      "keyPoints": ["Can't atomically write DB + publish to broker → crash causes divergence", "Outbox: insert event in same DB transaction as the change", "Relay/CDC publishes outbox rows to the broker", "At-least-once + idempotent consumers handle duplicates"],
+      "followUps": ["What's the difference between polling the outbox table and using CDC on the DB log?"]
+    }
+  ]
+}

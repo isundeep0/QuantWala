@@ -1,0 +1,95 @@
+{
+  "slug": "market-participants",
+  "sectionId": "foundations",
+  "order": 2,
+  "title": "Who's Who: Makers, Takers & the Ecosystem",
+  "tagline": "The cast of characters in an electronic market — and which side an HFT firm plays.",
+  "level": "Core",
+  "track": ["dev", "research", "trader"],
+  "estMinutes": 14,
+  "concept": {
+    "analogy": "Think of a busy fish market. Wholesalers stand at stalls quoting buy and sell prices all day (makers / liquidity providers). Restaurant buyers rush in and take whatever is on offer right now because they need fish today (takers / liquidity removers). A few clever traders notice the same fish is cheaper one aisle over and shuttle between stalls (arbitrageurs). And the market operator runs the building, sets the rules, and matches everyone up (the exchange).",
+    "paragraphs": [
+      "Every electronic market has two fundamental roles for an order. A 'maker' posts a resting limit order that adds liquidity to the book and waits to be filled. A 'taker' sends a marketable order that removes liquidity by trading against resting orders. Exchanges often charge takers a fee and pay makers a rebate (the 'maker-taker' model) to encourage liquidity provision — which directly shapes HFT incentives.",
+      "Among participants you'll find: market makers (quote both sides, capture spread + rebates), arbitrageurs (exploit price differences across instruments/venues), directional/statistical traders (predict short-horizon moves), institutional 'real money' (pension funds, asset managers executing large orders slowly), retail (often routed through wholesalers/internalizers), and the venues themselves (exchanges, ECNs, dark pools).",
+      "HFT firms predominantly play the maker and arbitrageur roles, though they also take liquidity aggressively when they have an edge or need to hedge. The key relationship is between liquidity providers and the 'informed' flow that picks them off — a constant tension that determines who profits.",
+      "Understanding who you're trading against — and whether their flow is 'toxic' (informed) or 'benign' (uninformed) — is central to every HFT strategy. You want to fill the uninformed (a retail buyer who just wants exposure) and avoid the informed (a fast fund that knows the price is about to move)."
+    ],
+    "points": [
+      "Maker = adds liquidity (resting limit order); Taker = removes liquidity (marketable order).",
+      "Maker-taker fee schedules pay rebates to makers and charge takers — a real component of HFT P&L.",
+      "Venues differ: lit exchanges (visible book), ECNs, and dark pools (hidden, for large blocks).",
+      "Flow toxicity — how informed your counterparty is — drives a market maker's profitability."
+    ],
+    "keyIdea": "Markets pair liquidity providers (makers) with liquidity removers (takers). HFT mostly provides liquidity and arbitrages, and lives or dies on whether the flow it fills is informed or not."
+  },
+  "deepDive": {
+    "intro": "Let's map the ecosystem and the order-routing reality you'll be quizzed on.",
+    "steps": [
+      {
+        "title": "Exchanges and the consolidated tape",
+        "detail": "In US equities, many exchanges (NYSE, Nasdaq, Cboe, IEX, MEMX…) each run their own order book. A consolidated feed (the SIP) aggregates the National Best Bid and Offer (NBBO). Regulation NMS roughly requires routing to the best displayed price, creating cross-venue races and the need to consolidate data fast."
+      },
+      {
+        "title": "Dark pools and internalizers",
+        "detail": "Dark venues don't display orders; they're used to trade large blocks with less market impact. Wholesalers/internalizers (e.g., for retail flow) match orders off-exchange. Retail flow is prized because it's relatively uninformed — 'benign' liquidity that makers love to fill."
+      },
+      {
+        "title": "The maker-taker economics",
+        "detail": "Posting and getting filled may earn you a rebate (say +0.20¢/share); taking may cost a fee (say −0.30¢/share). Some venues invert this ('taker-maker'). A meaningful chunk of certain HFT P&L is rebate capture — which makes fee tiers and venue selection a real optimization problem."
+      },
+      {
+        "title": "Informed vs. uninformed flow",
+        "detail": "If you mostly fill traders who know more than you (informed), you lose on average even while collecting the spread. If you fill noise traders (uninformed), you profit. Strategies route to where benign flow concentrates and widen/cancel quotes when toxic flow appears."
+      },
+      {
+        "title": "Where HFT sits",
+        "detail": "HFT firms are often the dominant liquidity providers in many products today. They compete with each other to be at the top of the book, and with informed institutional flow that wants to trade against them. They are not 'the house' — they are fast, well-capitalized participants in a competitive game."
+      }
+    ],
+    "pitfalls": [
+      "Confusing 'maker' (rebate, resting order) with 'taker' (fee, aggressive order) — interviewers test this directly.",
+      "Believing dark pools are nefarious by default; they exist for legitimate block execution to reduce impact.",
+      "Assuming all flow is equal — the entire skill of a maker is discriminating toxic from benign flow."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-maker-taker",
+        "q": "Explain the maker-taker model. If you're running a passive market-making strategy, how does the fee schedule change your behavior?",
+        "tag": "Microstructure",
+        "a": [
+          "Maker-taker means the venue pays a rebate to orders that add liquidity (resting limit orders that get filled) and charges a fee to orders that remove liquidity (marketable orders). It's designed to attract liquidity providers.",
+          "As a passive maker, the rebate is part of your edge: even capturing zero spread, a +0.20¢ rebate can make a fill profitable. So you favor venues/queue positions where you reliably earn the rebate, you care a lot about queue priority (you only get the rebate if you actually fill), and you may post on the venue with the best rebate among those at the NBBO. Conversely, when you must take liquidity, the taker fee is a real cost you weigh against the urgency of the trade."
+        ],
+        "followups": [
+          "What is 'queue position' and why does it matter for rebate capture?",
+          "How do inverted (taker-maker) venues change the calculus?"
+        ]
+      },
+      {
+        "id": "q-toxic",
+        "q": "What does 'toxic flow' mean, and how might a market maker detect and respond to it?",
+        "tag": "Strategy",
+        "a": [
+          "Toxic (informed) flow is order flow from counterparties who, on average, know the price is about to move against you — so filling them is a losing trade even though you collected the spread. The classic measure is 'markout': look at the mid-price a few hundred ms after your fill; if it consistently moves against you, that flow is toxic.",
+          "Responses include: widening quotes or reducing size when toxicity rises, skewing quotes away from the side being hit, cancelling faster, routing to venues with more benign flow, and using signals (order-flow imbalance, recent volatility) to anticipate toxic conditions and pull quotes pre-emptively."
+        ]
+      },
+      {
+        "id": "q-venues",
+        "q": "Why do multiple exchanges and dark pools exist for the same stock, and what problem does that create for an HFT system?",
+        "tag": "Microstructure",
+        "a": [
+          "Fragmentation arises from competition between venues, different fee models, and regulation. Lit exchanges display quotes; dark pools let large orders trade without revealing intent (reducing market impact).",
+          "For an HFT system it creates the need to consume and time-align many feeds, build a consolidated view of the book / NBBO with minimal latency, and race across venues (e.g., when a price improves on one venue you must react on others). It also creates legging risk for cross-venue strategies and makes accurate, low-jitter timestamps essential."
+        ]
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Trading and Exchanges", "by": "Larry Harris", "note": "Chapters on order-driven markets, dealers, and the players." },
+    { "title": "SEC Regulation NMS overview", "note": "Understand NBBO, order protection, and why US equities are fragmented." }
+  ]
+}

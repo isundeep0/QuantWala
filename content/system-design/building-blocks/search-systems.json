@@ -1,0 +1,114 @@
+{
+  "slug": "search-systems",
+  "sectionId": "building-blocks",
+  "order": 10,
+  "title": "Search & the Inverted Index",
+  "tagline": "How full-text search works under the hood, and why you don't run `LIKE '%query%'` on your database.",
+  "summary": "Inverted indexes, Elasticsearch, and search as a separate system.",
+  "difficulty": "Intermediate",
+  "estMinutes": 14,
+  "tags": ["data", "search"],
+  "prereqs": ["databases"],
+  "sections": [
+    {
+      "id": "problem",
+      "title": "Why your database can't do search",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Searching text with `WHERE description LIKE '%shoes%'` forces a full table scan — no index can help a leading wildcard — so it's catastrophically slow at scale. It also can't rank by relevance, handle typos, stem words (run/running), or match across fields. Full-text search is a different problem that needs a different data structure: the **inverted index**.",
+            "An inverted index maps each *term* to the list of documents that contain it — the inverse of a document→terms layout. Looking up 'shoes' becomes an instant lookup of a precomputed list, not a scan."
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["Document store (forward)", "Inverted index"],
+          "rows": [
+            ["doc1 → {red, running, shoes}", "running → [doc1, doc7]"],
+            ["doc2 → {blue, formal, shoes}", "shoes → [doc1, doc2, doc5]"],
+            ["doc5 → {kids, shoes}", "blue → [doc2, doc9]"]
+          ],
+          "caption": "Searching flips the question from 'what's in this doc?' to 'which docs contain this term?' — answered by a precomputed posting list."
+        }
+      ]
+    },
+    {
+      "id": "how",
+      "title": "How search engines work",
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Ingest & analyze", "detail": "Documents are tokenized into terms, lowercased, stemmed (running→run), and filtered (drop stop-words like 'the'). Synonyms can be expanded." },
+            { "title": "Build the inverted index", "detail": "For each term, store a posting list of documents (and positions) containing it, plus term frequencies for ranking." },
+            { "title": "Query", "detail": "The query is analyzed the same way, then posting lists for its terms are fetched and combined (intersect for AND, union for OR)." },
+            { "title": "Rank", "detail": "Score matches by relevance (e.g., TF-IDF or BM25: rare terms and higher term frequency score higher) plus business signals (popularity, recency), and return the top results." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Engines like Elasticsearch/OpenSearch (built on Lucene) package all of this — distributed inverted indexes, analyzers, relevance scoring, sharding, and replication — so you rarely build search from scratch. But know the inverted index is what's underneath."
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "Search as a separate system",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Search runs as its own service alongside your primary database, not inside it. Your source of truth (SQL/NoSQL) handles transactions and exact lookups; the search index is a **derived, denormalized copy** optimized for querying text. You keep them in sync by streaming changes from the DB into the index — typically asynchronously via a queue or change-data-capture (CDC) pipeline.",
+            "This means search results are **eventually consistent** with the database (a newly created item may take a moment to become searchable) — almost always an acceptable trade-off. Indexes are **sharded** (split the term space / documents across nodes) and **replicated** for scale and availability, just like databases."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "Writes go to the DB; a pipeline streams changes into the search index, which serves queries.",
+          "groups": [
+            { "label": "Write", "nodes": [{ "label": "App + DB", "sub": "source of truth", "icon": "Database", "accent": "#10b981" }] },
+            { "label": "Sync", "nodes": [{ "label": "CDC / Queue", "sub": "stream changes", "icon": "Inbox", "accent": "#0ea5e9" }] },
+            { "label": "Index", "nodes": [{ "label": "Search (Elasticsearch)", "sub": "inverted index, sharded", "icon": "Search", "accent": "#8b5cf6" }] }
+          ]
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "`LIKE '%x%'` = full scan, no ranking — never use it for real search at scale.",
+    "Full-text search uses an inverted index: term → posting list of documents containing it.",
+    "Pipeline: analyze (tokenize/stem/stop-words) → build index → query (combine posting lists) → rank (TF-IDF/BM25 + signals).",
+    "Use Elasticsearch/OpenSearch (Lucene) — don't build search from scratch.",
+    "Search is a separate, derived, eventually-consistent system kept in sync via queue/CDC; sharded + replicated."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "Explain an inverted index and why it makes search fast.",
+      "hint": "What does it map, and what does a query become?",
+      "answer": [
+        "An inverted index maps each term to a 'posting list' — the set of documents that contain that term (often with positions and frequencies). It's the inverse of the natural document→terms layout.",
+        "It makes search fast because a query for 'shoes' becomes a direct lookup of a precomputed list instead of scanning every document. Multi-term queries combine posting lists (intersect for AND, union for OR), and stored term frequencies let you rank by relevance — all far cheaper than the full scans a `LIKE` query would require."
+      ],
+      "keyPoints": ["Maps term → list of documents containing it", "Query = lookup precomputed list, not a scan", "Combine posting lists for multi-term queries", "Stored frequencies enable relevance ranking"],
+      "followUps": ["How would you support typo tolerance / fuzzy matching?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Trade-off",
+      "difficulty": "Medium",
+      "prompt": "Why keep search in a separate Elasticsearch cluster instead of your primary database, and what's the downside?",
+      "hint": "Different workloads, plus a consistency cost.",
+      "answer": [
+        "Search and transactional storage are different workloads optimized by different structures: the DB gives ACID, exact lookups, and is the source of truth; the search index is a denormalized inverted index tuned for fast text queries and relevance ranking. Mixing them would force one system to do a job it's bad at and couple their scaling. Separating lets each scale and be tuned independently.",
+        "The downside is **eventual consistency** and added complexity: you must stream DB changes into the index (via a queue or CDC), so there's a lag before new/updated data is searchable, and you now operate a second stateful system that can drift or fall behind. For search, slight staleness is almost always acceptable, making this a good trade."
+      ],
+      "keyPoints": ["DB = source of truth/ACID; index = denormalized for text query+ranking", "Separation lets each scale/tune independently", "Downside: eventual consistency (indexing lag) + extra system to operate", "Sync via queue/CDC; slight staleness acceptable for search"],
+      "followUps": ["How would you re-sync if the search index drifts out of sync with the DB?"]
+    }
+  ]
+}

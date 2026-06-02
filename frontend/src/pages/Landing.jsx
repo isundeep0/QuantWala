@@ -5,6 +5,7 @@ import {
   Network,
   Cpu,
   Trophy,
+  Wallet,
   ArrowRight,
   PlayCircle,
   Gauge,
@@ -14,8 +15,10 @@ import {
 import { CP_TOTAL_PROBLEMS } from "@/data/cpRoadmap.js";
 import { useProgress } from "@/context/ProgressContext.jsx";
 import { useSdProgress } from "@/context/SdProgressContext.jsx";
+import { useFinanceProgress } from "@/context/FinanceProgressContext.jsx";
 import { TOTAL_ALGORITHMS } from "@/data/registry.js";
 import { SD_TOTAL_LESSONS } from "@/data/systemDesign.js";
+import { FIN_TOTAL_LESSONS } from "@/data/finance.js";
 import GlassCard from "@/components/liquid/GlassCard.jsx";
 import SwirlProgress from "@/components/liquid/SwirlProgress.jsx";
 
@@ -40,6 +43,7 @@ function StatPill({ icon: Icon, label }) {
 export default function Landing() {
   const { overallPercent, completedCount, problemStats } = useProgress();
   const { overallPercent: sdPercent } = useSdProgress();
+  const { overallPercent: finPercent } = useFinanceProgress();
 
   const modules = [
     {
@@ -84,6 +88,17 @@ export default function Landing() {
       status: "UI preview",
       live: false,
       percent: 0,
+    },
+    {
+      to: "/finance",
+      eyebrow: "Module 05",
+      title: "Personal Finance & Investing",
+      desc: `A from-scratch money masterclass for the Indian market — ${FIN_TOTAL_LESSONS} lessons across budgeting, compounding, credit & CIBIL, every asset class, goal-based investing, and taxation. Every example built on one real beginner persona.`,
+      icon: Wallet,
+      color: "#14b8a6",
+      status: "Fully available",
+      live: true,
+      percent: finPercent,
     },
   ];
 
@@ -149,7 +164,7 @@ export default function Landing() {
           >
             <StatPill icon={Boxes} label={`${TOTAL_ALGORITHMS} algorithms`} />
             <StatPill icon={Network} label={`${SD_TOTAL_LESSONS} system design lessons`} />
-            <StatPill icon={Gauge} label="Step-by-step simulators" />
+            <StatPill icon={Wallet} label={`${FIN_TOTAL_LESSONS} personal finance lessons`} />
             <StatPill icon={ListChecks} label="Curated problem sets" />
           </motion.div>
         </div>
@@ -157,7 +172,7 @@ export default function Landing() {
 
       {/* Module orbs */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {modules.map((m, i) => {
             const Icon = m.icon;
             return (

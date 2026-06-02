@@ -1,0 +1,139 @@
+{
+  "slug": "low-latency-coding-patterns",
+  "sectionId": "interview",
+  "order": 2,
+  "title": "Low-Latency Coding Patterns",
+  "tagline": "The recurring C++/systems questions HFT interviewers love — and the principled answers that show you think in nanoseconds.",
+  "level": "Advanced",
+  "track": ["dev", "systems"],
+  "estMinutes": 22,
+  "concept": {
+    "analogy": "Interviewers don't ask you to rebuild a Formula 1 car from scratch; they hand you a part and ask 'why is this fast, and how would you make it faster?' The patterns repeat: a queue, a parser, a counter, a hot loop. If you've internalized the principles (no allocation, no locks, cache-friendly, branch-predictable, measured), you can take almost any 'make this fast' prompt and reason your way to a strong answer instead of memorizing solutions.",
+    "paragraphs": [
+      "Low-latency coding interviews are less about exotic algorithms and more about whether you instinctively avoid the things that cost nanoseconds and add jitter. The same handful of prompts recur across firms: implement/critique an SPSC queue, design a fast order book, parse a binary message with no copies, make a hot loop branch-predictable or branchless, remove allocations from a path, fix false sharing, choose the right memory ordering, or replace virtual dispatch. They're testing a mindset, drilled in the C++ and Systems sections of this module.",
+      "The core principles to apply to any 'make this fast' question: (1) No allocation on the hot path — pre-allocate, pool, reuse; std::vector growth, new/delete, and hidden temporaries are red flags. (2) No locks/syscalls on the hot path — use lock-free SPSC structures with correct memory ordering; mutexes mean jitter. (3) Cache-friendliness — contiguous, compact, Structure-of-Arrays data; avoid pointer-chasing and fat structs. (4) Branch predictability — make hot branches predictable or branchless; avoid data-dependent random branches. (5) Zero-cost abstraction — static dispatch (templates/CRTP) over virtuals on the hot path. (6) Measure — never claim 'faster' without saying how you'd benchmark p50/p99/p99.9.",
+      "Just as important is what NOT to do prematurely. A great candidate first asks about the workload and constraints (single vs multi producer? message rate? bounded? latency vs throughput target?), writes a correct version, and then optimizes with reasons — rather than blurting micro-optimizations. They also know when the standard library is fine (cold paths) and reserve hand-tuning for the measured hot path. Showing judgment about where optimization matters is itself a signal of seniority.",
+      "Finally, communication wins these rounds. Talk through the trade-offs out loud: 'I'll use release/acquire here, not seq_cst, because I only need message-passing ordering and seq_cst adds unnecessary barriers'; 'I'll pad the indices to avoid false sharing'; 'this is O(1) but the real cost is the cache miss on the id lookup, so I'd use an open-addressing map'. That running commentary — correct, specific, and measured — is exactly what distinguishes a hire from a pass."
+    ],
+    "points": [
+      "Recurring prompts: SPSC queue, fast order book, zero-copy parse, branchless/predictable loop, remove allocations, fix false sharing, pick memory ordering, replace virtuals.",
+      "Principles: no hot-path allocation; no locks/syscalls; cache-friendly (contiguous/SoA); branch-predictable/branchless; static dispatch; always measure (p50/p99/p99.9).",
+      "Clarify the workload first (producers/consumers, rate, bounded?, latency vs throughput) and write correct before fast.",
+      "Know when the stdlib is fine (cold paths) vs when to hand-tune (measured hot path) — judgment is a signal.",
+      "Narrate trade-offs out loud with specific, correct reasoning — that's what gets graded."
+    ],
+    "callouts": [
+      { "type": "tip", "title": "Always ask 'how would you measure it?'", "body": "Whenever you optimize, state the benchmark: warm steady-state, representative load, record p50/p99/p99.9 with rdtsc into a histogram, change one thing at a time. Interviewers love candidates who refuse to claim a win without numbers." },
+      { "type": "warn", "title": "Beware premature micro-opt", "body": "Spraying tricks before clarifying requirements or writing a correct version signals immaturity. First correctness and the right data structure; then targeted, measured optimization where it matters." }
+    ],
+    "keyIdea": "Low-latency coding rounds test a mindset: avoid allocation, locks, cache misses, and unpredictable branches on the hot path; prefer static dispatch; and never claim 'faster' without a measurement plan. Clarify the workload, write correct-then-fast, know when the stdlib suffices, and narrate specific, correct trade-offs out loud."
+  },
+  "deepDive": {
+    "intro": "The most common prompts and how to answer each with principled, specific reasoning.",
+    "steps": [
+      {
+        "title": "'Implement / critique an SPSC queue'",
+        "detail": "Answer with: fixed power-of-two ring, producer-owned tail (release store on publish), consumer-owned head (acquire load on observe), indices on separate cache lines (false-sharing fix), cached opposite index to cut cross-core reads, no allocation. Explain why release/acquire (message passing) not seq_cst, and how you'd test on ARM/TSan. This single question exercises memory model, false sharing, and lock-free design."
+      },
+      {
+        "title": "'Make this hot loop faster'",
+        "detail": "Walk the checklist aloud: is it allocating (hidden temporaries, growth)? pointer-chasing (AoS→SoA, contiguous)? branchy on random data (sort/group, or go branchless with masks/min-max)? virtual-dispatching (templatize)? Then say how you'd confirm with perf (cache-misses, branch-misses, IPC) and a microbenchmark. Don't guess the bottleneck — propose measuring it."
+      },
+      {
+        "title": "'Parse this binary protocol fast'",
+        "detail": "Zero-copy: overlay a packed struct on the buffer, read fixed-offset fields (mind endianness), advance by length, dispatch by type with a switch/jump table, decode only needed fields into a pre-allocated event. No allocation, no string building. Mention sequencing/validation if it's market data. This is the feed-handler skill in miniature."
+      },
+      {
+        "title": "'Why is this slow / what's the hidden cost?'",
+        "detail": "Spot the classic culprits: std::function/std::shared_ptr/virtuals (indirection, maybe allocation), std::string concatenation (allocation), std::map/list (pointer-chasing), copying instead of moving, false sharing on adjacent atomics, locks on the hot path, logging/IO inline. Name the cost precisely (allocation, indirection, cache miss, syscall, mispredict) and give the fix."
+      },
+      {
+        "title": "'Pick the data structure / memory ordering'",
+        "detail": "Justify with the access pattern: dense array + id-map for an order book (O(1), cache-friendly) vs map (log n, pointer-chasing); open-addressing vs chaining hash map; relaxed for your own counter, release/acquire for publish/observe, seq_cst only when you truly need a single global order. Tie every choice to a concrete reason, not habit."
+      }
+    ],
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "spot_the_costs.cpp — name every red flag",
+        "source": "// Interviewer: 'This is a hot-path callback. What's wrong and how do you fix it?'\nvoid onTick(const Tick& t,\n            std::function<void(const std::string&)> cb) {   // (1) std::function: type-erase/indirection\n    std::string s = t.symbol;                                // (2) copy + allocation\n    auto* p = new Result();                                  // (3) heap alloc on hot path\n    std::map<std::string,double> book;                       // (4) tree + alloc + pointer-chase\n    if (rand() & 1) p->v = t.px; else p->v = 0;             // (5) unpredictable branch + rand()\n    cb(\"tick \" + s);                                         // (6) temporary string alloc + indirection\n}\n// Fixes: take a templated/CRTP callback (no std::function); use string_view / fixed symbol\n// (no copy); pre-allocated Result from a pool (no new); flat array/SoA or open-addressing\n// map (no tree); branchless or predictable logic (no rand-driven branch); log/format off-path."
+      },
+      {
+        "language": "cpp",
+        "title": "principled_fix.cpp — the rewritten hot path",
+        "source": "template <class OnResult>      // static dispatch, inlinable\ninline void onTick(const Tick& t, Result* out /*from pool*/, OnResult&& emit) noexcept {\n    std::string_view sym{t.symbol, t.symbol_len};   // no copy/alloc\n    out->v = (t.px > t.fair) ? t.px : 0.0;          // min/max-style, branchless-friendly\n    emit(out);                                       // direct, inlinable; no std::function\n    // logging/formatting happens off the hot path via a ring buffer, not here\n}"
+      }
+    ],
+    "notes": [
+      { "title": "Correct-then-fast", "detail": "State 'let me write a correct version first, then optimize the hot path' — and mean it. A correct baseline plus a measured optimization beats a clever-but-buggy one." },
+      { "title": "Complexity AND constants", "detail": "Give the Big-O, then immediately discuss the real-world constant factors (cache misses, allocation, branches) — HFT interviewers care about both, and constants often dominate." },
+      { "title": "Know the stdlib's hot-path traps", "detail": "Be ready to name why std::function, std::shared_ptr, std::map, std::list, std::string, and unbounded std::vector growth are hot-path hazards — and what you'd use instead." }
+    ],
+    "complexity": {
+      "time": "Pattern-recognition, not new algorithms",
+      "timeReason": "These rounds reward applying a fixed set of principles (no alloc/locks, cache/branch awareness, static dispatch, measurement) to varied prompts — preparation is internalizing the checklist until it's reflexive.",
+      "space": "n/a",
+      "spaceReason": "This lesson is about interview patterns and reasoning."
+    },
+    "pitfalls": [
+      "Jumping to micro-optimizations before clarifying the workload and writing a correct version.",
+      "Claiming something is 'faster' without a concrete measurement plan (p50/p99/p99.9).",
+      "Reciting buzzwords (cache, lock-free) without naming the specific cost or the correct fix.",
+      "Over-engineering cold paths where the stdlib is perfectly fine.",
+      "Silent coding — not narrating the trade-offs interviewers are trying to grade."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-checklist",
+        "q": "An interviewer shows you a hot-path function and says 'make it faster.' What's your process?",
+        "tag": "C++",
+        "a": [
+          "First clarify the context: what's the workload (message rate, single vs multi producer/consumer), is the path latency- or throughput-critical, what's the target, and is correctness fixed? Then read for the classic hot-path costs and name each precisely: allocations (new/delete, std::string concatenation, vector growth, hidden temporaries), indirection/type-erasure (virtuals, std::function, std::shared_ptr), pointer-chasing/poor layout (std::map/list, AoS fat structs → prefer contiguous/SoA, open-addressing maps), unnecessary copies (use move/views), unpredictable data-dependent branches (sort/group or go branchless), false sharing on adjacent atomics, and locks/syscalls/logging inline.",
+          "I'd propose a correct baseline, then apply targeted fixes with reasons, and — crucially — say how I'd verify: benchmark at warm steady state under representative load, use rdtsc into a histogram to get p50/p99/p99.9, and use perf to check cache-misses, branch-misses, and IPC, changing one thing at a time. I'd avoid micro-optimizing cold paths and reserve hand-tuning for the part profiling shows dominates."
+        ],
+        "followups": ["Which stdlib types do you avoid on the hot path and why?", "How do you decide if it's memory-bound or branch-bound?"]
+      },
+      {
+        "id": "q-orderings",
+        "q": "When would you use relaxed, acquire/release, and seq_cst memory ordering? Give a concrete example.",
+        "tag": "C++",
+        "a": [
+          "Use relaxed when you need atomicity but no cross-thread ordering — e.g., a statistics counter, or reading an index your own thread exclusively owns. Use acquire/release for the message-passing pattern: the producer writes data then does a release store on a flag/index, and the consumer does an acquire load of that flag/index and is then guaranteed to see the data written before the release — this is exactly the SPSC ring buffer publish/observe, and it's cheaper than seq_cst because it only orders around that one variable. Use seq_cst when you genuinely need a single total order across multiple atomics observed consistently by all threads (e.g., certain Dekker-style or multi-flag algorithms) — it's the safe default but adds full barriers you usually don't need.",
+          "Concrete example: in an SPSC queue, the producer does buffer[tail]=x; tail.store(next, release); the consumer does if (head != tail.load(acquire)) read buffer[head]; — release/acquire makes the payload visible without the cost of seq_cst. I'd pick the weakest ordering that's provably correct, and verify on weakly-ordered hardware (ARM) and with ThreadSanitizer."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-rewrite",
+        "title": "Rewrite a hot-path function and justify every change",
+        "difficulty": "Advanced",
+        "statement": "You're given: `void handle(const Msg& m, std::function<void(std::string)> log) { auto rec = std::make_shared<Record>(); rec->key = std::string(m.key); std::map<std::string,double> idx; idx[rec->key] = m.val; if (hash(m.key) % 7 == 0) log(\"hit \" + rec->key); }`. It runs millions of times/sec. Rewrite it for the hot path and justify each change in terms of the specific cost removed. State how you'd measure the improvement.",
+        "hint": "Name each cost: shared_ptr alloc, string copy/concat, std::map, std::function indirection, data-dependent branch, inline logging. Replace with pool/view/flat structure/static dispatch/off-path logging.",
+        "tests": "Applying the low-latency checklist end to end.",
+        "solution": {
+          "approach": [
+            "Identify the costs: make_shared<Record> heap-allocates (and atomic refcount); std::string(m.key) copies and allocates; std::map allocates tree nodes and pointer-chases on every insert; \"hit \"+key builds a temporary std::string (allocation); std::function type-erases the logger (indirection, possible allocation, blocks inlining); calling log() inline does formatting/IO on the hot path; and hash%7 is a data-dependent branch.",
+            "Rewrite: take a pre-allocated Record* from a pool (no shared_ptr/new, no atomic refcount); use std::string_view for the key (no copy/alloc); if an index is truly needed, use a pre-sized open-addressing hash map keyed by a fixed-size/interned key (O(1), cache-friendly) instead of std::map — or skip it if it's per-call scratch; template the logging callback (or pass a concrete type) to avoid std::function and enable inlining; and move logging off the hot path by pushing a compact binary record into an SPSC ring that a background thread formats and writes. If the branch must stay, keep it predictable or compute branchlessly.",
+            "Measure: benchmark the old vs new at warm steady state under representative message rate; time with rdtsc into an HdrHistogram and compare p50/p99/p99.9/max (not just mean); use perf stat to confirm fewer allocations (track via a counting allocator), lower cache-miss and branch-miss rates, and higher IPC. Change one thing at a time so each improvement is attributable, and verify correctness is unchanged."
+          ],
+          "complexity": { "time": "O(1) per call, allocation/lock/indirection-free", "space": "Pooled Record + pre-sized map" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "rewritten.cpp",
+              "source": "template <class Log>\ninline void handle(const Msg& m, Record* rec /*from pool*/, Log&& log_ring) noexcept {\n    std::string_view key{m.key, m.key_len};      // no copy/alloc\n    rec->key = key;                              // store view/interned id, not a new string\n    // index: use a pre-sized open-addressing map if persistence is needed (not std::map)\n    if (predictable_filter(m)) {                 // keep branch predictable, or make branchless\n        log_ring.push(LogRec{LogRec::HIT, key}); // off-path: background thread formats/writes\n    }\n}"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "CppCon low-latency talks (Carl Cook 'When a Microsecond Is an Eternity', Fedor Pikus)", "note": "The exact mindset and patterns these interviews probe." },
+    { "title": "Optimized C++ / Effective Modern C++", "by": "Kurt Guntheroth / Scott Meyers", "note": "Performance reasoning and hot-path C++ idioms." },
+    { "title": "This module's C++ and Systems sections", "note": "The source material for every pattern above — review them before interviewing." }
+  ]
+}

@@ -1,0 +1,150 @@
+{
+  "slug": "simd-data-layout",
+  "sectionId": "systems",
+  "order": 6,
+  "title": "SIMD & Data-Oriented Design",
+  "tagline": "Do 8–16 lanes of work per instruction — but only if your data is laid out so the CPU can.",
+  "level": "Advanced",
+  "track": ["dev", "systems"],
+  "estMinutes": 20,
+  "concept": {
+    "analogy": "A scalar instruction is one cashier scanning one item at a time. SIMD (Single Instruction, Multiple Data) is a cashier with a wide scanner that reads a whole row of items in one swipe. But the wide scanner only works if the items are lined up neatly in a row (contiguous, aligned). Hand it a jumbled pile (pointers scattered across the heap) and it falls back to one-at-a-time. Data-oriented design is the discipline of always presenting the data as a neat row.",
+    "paragraphs": [
+      "Modern CPUs have wide vector registers (SSE 128-bit, AVX2 256-bit, AVX-512 512-bit; NEON/SVE on ARM) that apply one operation to many values at once — e.g., add eight 32-bit floats in a single instruction. Used well, SIMD multiplies arithmetic throughput several-fold for the data-parallel parts of a hot path: computing fair values across a basket, normalizing a vector of prices, scanning for a max, parsing fixed-width fields.",
+      "The catch is that SIMD is only as good as your data layout. Vector loads want contiguous, ideally aligned data so a register fills from one cache line; they want Structure-of-Arrays so a single lane operation touches only the field you're processing; and they hate branches inside the kernel (you replace them with masks/blends). Pointer-chasing, AoS, and data-dependent control flow all force the compiler back to scalar code or expensive gather/scatter.",
+      "This is why SIMD and data-oriented design (DOD) are taught together. DOD says: organize your program around how data is accessed and transformed in bulk, not around 'objects'. Group hot fields into contiguous arrays (SoA), process them in tight loops, and keep cold/rare data elsewhere. Once the data is in that shape, the compiler's auto-vectorizer can often vectorize the loop for free — and where it can't, you reach for intrinsics or libraries.",
+      "For HFT, SIMD shows up in signal computation, risk/PNL aggregation, batch normalization of features, fixed-format message parsing, and checksum/hash routines. The win is throughput, not single-event latency; the meta-lesson is that performance comes from data layout first, then vectorization, then micro-optimization — in that order."
+    ],
+    "points": [
+      "SIMD applies one instruction to many lanes (e.g., 8 floats with AVX2).",
+      "It needs contiguous, aligned, Structure-of-Arrays data; pointer-chasing and AoS defeat it.",
+      "Branches in the kernel become masks/blends; gather/scatter is slow — avoid when possible.",
+      "Auto-vectorization often works for free once data is laid out well; intrinsics/libraries for the rest.",
+      "Data-oriented design (organize by access pattern, SoA, hot/cold split) is the foundation."
+    ],
+    "callouts": [
+      { "type": "tip", "title": "Let the compiler try first", "body": "Write clean, contiguous SoA loops with `-O3 -march=native` and check the vectorization report (`-fopt-info-vec` / `-Rpass=loop-vectorize`). Hand-written intrinsics are a last resort — they're unportable and easy to get wrong." },
+      { "type": "warn", "title": "Gather/scatter is a trap", "body": "AVX gather loads from non-contiguous addresses, but it's often barely faster than scalar. If you find yourself needing gather, the real fix is usually to change the data layout so loads are contiguous." }
+    ],
+    "keyIdea": "SIMD multiplies throughput by operating on many lanes per instruction, but it only delivers when data is contiguous, aligned, and Structure-of-Arrays with branches turned into masks. Fix the data layout (data-oriented design) first; vectorization — often automatic — follows."
+  },
+  "deepDive": {
+    "intro": "How to make code vectorizable, when to use intrinsics, and the layout rules that decide whether SIMD helps at all.",
+    "steps": [
+      {
+        "title": "Make the loop vectorizable",
+        "detail": "Auto-vectorization needs a countable loop with no loop-carried dependencies, contiguous unit-stride access, no aliasing between input/output (use `__restrict`), and ideally no branches (use arithmetic/masks). Then `-O3 -march=native` lets the compiler emit AVX. Check the report to confirm it actually vectorized and why it didn't if it failed."
+      },
+      {
+        "title": "SoA so each lane is useful",
+        "detail": "A vector add of prices wants 8 contiguous prices per register. With AoS (price embedded in a fat struct), the prices are 32 bytes apart and you'd need gather. With SoA (`std::vector<float> price`), 8 prices sit in one 32-byte span — one aligned load fills the register. Layout is the enabler."
+      },
+      {
+        "title": "Branches → masks/blends",
+        "detail": "Inside a SIMD kernel you can't branch per lane. Instead compute a comparison mask (e.g., `_mm256_cmp_ps`) and blend two results (`_mm256_blendv_ps`) or AND with the mask. All lanes do both computations; the mask selects. This is branchless by construction and avoids mispredicts."
+      },
+      {
+        "title": "Alignment, tails, and width",
+        "detail": "Aligned loads/stores (`_mm256_load_ps` on 32-byte-aligned data) are fastest; handle the leftover 'tail' elements with a scalar epilogue or masked loads. Pick width by target (AVX2 = 8 floats; AVX-512 is wider but can downclock the core — measure, sometimes AVX2 wins overall)."
+      },
+      {
+        "title": "Portable options",
+        "detail": "Beyond raw intrinsics, use `std::experimental::simd`, libraries like xsimd/Highway/Eigen, or `#pragma omp simd` to stay readable and portable across SSE/AVX/NEON. Reserve hand-tuned intrinsics for the few kernels that profiling proves dominate."
+      }
+    ],
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "vectorize.cpp — autovec-friendly vs intrinsics",
+        "source": "#include <immintrin.h>\n#include <cstddef>\n\n// Auto-vectorizable: contiguous, no aliasing (__restrict), no branches.\nvoid scale_add(float* __restrict out,\n               const float* __restrict a,\n               const float* __restrict b,\n               float k, size_t n) {\n    for (size_t i = 0; i < n; ++i)\n        out[i] = a[i] * k + b[i];     // -O3 -march=native -> FMA over 8 lanes\n}\n\n// Explicit AVX2 version of the same kernel (8 floats per iteration).\nvoid scale_add_avx2(float* out, const float* a, const float* b,\n                    float k, size_t n) {\n    __m256 vk = _mm256_set1_ps(k);\n    size_t i = 0;\n    for (; i + 8 <= n; i += 8) {\n        __m256 va = _mm256_loadu_ps(a + i);\n        __m256 vb = _mm256_loadu_ps(b + i);\n        __m256 vo = _mm256_fmadd_ps(va, vk, vb);   // a*k + b, 8 lanes\n        _mm256_storeu_ps(out + i, vo);\n    }\n    for (; i < n; ++i) out[i] = a[i] * k + b[i];   // scalar tail\n}"
+      },
+      {
+        "language": "cpp",
+        "title": "masked_select.cpp — branchless SIMD",
+        "source": "#include <immintrin.h>\n\n// out[i] = (a[i] > thr) ? a[i] : 0, vectorized with a mask (no per-lane branch).\nvoid keep_above(float* out, const float* a, float thr, int n) {\n    __m256 vthr = _mm256_set1_ps(thr);\n    __m256 zero = _mm256_setzero_ps();\n    int i = 0;\n    for (; i + 8 <= n; i += 8) {\n        __m256 va   = _mm256_loadu_ps(a + i);\n        __m256 mask = _mm256_cmp_ps(va, vthr, _CMP_GT_OQ);  // per-lane 0/-1\n        __m256 vo   = _mm256_blendv_ps(zero, va, mask);     // select per lane\n        _mm256_storeu_ps(out + i, vo);\n    }\n    for (; i < n; ++i) out[i] = a[i] > thr ? a[i] : 0.f;\n}"
+      }
+    ],
+    "notes": [
+      { "title": "Throughput, not latency", "detail": "SIMD speeds up bulk computation; it doesn't shorten the critical path of a single event. Use it for batch signal/PNL/parse work, not to shave one order's tick-to-trade." },
+      { "title": "Watch the clock", "detail": "Heavy AVX-512 can trigger frequency throttling on some CPUs, so a 'wider' kernel can be net slower for mixed workloads. Always benchmark the whole program, not the kernel in isolation." },
+      { "title": "Reductions need care", "detail": "Summations vectorize with multiple partial accumulators (to break the dependency chain) then a horizontal add. Be aware floating-point reductions become non-associative — results can differ slightly from the scalar order." }
+    ],
+    "complexity": {
+      "time": "Up to W× fewer instructions (W = lane count)",
+      "timeReason": "One vector instruction does W scalar ops. Real speedup is bounded by memory bandwidth, alignment, tails, and how much of the loop actually vectorizes.",
+      "space": "Same data, layout matters",
+      "spaceReason": "SoA may use the same bytes as AoS but arranged for unit-stride loads; small alignment padding may be added."
+    },
+    "pitfalls": [
+      "Trying to vectorize AoS / pointer-chasing data — you get scalar code or slow gathers.",
+      "Per-lane branches instead of masks/blends, reintroducing control flow into the kernel.",
+      "Ignoring aliasing (no __restrict) so the compiler refuses to vectorize.",
+      "Forgetting the scalar tail or alignment, causing crashes or correctness bugs.",
+      "Assuming AVX-512 is always fastest — downclocking can make AVX2 win; measure end-to-end."
+    ]
+  },
+  "benchmark": {
+    "intro": "Elementwise `out = a*k + b` over 64M floats, contiguous data (relative, -O3 -march=native).",
+    "columns": ["Variant", "Relative throughput", "Notes"],
+    "rows": [
+      ["Scalar, AoS (gather-like access)", "~0.2x", "Strided access defeats prefetch & vectorization"],
+      ["Scalar, SoA contiguous", "~1x", "Baseline; prefetcher-friendly"],
+      { "cells": ["Auto-vectorized SoA (AVX2 FMA)", "~4–6x", "8 lanes + FMA; bandwidth-bound at the top end"], "best": true }
+    ],
+    "note": "Speedup is capped by memory bandwidth once the kernel is compute-light; layout is the prerequisite.",
+    "takeaway": "Vectorization delivered several-fold throughput only because the data was contiguous SoA. The same SIMD on AoS data would have collapsed to scalar — proving layout comes before vectorization."
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-soa",
+        "q": "Why are SIMD and Structure-of-Arrays so often discussed together?",
+        "tag": "Systems",
+        "a": [
+          "A SIMD register fills from contiguous memory: to add eight prices in one instruction you need eight prices laid out back-to-back. SoA gives exactly that — each field is its own contiguous array — so a single aligned vector load grabs eight useful values. AoS interleaves fields, so the eight prices are 'struct-stride' apart and you'd need a slow gather or scalar fallback.",
+          "So SoA is the enabling data layout for SIMD: it turns a loop over a field into unit-stride, prefetcher-friendly, vectorizable code. That's the heart of data-oriented design — choose the layout that matches how you process the data in bulk."
+        ],
+        "followups": ["How do you handle a conditional inside a SIMD loop?", "When does gather make sense?"]
+      },
+      {
+        "id": "q-when",
+        "q": "When is SIMD the wrong tool, and what does it actually optimize?",
+        "tag": "Systems",
+        "a": [
+          "SIMD optimizes throughput of data-parallel bulk work, not the latency of a single event. It's the wrong tool when the hot path is one event with control-flow-heavy, pointer-chasing logic — there's nothing to vectorize, and forcing it (gathers, per-lane branches) can be slower than clean scalar code.",
+          "It's also the wrong first move: if data is AoS or scattered, fix the layout before reaching for intrinsics. And on some CPUs wide AVX-512 downclocks the core, so it can hurt mixed workloads. Use SIMD for batch signal/PNL/feature/parse computations where data is contiguous and you process many elements the same way — and benchmark end-to-end."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-vectorize",
+        "title": "Make a loop vectorize, then beat it with intrinsics",
+        "difficulty": "Advanced",
+        "statement": "You have two AoS arrays of `struct Q{float bid; float ask; float last; int id;}`. A hot routine computes `mid[i] = 0.5f*(bid+ask)` for a million entries and it won't vectorize. Diagnose why, refactor so the compiler auto-vectorizes it, and then write an AVX2 intrinsic version. State how you'd verify the speedup and correctness.",
+        "hint": "The fields you need (bid, ask) aren't contiguous in AoS; move to SoA, add __restrict, then check the vectorizer report.",
+        "tests": "Layout-driven vectorization end to end.",
+        "solution": {
+          "approach": [
+            "Why it won't vectorize: in AoS, bid/ask are 16 bytes apart (struct stride), so the loop has strided access — the compiler must gather, which it usually declines, leaving scalar code. Aliasing uncertainty between input and output pointers can also block it.",
+            "Refactor to SoA: keep `std::vector<float> bid, ask, mid;`. Now `for(i) mid[i]=0.5f*(bid[i]+ask[i]);` is unit-stride. Mark pointers `__restrict` (or pass distinct vectors) so the compiler knows they don't alias, build with `-O3 -march=native`, and confirm with `-Rpass=loop-vectorize` / `-fopt-info-vec` that it emitted AVX.",
+            "Intrinsic version: load 8 bids and 8 asks (`_mm256_loadu_ps`), add, multiply by a broadcast 0.5 (`_mm256_mul_ps`), store; scalar tail for the remainder. Verify: compare outputs against the scalar version within a tiny float tolerance for correctness, and microbenchmark all three (AoS scalar, SoA auto-vec, SoA intrinsic) over the same data, plus `perf stat` to confirm higher IPC and that you're now bandwidth-bound."
+          ],
+          "complexity": { "time": "~4–8x fewer instructions, bandwidth-bound", "space": "SoA arrays, same total bytes" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "mid_avx2.cpp",
+              "source": "#include <immintrin.h>\n#include <vector>\n\nvoid mid_soa(float* __restrict mid, const float* __restrict bid,\n             const float* __restrict ask, int n) {\n    __m256 half = _mm256_set1_ps(0.5f);\n    int i = 0;\n    for (; i + 8 <= n; i += 8) {\n        __m256 b = _mm256_loadu_ps(bid + i);\n        __m256 a = _mm256_loadu_ps(ask + i);\n        _mm256_storeu_ps(mid + i, _mm256_mul_ps(half, _mm256_add_ps(b, a)));\n    }\n    for (; i < n; ++i) mid[i] = 0.5f * (bid[i] + ask[i]);\n}"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Data-Oriented Design", "by": "Richard Fabian / Mike Acton (CppCon 'Data-Oriented Design and C++')", "note": "The canonical case for organizing code around data access." },
+    { "title": "Intel Intrinsics Guide & Agner Fog instruction tables", "note": "Reference for every SIMD intrinsic and its latency/throughput." },
+    { "title": "Google Highway, xsimd, std::experimental::simd", "note": "Portable SIMD libraries to avoid hand-writing per-ISA intrinsics." }
+  ]
+}

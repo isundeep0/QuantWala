@@ -1,0 +1,110 @@
+{
+  "slug": "probability-essentials",
+  "sectionId": "quant-math",
+  "order": 1,
+  "title": "Expected Value & Conditional Probability",
+  "tagline": "The single most important math for any quant interview — think in expected value, fast and correctly.",
+  "level": "Core",
+  "track": ["trader", "research", "dev"],
+  "estMinutes": 18,
+  "concept": {
+    "analogy": "Expected value is the 'fair price' of a gamble. If a game pays $10 on heads and costs you $4 on tails, a fair coin makes it worth (½·$10) + (½·−$4) = $3 per play on average. A trader's whole job is finding bets whose price is below their expected value and taking them repeatedly — exactly what a casino does, just with the edge on your side.",
+    "paragraphs": [
+      "Expected value (EV) is the probability-weighted average of all outcomes: EV = Σ (probability of outcome × value of outcome). It's the foundation of quant trading because every trade is a bet, and you want positive-EV bets you can repeat. By the law of large numbers, repeating a positive-EV bet many times converts that edge into near-certain profit.",
+      "Conditional probability — P(A | B), the probability of A given that B happened — is the other pillar. It's defined as P(A | B) = P(A and B) / P(B). It captures how new information updates probabilities, and it's where most people's intuition breaks (the Monty Hall problem, the two-children problem, base-rate fallacies). Interviewers love these because they reveal whether you actually reason or just pattern-match.",
+      "Two tools you'll use constantly: linearity of expectation — E[X + Y] = E[X] + E[Y] always, even when X and Y are dependent — which turns scary problems into easy sums; and indicator variables — write a count as a sum of 0/1 indicators and take expectations. Many 'hard' problems collapse instantly with these.",
+      "The interview skill isn't just knowing formulas — it's setting up the right model fast, computing cleanly under pressure, and narrating your reasoning so the interviewer follows your logic. Calibration (knowing how confident to be) matters as much as the final number."
+    ],
+    "points": [
+      "EV = Σ probability × value; positive-EV bets, repeated, become near-certain profit.",
+      "Conditional: P(A|B) = P(A∩B)/P(B) — how information updates probability.",
+      "Linearity of expectation: E[X+Y] = E[X]+E[Y], even for dependent variables.",
+      "Indicator variables turn counts into sums of expectations — a superpower for hard problems.",
+      "The skill is fast, clean setup + narration, not memorized formulas."
+    ],
+    "keyIdea": "Think in expected value, and use linearity of expectation + indicator variables to make hard counting/probability problems easy. Conditional probability is where intuition fails — slow down and use the definition."
+  },
+  "deepDive": {
+    "intro": "Let's build the toolkit with the exact techniques that crack interview problems.",
+    "steps": [
+      {
+        "title": "Computing EV cleanly",
+        "detail": "List outcomes, attach probabilities (they must sum to 1), multiply and sum. For a fair die, E[roll] = (1+2+3+4+5+6)/6 = 3.5. For a bet, include the cost: net EV = EV of payoff − cost. You take the bet iff net EV > 0 (ignoring risk/variance, which matters for sizing)."
+      },
+      {
+        "title": "Linearity of expectation",
+        "detail": "E[X+Y] = E[X] + E[Y] regardless of dependence. Example: expected number of heads in 100 flips = sum of E[indicator each flip is heads] = 100 × ½ = 50. Example: expected fixed points of a random permutation = n × (1/n) = 1, no matter n — each position is a fixed point with prob 1/n, and you just add them."
+      },
+      {
+        "title": "Indicator variables",
+        "detail": "To find E[count of something], define X_i = 1 if condition i holds, else 0; then count = Σ X_i and E[count] = Σ P(condition i). This sidesteps complicated dependence. Most 'expected number of ___' problems are one line with this trick."
+      },
+      {
+        "title": "Conditional probability and the definition",
+        "detail": "Always fall back to P(A|B) = P(A∩B)/P(B). The two-children problem: given at least one boy, P(both boys)? Outcomes {BB, BG, GB} are equally likely among those with ≥1 boy, so 1/3, not 1/2 — the conditioning changed the sample space. Drawing the sample space beats intuition."
+      },
+      {
+        "title": "Law of total probability",
+        "detail": "P(A) = Σ P(A | B_i)·P(B_i) over a partition {B_i}. Useful when an outcome depends on a hidden state: average the conditional probabilities, weighted by how likely each state is. This is also the setup for Bayes' theorem (next lesson)."
+      }
+    ],
+    "notes": [
+      {
+        "title": "Variance and why traders care",
+        "detail": "EV tells you the long-run average; variance tells you the bumpiness. Two positive-EV bets can need very different sizing — a high-variance bet can bankrupt you before the edge materializes. This is why position sizing (e.g., Kelly criterion) and risk limits exist. Interviewers often follow an EV question with 'how much would you bet?'"
+      }
+    ],
+    "pitfalls": [
+      "Forgetting the cost when computing a bet's net EV.",
+      "Assuming independence when events are dependent (or vice versa) — check.",
+      "Conditional-probability errors: not updating the sample space when you condition on information.",
+      "Confusing EV with certainty — a positive-EV bet can still lose; size for variance."
+    ]
+  },
+  "practice": {
+    "intro": "These are representative of the rapid-fire probability questions that open trader/research interviews. Try each fully before revealing.",
+    "interviewQuestions": [
+      {
+        "id": "q-dice-game",
+        "q": "You roll a fair die once. You win its value in dollars, but you may, before rolling, choose to instead reroll once and take the second value. What's the optimal strategy and the game's expected value?",
+        "tag": "Probability",
+        "a": [
+          "If allowed to reroll after seeing the first roll: you should reroll whenever the first roll is below the expected value of a fresh roll (3.5), i.e., reroll on 1, 2, or 3; keep 4, 5, 6.",
+          "EV = P(first ≥ 4)·E[first | ≥4] + P(first ≤ 3)·E[fresh roll]. P(first ≥ 4) = 1/2 with mean 5; P(first ≤ 3) = 1/2, then you reroll for mean 3.5. EV = ½·5 + ½·3.5 = 2.5 + 1.75 = 4.25. (Contrast: no reroll option = 3.5.)"
+        ],
+        "followups": ["What if you get two rerolls?", "What's the value of the option to reroll?"]
+      },
+      {
+        "id": "q-two-children",
+        "q": "A family has two children. Given that at least one is a boy, what's the probability both are boys?",
+        "tag": "Conditional",
+        "a": [
+          "Equally likely birth orders are BB, BG, GB, GG. Conditioning on 'at least one boy' removes GG, leaving {BB, BG, GB}, each equally likely.",
+          "Among these, only BB has both boys, so P(both boys | at least one boy) = 1/3 — not 1/2. The information shrank and reshaped the sample space. (Note: a subtly different phrasing — 'the older child is a boy' — gives 1/2, which is why precise conditioning matters.)"
+        ]
+      },
+      {
+        "id": "q-expected-rolls",
+        "q": "What is the expected number of die rolls to get the first 6?",
+        "tag": "Probability",
+        "a": [
+          "This is a geometric distribution with success probability p = 1/6. The expected number of trials until the first success is 1/p.",
+          "So E[rolls] = 1/(1/6) = 6. Intuition/derivation: let E be the answer; with prob 1/6 you're done in 1 roll, with prob 5/6 you've used a roll and start over: E = 1 + (5/6)E ⇒ (1/6)E = 1 ⇒ E = 6."
+        ]
+      },
+      {
+        "id": "q-linearity",
+        "q": "Shuffle a deck of 52 cards uniformly at random. What is the expected number of cards in their original position?",
+        "tag": "Probability",
+        "a": [
+          "Use indicator variables: let X_i = 1 if card i is in its original position. The expected count is E[Σ X_i] = Σ P(card i in original position) by linearity of expectation (which holds despite the positions being dependent).",
+          "Each card is equally likely to be in any of the 52 positions, so P(card i in its original spot) = 1/52. Summing over 52 cards: E = 52 × (1/52) = 1. Remarkably, the answer is 1 regardless of deck size n."
+        ]
+      }
+    ]
+  },
+  "resources": [
+    { "title": "A Practical Guide to Quantitative Finance Interviews ('Green Book')", "by": "Xinfeng Zhou", "note": "The standard source for these probability/brain-teaser problems." },
+    { "title": "Fifty Challenging Problems in Probability", "by": "Frederick Mosteller", "note": "Classic problems that recur in interviews." }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "slug": "matching-engine",
+  "sectionId": "microstructure",
+  "order": 3,
+  "title": "Inside the Matching Engine",
+  "tagline": "How an exchange turns a stream of orders into trades — deterministically, fairly, and fast.",
+  "level": "Intermediate",
+  "track": ["dev", "systems", "research"],
+  "estMinutes": 18,
+  "concept": {
+    "analogy": "A matching engine is like a strict, lightning-fast auctioneer who never plays favorites. Orders arrive in a single-file line. For each one, the auctioneer checks: does this cross with what's already on the board? If yes, pair them off by the rules (best price first, then who was here longest) and announce the trades. If not, pin it on the board. The same inputs in the same order always produce the same trades — that determinism is sacred.",
+    "paragraphs": [
+      "The matching engine is the heart of an exchange: it receives orders, maintains the order book, and matches buyers with sellers according to fixed priority rules, emitting trades and book updates. Its defining properties are determinism (same input sequence → same output), fairness (consistent priority rules), and speed (modern engines match in microseconds or less).",
+      "The dominant matching algorithm is price-time priority (FIFO): incoming aggressive orders match the best price on the opposite side, and within a price, the order that has been resting longest fills first. Some markets (especially certain futures/options) use pro-rata matching, where a fill is split among resting orders proportional to their size, or hybrids.",
+      "A key architectural fact: the core matching is typically a single-threaded, sequential process per instrument (or per book). Sequencing all events through one logical thread is what makes the engine deterministic and avoids the nightmares of concurrent book mutation. Throughput comes from doing each match incredibly fast and from sharding different instruments across cores/machines — not from multithreading a single book.",
+      "Understanding the engine from the inside makes you a better participant: you know exactly how your orders will be prioritized and matched, and (for dev/systems roles) you can build a mini version, a classic interview project."
+    ],
+    "points": [
+      "Core properties: deterministic, fair (fixed priority), and extremely fast.",
+      "Price-time (FIFO) priority is most common; pro-rata and hybrids exist (often in futures/options).",
+      "A single book is matched sequentially (single-threaded) for determinism; scale by sharding instruments.",
+      "Emits a deterministic stream of trades + book updates that becomes the market-data feed."
+    ],
+    "keyIdea": "A matching engine is a deterministic, sequential state machine over the order book. Price-time priority plus single-threaded sequencing gives fairness and reproducibility; speed and sharding give throughput."
+  },
+  "deepDive": {
+    "intro": "Let's walk the matching loop and the design choices, then you'll build the core in code.",
+    "steps": [
+      {
+        "title": "The match loop",
+        "detail": "For an incoming order: while it still has quantity AND it crosses the best opposite level, fill against the front-of-queue resting order (min(incoming, resting) shares) at the resting order's price, emit a trade, and remove the resting order if fully filled. When it stops crossing, if it's a limit with quantity left, rest it; if it's IOC/market, cancel/stop."
+      },
+      {
+        "title": "Price-time vs pro-rata",
+        "detail": "Price-time fills the oldest resting order first — rewards speed/queueing. Pro-rata splits a fill across resting orders proportional to size — rewards posting large size. Pro-rata changes incentives (you post more to get a bigger share), which is why it's chosen in some products to encourage depth."
+      },
+      {
+        "title": "Determinism and sequencing",
+        "detail": "Every event is assigned a monotonic sequence number as it enters the engine; matching processes them strictly in that order on a single logical thread. This makes the engine a pure function of the input sequence — essential for fairness, dispute resolution, and replay/testing."
+      },
+      {
+        "title": "What it emits",
+        "detail": "The engine publishes execution reports to the order's owner (private) and a public market-data stream of adds/cancels/trades (the feed others reconstruct the book from). Both must be consistent and sequenced."
+      },
+      {
+        "title": "Auctions and special states",
+        "detail": "Engines also run opening/closing auctions (cross all eligible orders at a single clearing price that maximizes matched volume) and handle halts, circuit breakers, and self-trade prevention. These edge cases are where real engines get complex."
+      }
+    ],
+    "notes": [
+      {
+        "title": "Why not multithread the book?",
+        "detail": "Concurrent mutation of a single book is a source of races and nondeterminism, and the synchronization cost often exceeds the benefit. The industry answer is: one thread per book for determinism, plus sharding across instruments and busy-polling on isolated cores for throughput. The LMAX Disruptor pattern came directly from this insight."
+      }
+    ],
+    "pitfalls": [
+      "Filling at the incoming order's price instead of the resting order's price — trades execute at the resting (passive) price.",
+      "Breaking determinism by processing events out of sequence or introducing data races.",
+      "Forgetting partial fills: an incoming order can fill multiple resting orders across multiple levels in one event.",
+      "Mishandling self-trade prevention, allowing a participant to trade with themselves."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-price",
+        "q": "An incoming limit buy at 100.05 crosses resting asks at 100.01 (200 shares) and 100.02 (500 shares) for a total buy of 400. At what prices does it trade, and where does any remainder go?",
+        "tag": "Microstructure",
+        "a": [
+          "It trades at the resting (passive) prices, best first: 200 shares at 100.01, then 200 shares at 100.02 (filling the 400). The taker does NOT trade at its own limit of 100.05 — it gets price improvement, paying the resting prices.",
+          "After 400 are filled, the buy is complete, so there's no remainder. (If it had been a buy of, say, 1000, it would fill 200@100.01 + 500@100.02 = 700, then the remaining 300 would rest as a new bid at 100.05 since 100.05 no longer crosses the next ask.)"
+        ]
+      },
+      {
+        "id": "q-determinism",
+        "q": "Why are exchange matching engines typically single-threaded per book, and how do they still achieve high throughput?",
+        "tag": "Systems",
+        "a": [
+          "Single-threaded-per-book gives determinism and correctness: there are no data races on the book, and the output is a pure function of the input event sequence, which is essential for fairness, auditability, and replay. Locking a shared book across threads is both error-prone and often slower than a tight single-threaded loop.",
+          "Throughput comes from: making each match extremely fast (cache-friendly book, no allocation, branch-light hot path), sequencing events through a lock-free queue (Disruptor-style), busy-polling on an isolated, pinned core, and sharding different instruments/books across many cores and machines so the system scales horizontally without contending on a single book."
+        ]
+      },
+      {
+        "id": "q-prorata",
+        "q": "Contrast price-time and pro-rata matching. How does each change a participant's incentives?",
+        "tag": "Microstructure",
+        "a": [
+          "Price-time fills the earliest resting order at a price first, so it rewards speed and queue position — participants race to post early and protect priority. Order size beyond what fills doesn't help you jump the queue.",
+          "Pro-rata splits an incoming fill among resting orders proportional to their displayed size, so it rewards posting large size to capture a bigger share of each fill — leading to larger displayed quotes and sometimes 'size games'. Exchanges pick pro-rata (or hybrids) to encourage deep, visible liquidity, common in some futures/options markets."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-match",
+        "title": "Mini matching engine: process one aggressive order",
+        "difficulty": "Intermediate",
+        "statement": "You maintain an ask side as a price-ascending list of price levels, each a FIFO queue of (orderId, size). Process an incoming aggressive limit BUY of (limitPrice, qty): match against asks best-price-first, filling FIFO within a level at the resting price, until qty is exhausted or the best ask price > limitPrice. Return the list of executed trades (restingId, price, size). Mutate the book to reflect fills.",
+        "hint": "Loop while qty > 0 and best ask exists and best ask price <= limitPrice. Fill min(qty, front order size); pop the front order if it's fully consumed; pop the level if it empties.",
+        "tests": "The core matching loop with partial fills and multi-level sweeps.",
+        "solution": {
+          "approach": [
+            "Keep asks sorted ascending; the best ask is the front level, and within it the front order is the oldest (time priority). While the incoming buy still has quantity and the best ask crosses (price <= limitPrice), fill against the front resting order at its price.",
+            "Each fill is min(remaining buy qty, front resting size). Decrement both; if the resting order hits 0, remove it; if the level empties, remove the level. Record each trade at the resting price. Stop when qty is exhausted or the best ask no longer crosses."
+          ],
+          "complexity": { "time": "O(F) in number of fills", "space": "O(F) for the trade list" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "match.cpp",
+              "source": "#include <deque>\n#include <vector>\n#include <map>\nstruct Resting { long long id; long long size; };\nstruct Trade { long long restingId; double price; long long size; };\n// asks: price -> FIFO queue of resting orders (std::map keeps ascending order)\nstd::vector<Trade> matchBuy(std::map<double, std::deque<Resting>>& asks,\n                            double limitPrice, long long qty){\n    std::vector<Trade> trades;\n    while (qty > 0 && !asks.empty()){\n        auto it = asks.begin();           // best (lowest) ask\n        if (it->first > limitPrice) break; // no longer crosses\n        auto& queue = it->second;\n        while (qty > 0 && !queue.empty()){\n            Resting& front = queue.front();\n            long long fill = std::min(qty, front.size);\n            trades.push_back({front.id, it->first, fill});\n            front.size -= fill; qty -= fill;\n            if (front.size == 0) queue.pop_front();\n        }\n        if (queue.empty()) asks.erase(it);\n    }\n    return trades; // remaining qty (if any) would rest as a new bid\n}"
+            },
+            {
+              "language": "python",
+              "title": "match.py",
+              "source": "from collections import deque\n\ndef match_buy(asks, limit_price, qty):\n    # asks: dict price -> deque of [id, size]; we sort keys for best-first\n    trades = []\n    for price in sorted(asks):\n        if qty <= 0 or price > limit_price:\n            break\n        q = asks[price]\n        while qty > 0 and q:\n            front = q[0]\n            fill = min(qty, front[1])\n            trades.append((front[0], price, fill))\n            front[1] -= fill\n            qty -= fill\n            if front[1] == 0:\n                q.popleft()\n        if not q:\n            del asks[price]\n    return trades  # leftover qty would rest as a new bid"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "LMAX Disruptor technical paper", "by": "Thompson et al.", "note": "Why single-threaded sequencing + a lock-free ring buffer beat locking for an exchange." },
+    { "title": "Build a matching engine (project)", "note": "Implementing a price-time engine over a sample feed is a top-tier portfolio project for dev roles." }
+  ]
+}

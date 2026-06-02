@@ -1,0 +1,89 @@
+{
+  "slug": "roles-and-tracks",
+  "sectionId": "foundations",
+  "order": 3,
+  "title": "Quant Dev vs Researcher vs Trader vs FPGA",
+  "tagline": "The four main hiring tracks at HFT firms — what each does day-to-day and what they're tested on.",
+  "level": "Core",
+  "track": ["dev", "research", "trader", "systems"],
+  "estMinutes": 15,
+  "concept": {
+    "analogy": "A Formula 1 team is the cleanest analogy. The driver (trader) makes real-time decisions and owns the result on track. The race engineers and aerodynamicists (researchers) design the car and strategy from data. The mechanics and software/hardware engineers (quant devs / systems / FPGA) build the car and the pit systems and make them blisteringly fast and reliable. You can be world-class at any of these roles — and they all need each other to win.",
+    "paragraphs": [
+      "HFT firms hire across several tracks. The lines blur between firms, but the archetypes are: Quantitative Trader, Quantitative Researcher, Quantitative Developer / Software Engineer, and specialist Systems / FPGA / Hardware engineers. Knowing which one you're aiming at tells you exactly what to study — because the interviews differ sharply.",
+      "Quantitative Trader: owns strategy decisions, risk, and P&L in real time. Hired heavily on probability, mental math, and market-making games rather than deep coding. Often hired straight from undergrad at firms like Optiver, IMC, SIG, Jane Street.",
+      "Quantitative Researcher: builds the models and signals from data — alpha research, backtesting, calibration. Heavy on statistics, probability, and (depending on the firm) ML and stochastic processes, plus strong Python. Tested on math/stats depth and research judgment.",
+      "Quantitative Developer / Low-Latency SWE: builds and optimizes the trading system — feed handlers, order books, the hot path. This is the most C++-and-systems-heavy track: memory model, lock-free, cache behavior, and systems design. Firms like HRT, Citadel Securities, Jump, Radix weight this most.",
+      "Systems / FPGA / Hardware: the deepest specialists — kernel-bypass networking, FPGA/ASIC, deterministic latency. Tested on Verilog/VHDL, digital design, and networking. A smaller, very specialized track."
+    ],
+    "points": [
+      "Trader → probability, mental math, market-making games; fast decisions under uncertainty.",
+      "Researcher → statistics, probability, signal/ML research, Python; rigor and research taste.",
+      "Quant Dev / SWE → modern C++, low-latency systems, the memory model, systems design.",
+      "Systems / FPGA → networking, hardware, deterministic latency, Verilog/VHDL."
+    ],
+    "keyIdea": "Pick a primary track early. The probability + microstructure core is shared, but Dev/Systems roles demand low-latency C++ and systems mastery, while Trader/Researcher roles demand probability, mental math, and statistics."
+  },
+  "deepDive": {
+    "intro": "This module is built so you can follow any track. Here's how the sections map, and how the tracks overlap.",
+    "steps": [
+      {
+        "title": "The shared core (everyone)",
+        "detail": "Market microstructure (order books, matching, market data) and probability/EV are assumed knowledge for every role. Sections 'Foundations', 'Market Microstructure', and 'Probability, Stats & Mental Math' are for everyone."
+      },
+      {
+        "title": "If you're aiming Quant Dev / Low-Latency SWE",
+        "detail": "Live in 'Modern C++ for Low Latency', 'Low-Latency Systems Engineering', and 'Trading System Architecture'. You must be able to write correct lock-free code, reason about cache and the memory model, and design a tick-to-trade pipeline live. Microstructure and basic probability are still expected."
+      },
+      {
+        "title": "If you're aiming Quant Researcher",
+        "detail": "Go deep in 'Probability, Stats & Mental Math' and 'Strategies & Quant Research' (signals, stat-arb, backtesting). Strong Python and statistics matter more than C++. You should still understand microstructure intimately because your signals live in it."
+      },
+      {
+        "title": "If you're aiming Quant Trader",
+        "detail": "Master probability, mental math, and market-making games (the games lesson is for you), plus microstructure. Coding is lighter but you should be comfortable with logic and quick estimation. Calibration and disciplined risk-taking are the graded skills."
+      },
+      {
+        "title": "If you're aiming Systems / FPGA",
+        "detail": "Everything in 'Low-Latency Systems Engineering' plus the networking and hardware lessons, and the FPGA lesson specifically. You'll go beyond this module into digital design, but the systems mindset here is the foundation."
+      }
+    ],
+    "notes": [
+      {
+        "title": "You don't have to choose forever",
+        "detail": "Many people move between tracks (dev→trader, researcher→dev). But for a specific interview loop, prepare for that loop's emphasis. A researcher loop won't grill you on lock-free queues; a dev loop won't grill you on stochastic calculus."
+      }
+    ],
+    "pitfalls": [
+      "Preparing 'a bit of everything' shallowly. Depth in your target track's core beats breadth.",
+      "Devs neglecting probability/microstructure — you'll still be asked, and it signals you understand the product.",
+      "Traders/researchers thinking they need zero coding — comfort with Python (research) or clean logic (trading) is expected."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-pick",
+        "q": "An interviewer asks: 'Why the developer track and not trading or research?' How do you give a strong answer?",
+        "tag": "Behavioral",
+        "a": [
+          "Anchor it in genuine interest and evidence, not flattery. Strong answers connect what energizes you to what the role actually is: e.g., 'I love making systems fast and correct — I've spent time profiling C++, writing lock-free structures, and chasing tail latency, and the idea that a microsecond is worth real money is motivating. I find building the engine more compelling than making the discretionary calls.'",
+          "Back it with a concrete artifact (a project: a matching engine, a low-latency parser, a benchmark you optimized). Show you understand the trade-off you're choosing — you're opting into deep systems work over direct P&L ownership — and that it's a deliberate, informed choice."
+        ],
+        "followups": ["What project best demonstrates your low-latency skills?", "Where do you see the dev/researcher boundary at this firm?"]
+      },
+      {
+        "id": "q-overlap",
+        "q": "How much do the researcher and developer roles overlap at an HFT firm, and where do they hand off?",
+        "tag": "Concept",
+        "a": [
+          "They overlap heavily around the strategy: researchers design signals and models and validate them in backtests; developers turn those into production code that runs on the hot path within a latency budget, and build the data/backtesting infrastructure researchers rely on.",
+          "The hand-off is usually: researcher specifies and prototypes (often Python) → developer productionizes and optimizes (C++), ensuring the live system reproduces backtest behavior. At smaller firms one person may do both ('quant dev'); at larger firms they're distinct but tightly collaborating roles. Good devs understand the research; good researchers understand the latency/feasibility constraints."
+        ]
+      }
+    ]
+  },
+  "resources": [
+    { "title": "How to Get a Quant Job — track breakdowns", "note": "Community guides that contrast trader/researcher/dev hiring bars by firm." }
+  ]
+}

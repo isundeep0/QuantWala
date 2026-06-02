@@ -1,0 +1,133 @@
+{
+  "slug": "feed-handler",
+  "sectionId": "architecture",
+  "order": 2,
+  "title": "The Feed Handler",
+  "tagline": "Turn raw exchange packets into a correct, gap-free event stream — at line rate, with no allocation.",
+  "level": "Advanced",
+  "track": ["dev", "systems"],
+  "estMinutes": 20,
+  "concept": {
+    "analogy": "A feed handler is a simultaneous interpreter at the UN who also catches missing pages. The exchange speaks a terse, fast binary dialect; the interpreter must translate it instantly into your system's vocabulary, never lag behind the speaker, and immediately notice if page 47 was skipped — then quietly fetch it from a backup transcript without interrupting the flow. Speed alone isn't enough; a single missed or mistranslated message corrupts everything downstream.",
+    "paragraphs": [
+      "The feed handler is the first software stage: it consumes raw market-data packets and produces a normalized, ordered, gap-free stream of events (add/modify/delete/trade) for the order book and strategy. It is simultaneously latency-critical (it's on the hot path) and correctness-critical (everything downstream trusts its output), which makes it one of the most demanding components to build well.",
+      "Exchange feeds are typically UDP multicast carrying a compact binary protocol — Nasdaq ITCH, CME MDP/SBE, or proprietary formats — where each message is a fixed or self-describing record with a sequence number. Because UDP has no delivery guarantee, the feed handler must detect sequence gaps and recover: exchanges provide redundant A/B feeds (two identical streams on different network paths) and separate snapshot/retransmit channels. The handler arbitrates A/B (process whichever copy of a sequence arrives first, discard the duplicate) and, on a real gap, requests a snapshot or replays missed messages while buffering the live stream.",
+      "Performance demands shape the code: parse with zero copies directly on the received buffer; avoid all heap allocation (use pre-allocated pools and fixed-size event structs); keep the parse branch-light and cache-friendly; and decode just enough to act. Many protocols are designed for this — fixed offsets, little-endian fields, length-prefixed messages — so a tight, table-driven or switch-on-type decoder can run in tens of nanoseconds per message and handle millions per second during bursts.",
+      "The hardest part is bursts and recovery, not the steady state. Open and close auctions, news, and volatile moments produce huge message bursts that must not overflow buffers or fall behind; the handler needs back-pressure, batching, and headroom. And the recovery logic (gap detection, snapshot re-sync, out-of-order handling across A/B) is where subtle bugs hide — bugs that silently desynchronize your book from the exchange. A great feed handler is fast in the common case and provably correct in the rare one."
+    ],
+    "points": [
+      "Input: raw UDP multicast binary protocol (ITCH/MDP/proprietary) with sequence numbers; output: normalized, ordered, gap-free events.",
+      "UDP isn't reliable: detect gaps; recover via redundant A/B feeds and snapshot/retransmit channels.",
+      "A/B arbitration: take the first-arriving copy of each sequence, drop the duplicate — lower latency + loss resilience.",
+      "Hot-path rules: zero-copy parse, no heap allocation, branch-light decode, fixed-size event structs.",
+      "Hardest cases are bursts (auctions/news) and recovery, not the steady state — design for headroom and correctness."
+    ],
+    "callouts": [
+      { "type": "warn", "title": "A silent desync is the nightmare", "body": "If the handler mishandles a gap or an out-of-order A/B message, your book diverges from the exchange and the strategy trades on a phantom market. Sequence checking and recovery must be airtight and continuously monitored (gap counters, checksum/consistency checks)." },
+      { "type": "tip", "title": "Decode lazily", "body": "Parse only the fields you need to act; defer or skip the rest. For many strategies, top-of-book and trade messages matter most — don't pay to fully decode every field of every message type." }
+    ],
+    "keyIdea": "The feed handler converts raw UDP exchange packets into a normalized, ordered, gap-free event stream with zero-copy, allocation-free parsing on the hot path — while correctly handling the hard cases: A/B feed arbitration, sequence-gap detection, and snapshot/retransmit recovery. It must be fast in the common case and provably correct in the rare one."
+  },
+  "deepDive": {
+    "intro": "Parsing the wire format efficiently, sequencing and arbitrating feeds, recovering from loss, and surviving bursts.",
+    "steps": [
+      {
+        "title": "Zero-copy parsing",
+        "detail": "Receive frames directly into user-space buffers (kernel bypass) and parse in place: cast/overlay the message header at the current offset, read fixed-offset fields (handling endianness), and advance by the message length. No copying into intermediate structs, no allocation — populate a pre-allocated, fixed-size normalized event and hand it on. A switch on message-type (or a jump table) dispatches the few message kinds you care about."
+      },
+      {
+        "title": "Sequencing and gap detection",
+        "detail": "Each channel carries a monotonically increasing sequence number. Track the expected next seq; if an incoming seq equals it, process and advance; if it's ahead, you have a gap (lost or reordered) — enter recovery; if it's behind, it's a duplicate (drop). This single check is the backbone of feed correctness."
+      },
+      {
+        "title": "A/B feed arbitration",
+        "detail": "Exchanges send two identical feeds (A and B) over separate paths. Run both, keyed by sequence: for each sequence, act on whichever feed delivers it first and discard the later duplicate. This both lowers latency (you take the faster path per message) and tolerates loss on one path (the other often still has it), reducing how often you must do heavyweight recovery."
+      },
+      {
+        "title": "Recovery: snapshot & retransmit",
+        "detail": "On a true gap, you can't proceed with a desynchronized book. Options: request a retransmission of the missing messages (if offered), or subscribe to the snapshot channel that periodically broadcasts the full book state, then re-apply incremental messages from the snapshot's sequence forward. Meanwhile buffer the live stream so you can replay it once re-synced. At startup you always begin with a snapshot, then go live."
+      },
+      {
+        "title": "Bursts and back-pressure",
+        "detail": "Auctions/news create bursts far above average rate. Size receive rings for the worst case, process in batches (amortize per-message overhead, stay cache-hot), and ensure downstream queues (to the book/strategy) apply back-pressure or a defined drop policy rather than overflowing. Headroom and batching turn a burst into a brief catch-up rather than a loss event."
+      }
+    ],
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "decode.cpp — zero-copy, sequenced, allocation-free",
+        "source": "#include <cstdint>\n#include <cstring>\n#include <bit>\n\n#pragma pack(push, 1)\nstruct MsgHeader { uint16_t len; uint8_t type; uint64_t seq; };  // wire layout\nstruct AddOrder  { uint64_t order_id; uint8_t side; uint32_t qty; int32_t price; };\n#pragma pack(pop)\n\nstruct NormEvent { enum K{ADD,CANCEL,TRADE} kind; int32_t price; uint32_t qty; uint8_t side; };\n\nclass FeedHandler {\npublic:\n    // Parse one packet (may contain multiple messages) directly in the buffer.\n    template <class Sink>\n    void on_packet(const uint8_t* p, size_t n, Sink&& emit) {\n        size_t off = 0;\n        while (off + sizeof(MsgHeader) <= n) {\n            const auto* h = reinterpret_cast<const MsgHeader*>(p + off);\n            uint64_t seq = le(h->seq);\n            if (seq != expected_) { handle_gap(seq); /* may enter recovery */ }\n            else { dispatch(h, p + off + sizeof(MsgHeader), emit); ++expected_; }\n            off += le(h->len);\n        }\n    }\nprivate:\n    static uint16_t le(uint16_t v){ return v; }   // assume host==wire endianness here\n    static uint64_t le(uint64_t v){ return v; }\n\n    template <class Sink>\n    void dispatch(const MsgHeader* h, const uint8_t* body, Sink&& emit) {\n        switch (h->type) {\n            case 'A': { const auto* a = reinterpret_cast<const AddOrder*>(body);\n                        emit(NormEvent{NormEvent::ADD, le32(a->price), a->qty, a->side}); break; }\n            // case 'X': cancel ... case 'P': trade ...\n            default: break;   // skip message types we don't need (lazy decode)\n        }\n    }\n    static int32_t le32(int32_t v){ return v; }\n    void handle_gap(uint64_t) { /* A/B already deduped upstream; else snapshot/retransmit */ }\n    uint64_t expected_ = 0;\n};"
+      },
+      {
+        "language": "cpp",
+        "title": "ab_arbitrate.cpp — take the first copy",
+        "source": "#include <cstdint>\n\n// Deduplicate two identical feeds by sequence: act on the first arrival.\nclass AbArbiter {\npublic:\n    // returns true if this seq is new (caller should process it)\n    bool accept(uint64_t seq) {\n        if (seq < next_) return false;          // old/duplicate\n        if (seq == next_) { ++next_; advance_over_buffered(); return true; }\n        buffered_[seq & MASK] = true;           // ahead: remember, gap pending\n        return false;\n    }\nprivate:\n    void advance_over_buffered() {              // fill in any now-contiguous seqs\n        while (buffered_[next_ & MASK]) { buffered_[next_ & MASK] = false; ++next_; }\n    }\n    static constexpr uint64_t MASK = (1 << 20) - 1;\n    bool buffered_[1 << 20] = {};\n    uint64_t next_ = 0;\n};\n// With A/B, most 'gaps' on one feed are instantly filled by the other -> rare true recovery."
+      }
+    ],
+    "notes": [
+      { "title": "Endianness and packing", "detail": "Wire formats are usually little-endian and tightly packed; use packed structs/explicit byte reads and convert on read. Don't assume host layout matches the wire — test on the target." },
+      { "title": "Conflated vs full-depth feeds", "detail": "Some feeds give every order (order-by-order, e.g., ITCH) enabling a full book; others give aggregated level updates or conflated snapshots. Your handler and book design depend on which you consume." },
+      { "title": "Monitor relentlessly", "detail": "Expose gap counts, recovery events, per-message-type rates, and feed-to-feed skew. A handler that 'looks fine' but silently dropped to a stale book is the worst failure; continuous consistency checks catch it." }
+    ],
+    "complexity": {
+      "time": "~tens of ns/message; millions/sec in bursts",
+      "timeReason": "Zero-copy fixed-offset parsing plus a single sequence check and a type dispatch is a handful of cache-hot operations; batching amortizes overhead during bursts.",
+      "space": "Pre-allocated pools + recovery buffers",
+      "spaceReason": "Fixed event structs, a dedup/buffer window sized for reorder/gap depth, and a live-stream buffer for replay during recovery — all pre-sized, no hot-path allocation."
+    },
+    "pitfalls": [
+      "Allocating or copying per message instead of parsing zero-copy into pre-allocated events.",
+      "Weak or missing gap detection → silent book desync from the exchange.",
+      "Mishandling A/B (double-processing or dropping the wrong copy), or wrong reorder-window sizing.",
+      "Undersized receive/recovery buffers that overflow during auction/news bursts.",
+      "Fully decoding every field of every message when the strategy only needs a few."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-reliability",
+        "q": "Market data is UDP multicast with no retransmission by default. How does a feed handler stay correct?",
+        "tag": "Architecture",
+        "a": [
+          "Every message carries a sequence number, so the handler tracks the expected next sequence and classifies each arrival: in-order (process, advance), duplicate/old (drop), or ahead (gap — reordered or lost). To minimize loss it consumes the exchange's redundant A/B feeds and arbitrates by sequence, acting on the first copy to arrive and discarding the duplicate, so loss on one path is usually covered by the other.",
+          "On a genuine gap it enters recovery: request a retransmit of the missing messages if the exchange offers it, or re-sync from the snapshot channel (which periodically broadcasts full book state) and then re-apply incrementals from that point, buffering the live stream to replay once caught up. At startup it always begins from a snapshot before going live. Throughout, it monitors gap/recovery counters so a desync is detected immediately rather than silently corrupting the book."
+        ],
+        "followups": ["How do you size the reorder/recovery buffers?", "What happens to the strategy during recovery?"]
+      },
+      {
+        "id": "q-perf",
+        "q": "What makes a feed handler fast, and where does it usually break under load?",
+        "tag": "Systems",
+        "a": [
+          "Fast: receive via kernel bypass into user-space buffers; parse zero-copy in place at fixed offsets with a branch-light switch/jump-table dispatch; allocate nothing on the hot path (pre-allocated event structs and pools); decode lazily (only fields you need); and batch-process bursts to stay cache-hot and amortize overhead. Pin it to an isolated core busy-polling the NIC.",
+          "It breaks under bursts — auction opens/closes and news spikes push message rates far above average. If receive rings or downstream queues are undersized, you overflow and lose messages (forcing expensive recovery or, worse, a silent desync). The fixes are headroom (size for worst-case bursts), batching, back-pressure with a defined policy, and keeping per-message work minimal so catch-up is fast. Recovery logic is also a common correctness break point, so it must be tested against real loss scenarios."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-build-feed",
+        "title": "Design a feed handler with A/B and recovery",
+        "difficulty": "Advanced",
+        "statement": "Design the core of a feed handler for a UDP-multicast, sequence-numbered exchange protocol that provides A/B redundant feeds and a snapshot channel. Specify: the parse strategy, the sequence/dedup/arbitration logic, the recovery state machine (startup and mid-session gap), how you avoid allocation on the hot path, and what you'd monitor. State how a downstream order book consumes your output during normal operation and during recovery.",
+        "hint": "Sequence-keyed dedup across A/B; gap → snapshot/retransmit while buffering live; zero-copy parse into pre-allocated events; emit normalized events over an SPSC ring.",
+        "tests": "Correct, fast feed-handling design end to end.",
+        "solution": {
+          "approach": [
+            "Parse: receive both A and B via kernel bypass; parse each packet zero-copy by overlaying the message header at the current offset, reading fixed-offset little-endian fields, and advancing by message length. Dispatch on message type with a switch/jump table, decoding only needed fields into a pre-allocated, fixed-size NormEvent. Emit events to the book/strategy over a lock-free SPSC ring — no heap allocation anywhere on the path.",
+            "Sequencing/arbitration: maintain expectedSeq. An AB arbiter dedups by sequence — act on the first copy of each seq, drop duplicates, and buffer any seq that arrives ahead so it can be applied once the gap fills. Because A and B rarely lose the same message, most one-feed gaps are filled instantly by the other.",
+            "Recovery state machine: state ∈ {INIT, LIVE, RECOVERING}. At INIT, load the latest snapshot to build the book, note its sequence, then transition to LIVE applying incrementals from that seq. In LIVE, a true gap (neither feed delivered seq) → RECOVERING: keep buffering the live stream, request retransmit or re-subscribe to the snapshot channel, rebuild/patch state, then replay buffered messages from the recovered sequence forward and return to LIVE.",
+            "Downstream behavior: in LIVE, the book applies each normalized event in order. During RECOVERING, the handler signals 'stale' so the strategy stops quoting (or quotes conservatively) until the book is known-good again — never trade on a desynced book. Monitor: gap count, recovery count/duration, per-feed arrival skew, message-type rates, and a periodic consistency check; alert on any gap that isn't covered by A/B."
+          ],
+          "complexity": { "time": "~tens of ns/msg in LIVE; recovery bounded by snapshot size", "space": "Pre-allocated events + reorder window + live replay buffer" }
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Nasdaq TotalView-ITCH & CME MDP 3.0 / SBE specifications", "note": "Real wire formats a feed handler parses, including sequencing and recovery channels." },
+    { "title": "SBE (Simple Binary Encoding) and FAST", "note": "Encodings designed for low-latency, zero-copy decode." },
+    { "title": "Open-source feed handlers / matching engines on GitHub", "note": "Study production-style parse + sequencing + recovery code." }
+  ]
+}

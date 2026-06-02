@@ -1,0 +1,177 @@
+{
+  "slug": "cpu-caches",
+  "sectionId": "systems",
+  "order": 1,
+  "title": "CPU Caches & The Memory Hierarchy",
+  "tagline": "Why a cache miss costs ~100x an L1 hit — and how data layout, not clever code, wins the latency game.",
+  "level": "Intermediate",
+  "track": ["dev", "systems"],
+  "estMinutes": 22,
+  "visualizer": "cache",
+  "concept": {
+    "analogy": "Think of the CPU as a chef and memory as a giant warehouse across town. The chef's hands (registers) hold what's being used right now. The countertop (L1) holds the current recipe's ingredients. A nearby pantry (L2) and the kitchen's walk-in fridge (L3) hold a bit more. DRAM is the warehouse — a round trip there stalls the chef for what feels like forever. A good chef arranges ingredients so almost everything needed is already on the counter; a bad one runs to the warehouse for every single item.",
+    "paragraphs": [
+      "Modern CPUs are fast; main memory is comparatively glacial. A single DRAM access can cost ~60–100 nanoseconds, during which a 3 GHz core could have executed hundreds of instructions. To hide this, the hardware keeps a hierarchy of caches: L1 (per-core, ~32 KB, ~1 ns / ~4 cycles), L2 (per-core, ~256 KB–1 MB, ~4 ns), and L3 (shared, several MB to tens of MB, ~10–20 ns). The further out you go, the bigger and slower.",
+      "Caches move data in fixed-size blocks called cache lines — almost always 64 bytes. Touch one byte and the whole 64-byte line is pulled in. This is why spatial locality (using bytes near each other) and temporal locality (reusing bytes soon) are the two levers that decide real-world performance. The hardware prefetcher also watches your access pattern and speculatively pulls in lines ahead of a sequential stream.",
+      "For HFT, the headline fact is the cliff: an L1 hit is roughly 1 ns, an L3 hit ~15 ns, and a miss to DRAM ~80–100 ns. A hot loop that misses cache on every iteration can be 50–100x slower than the same loop hitting L1 — even though the C++ source looks identical. The instruction stream also lives in caches (I-cache), so bloated, branchy code can stall on instruction-cache misses too.",
+      "The practical takeaway is counterintuitive for newcomers: on the hot path, how your data is laid out in memory usually matters more than the cleverness of your algorithm. Compact, contiguous, sequentially-accessed data that fits in cache beats a 'smarter' structure that chases pointers all over the heap."
+    ],
+    "points": [
+      "Caches move 64-byte lines; touching one byte loads its whole line.",
+      "Rough latencies: register ~0, L1 ~1 ns, L2 ~4 ns, L3 ~15 ns, DRAM ~80–100 ns.",
+      "Spatial + temporal locality are the two levers; the hardware prefetcher rewards sequential access.",
+      "On the hot path, data layout often beats algorithmic cleverness.",
+      "Code also lives in cache — bloated/branchy hot paths suffer I-cache misses."
+    ],
+    "callouts": [
+      { "type": "tip", "title": "Structure of Arrays (SoA)", "body": "If a loop only reads the `price` field of a million orders, store all prices contiguously (SoA) rather than as a field inside a fat struct (AoS). You then load only useful bytes per cache line instead of dragging along fields you don't touch." },
+      { "type": "warn", "title": "Pointer chasing kills throughput", "body": "Linked lists, node-based maps, and `shared_ptr` graphs scatter data across the heap. Each `next` is a likely cache miss the prefetcher can't predict. Prefer flat arrays / open-addressing hash maps on the hot path." }
+    ],
+    "keyIdea": "Memory is a hierarchy and the unit of transfer is the 64-byte cache line. Make hot data compact, contiguous, and accessed sequentially so it stays in L1/L2 — because a cache miss to DRAM can cost 50–100x an L1 hit, dwarfing most algorithmic savings."
+  },
+  "deepDive": {
+    "intro": "How the hierarchy works, why sequential beats random by an order of magnitude, and the layout patterns that exploit it.",
+    "steps": [
+      {
+        "title": "Lines, sets, and associativity",
+        "detail": "A cache is organized into sets of N 'ways' (e.g. 8-way associative). An address maps to one set; any of its N lines can hold that data. When a set is full, a line is evicted (roughly LRU). Two hot addresses that map to the same set can repeatedly evict each other ('conflict misses') even when the cache is mostly empty — a subtle cause of slowdowns with power-of-two strides."
+      },
+      {
+        "title": "The hardware prefetcher",
+        "detail": "When you stream through memory sequentially (or with a fixed stride), the prefetcher detects the pattern and fetches upcoming lines before you ask. This is why iterating a contiguous array is dramatically faster than the same number of random accesses: the misses are hidden. Random / pointer-chasing patterns defeat the prefetcher, so every access pays full DRAM latency."
+      },
+      {
+        "title": "AoS vs SoA",
+        "detail": "Array-of-Structs (`struct Order{double px; int qty; char sym[8]; ...}; Order arr[N];`) is natural but wasteful when a loop touches one field: each 64-byte line is mostly the fields you ignore. Struct-of-Arrays keeps each field in its own contiguous array, so a price-only scan loads ~8 prices per line instead of 1. SoA is a cornerstone of data-oriented design."
+      },
+      {
+        "title": "Working set and capacity",
+        "detail": "If your hot working set fits in L1/L2, you stay fast; once it spills to L3 or DRAM, latency jumps. Keep per-event state small, reuse buffers, and prefer fixed-capacity containers. A 1 MB lookup table that thrashes L2 can be slower than recomputing a value that stays in registers."
+      },
+      {
+        "title": "Measuring it",
+        "detail": "Use `perf stat -e cache-misses,L1-dcache-load-misses,LLC-load-misses ./app` to see miss rates, and `perf record`/`perf report` to find the offending lines. Don't guess — cache behavior is unintuitive, and the bottleneck is rarely where you think."
+      }
+    ],
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "row_vs_column.cpp — same work, 5–10x different",
+        "source": "#include <vector>\n#include <chrono>\n#include <cstdio>\nusing namespace std::chrono;\n\nconstexpr int N = 4096;\nstd::vector<int> m(N * (size_t)N, 1);\n\n// Row-major traversal: sequential in memory -> prefetcher-friendly, L1-resident.\nlong sum_rows() {\n    long s = 0;\n    for (int r = 0; r < N; ++r)\n        for (int c = 0; c < N; ++c)\n            s += m[(size_t)r * N + c];   // stride 1\n    return s;\n}\n\n// Column-major traversal: stride N -> a new cache line (often a miss) every access.\nlong sum_cols() {\n    long s = 0;\n    for (int c = 0; c < N; ++c)\n        for (int r = 0; r < N; ++r)\n            s += m[(size_t)r * N + c];   // stride N\n    return s;\n}\n\nint main() {\n    auto t0 = high_resolution_clock::now();\n    volatile long a = sum_rows();\n    auto t1 = high_resolution_clock::now();\n    volatile long b = sum_cols();\n    auto t2 = high_resolution_clock::now();\n    printf(\"rows: %ld ns\\ncols: %ld ns\\n\",\n        duration_cast<nanoseconds>(t1 - t0).count(),\n        duration_cast<nanoseconds>(t2 - t1).count());\n    (void)a; (void)b;\n}\n// Identical arithmetic; the column scan is typically 5-10x slower purely from cache misses."
+      },
+      {
+        "language": "cpp",
+        "title": "aos_vs_soa.cpp",
+        "source": "#include <vector>\n#include <cstdint>\n\n// AoS: a price-only loop loads 32+ bytes of junk per useful 8-byte price.\nstruct OrderAoS { double price; int64_t qty; char sym[8]; uint32_t id; };\ndouble best_aos(const std::vector<OrderAoS>& v) {\n    double m = 0;\n    for (const auto& o : v) m = o.price > m ? o.price : m; // touches whole struct's line\n    return m;\n}\n\n// SoA: prices are contiguous -> ~8 prices per 64B line, prefetcher streams them.\nstruct OrdersSoA {\n    std::vector<double>  price;\n    std::vector<int64_t> qty;\n    std::vector<uint32_t> id;\n};\ndouble best_soa(const OrdersSoA& s) {\n    double m = 0;\n    for (double p : s.price) m = p > m ? p : m; // dense, cache-friendly\n    return m;\n}"
+      }
+    ],
+    "notes": [
+      { "title": "Alignment helps but is not magic", "detail": "Aligning hot structures to cache-line boundaries avoids straddling two lines, but the bigger win is touching fewer lines overall. Compactness first, alignment second." },
+      { "title": "Latency vs bandwidth", "detail": "Sequential access is fast partly because DRAM delivers high bandwidth in bursts; the cost you fight on random access is latency, which prefetching and pipelining cannot hide." }
+    ],
+    "complexity": {
+      "time": "Same Big-O, ~1–100 ns/access in practice",
+      "timeReason": "Big-O counts operations, not memory stalls. Two O(n) loops can differ 10–100x because one is L1-resident and the other misses to DRAM every iteration.",
+      "space": "Smaller is faster",
+      "spaceReason": "A working set that fits in L1/L2 stays fast; spilling to DRAM is the cliff. Compact representations are a performance feature, not just a memory saving."
+    },
+    "pitfalls": [
+      "Reasoning about hot-path speed purely from Big-O while ignoring the memory hierarchy.",
+      "Node-based containers (std::list, std::map, pointer graphs) on the hot path — every hop is a likely miss.",
+      "Fat structs scanned for one field (use SoA), and power-of-two strides causing conflict misses.",
+      "Trusting intuition instead of `perf` — the real bottleneck is usually a surprise."
+    ]
+  },
+  "benchmark": {
+    "intro": "Approximate latency of each level of the hierarchy on a modern server CPU (order-of-magnitude, not exact).",
+    "columns": ["Level", "Typical latency", "Approx size", "Notes"],
+    "rows": [
+      { "cells": ["Register", "~0 ns", "~1 KB", "No load needed"], "best": true },
+      ["L1 cache", "~1 ns (~4 cycles)", "32–48 KB", "Per-core, split I/D"],
+      ["L2 cache", "~4 ns", "256 KB–2 MB", "Per-core"],
+      ["L3 cache", "~12–20 ns", "8–64 MB", "Shared across cores"],
+      ["DRAM", "~70–100 ns", "GBs", "The cliff — hidden only by prefetch"],
+      ["NUMA-remote DRAM", "~120–160 ns", "GBs", "Another socket's memory"]
+    ],
+    "note": "Numbers vary by CPU; treat ratios (≈1 : 4 : 15 : 80) as the durable lesson.",
+    "takeaway": "An L1 hit vs a DRAM miss is roughly 1 ns vs 80 ns — an 80x gap created entirely by where the data lives. Winning latency is mostly about keeping hot data in cache, not shaving instructions."
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-cacheline",
+        "q": "What is a cache line, how big is it, and why does its size matter for performance?",
+        "tag": "Systems",
+        "a": [
+          "A cache line is the fixed-size block the CPU transfers between memory and cache — almost always 64 bytes on x86/ARM server cores. The cache never moves single bytes; touching one byte loads its entire 64-byte line.",
+          "It matters because it sets the granularity of locality: sequential access reuses already-loaded lines and triggers the prefetcher (cheap), while scattered access pays a full miss per line (expensive). It also explains false sharing (two threads hammering different variables that happen to share a line), and why packing hot fields together and unrelated-but-contended fields apart both help."
+        ],
+        "followups": ["How would you find the cache line size at runtime?", "How does this lead to false sharing?"]
+      },
+      {
+        "id": "q-rowcol",
+        "q": "Two nested loops sum a large 2D matrix; one is row-major, one column-major. Same operations and Big-O. Why is one much slower, and by how much?",
+        "tag": "Systems",
+        "a": [
+          "Row-major iteration walks memory with stride 1, so each 64-byte line yields ~16 ints and the hardware prefetcher streams the next lines — almost everything is an L1/L2 hit. Column-major iteration walks with stride = row length, touching a new (cold) line on nearly every access, so it misses to DRAM repeatedly and defeats the prefetcher.",
+          "The slowdown is typically 5–10x (sometimes more for large matrices), driven purely by cache-miss latency, not instruction count. It's the canonical demonstration that the memory access pattern, not Big-O, decides hot-loop performance."
+        ]
+      },
+      {
+        "id": "q-perf",
+        "q": "You suspect a hot loop is memory-bound. How do you confirm it and find the culprit?",
+        "tag": "Tooling",
+        "a": [
+          "Measure, don't guess. Use `perf stat -e cycles,instructions,cache-references,cache-misses,L1-dcache-load-misses,LLC-load-misses ./app` to see the miss rates and IPC (instructions-per-cycle) — low IPC with high LLC miss rate signals memory-bound.",
+          "Then `perf record` / `perf report` (and tools like VTune or `toplev`) to attribute misses to specific lines. Confirm by changing the data layout (e.g., SoA, smaller structs, contiguous storage) and re-measuring: if latency tracks the miss rate, it was the memory hierarchy."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-aos-soa",
+        "title": "Refactor AoS to SoA and predict the win",
+        "difficulty": "Intermediate",
+        "statement": "Given `struct Tick{ double px; int64_t qty; char sym[8]; uint32_t flags; };` and a vector of 10 million ticks, a hot loop computes the max `px`. Refactor to SoA, and explain quantitatively (in terms of bytes per cache line) why the SoA version should be faster. Roughly what speedup would you expect on the price-only scan?",
+        "hint": "Count how many useful prices fit in one 64-byte line under AoS vs SoA.",
+        "tests": "Understanding bytes-per-line utilization and SoA.",
+        "solution": {
+          "approach": [
+            "Under AoS, each Tick is 8 + 8 + 8 + 4 = 28 bytes (padded to 32). A 64-byte line holds ~2 Ticks, so a price-only scan brings in ~2 useful 8-byte prices and ~48 bytes of qty/sym/flags you never read — about 25% useful bandwidth.",
+            "Under SoA, `std::vector<double> px` is dense: one 64-byte line holds 8 prices, all useful — 100% useful bandwidth, and the prefetcher streams it perfectly. So you fetch ~4x fewer lines for the same scan.",
+            "Expect roughly a 3–4x speedup on the price-only scan (bounded by the bandwidth ratio), more if the AoS struct were larger. The exact number depends on whether the data was already cache-resident, so always measure with perf."
+          ],
+          "complexity": { "time": "O(n), ~4x fewer cache lines touched", "space": "O(n), same total bytes split per field" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "soa.cpp",
+              "source": "struct TicksSoA {\n    std::vector<double>  px;\n    std::vector<int64_t> qty;\n    std::vector<std::array<char,8>> sym;\n    std::vector<uint32_t> flags;\n};\n\ndouble max_price(const TicksSoA& t) {\n    double m = -1e300;\n    for (double p : t.px)            // dense, 8 prices/line, prefetch streams it\n        m = p > m ? p : m;\n    return m;\n}"
+            }
+          ]
+        }
+      },
+      {
+        "id": "p-conflict",
+        "title": "Diagnose a power-of-two slowdown",
+        "difficulty": "Advanced",
+        "statement": "A colleague reports that processing a 1024x1024 float matrix column-wise is far slower than a 1023x1023 one, despite being nearly the same size. Explain what's happening and how you'd fix it without changing the algorithm.",
+        "hint": "Think about cache associativity and which set each column element maps to.",
+        "tests": "Conflict misses and associativity.",
+        "solution": {
+          "approach": [
+            "With a 1024-wide row, the stride between vertically-adjacent elements is exactly a power of two (1024 floats = 4096 bytes). Such strides map many elements to the same cache set, so an N-way cache evicts useful lines repeatedly — classic conflict misses — even though total data is small. The 1023 width breaks the alignment, spreading accesses across sets.",
+            "Fixes that keep the algorithm: pad each row (e.g., allocate width 1024+8) so the stride is no longer a power of two; or block/tile the traversal so you reuse lines within a small sub-block before moving on; or transpose once if you'll scan columns repeatedly. Each restores set diversity or restores stride-1 locality.",
+            "Confirm with `perf stat` — you should see the high cache-miss / low-IPC profile collapse after padding or tiling."
+          ],
+          "complexity": { "time": "O(n) restored to L1/L2-bound", "space": "O(n) plus small padding" }
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "What Every Programmer Should Know About Memory", "by": "Ulrich Drepper", "note": "The definitive deep dive on caches, TLBs, and access patterns." },
+    { "title": "Latency Numbers Every Programmer Should Know", "by": "Jeff Dean / Peter Norvig", "note": "The classic order-of-magnitude latency table." },
+    { "title": "perf, VTune, and Agner Fog's optimization manuals", "note": "Tools and references for measuring and tuning memory behavior." }
+  ]
+}

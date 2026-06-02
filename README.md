@@ -133,15 +133,18 @@ interactive simulator. Possible future enhancements:
 - Per‑problem notes and a spaced‑repetition "review queue".
 - Expand the intentionally lean categories (greedy, stacks/queues) with more lessons.
 
-**Module 2 — System Design (content):**
+**Module 2 — HFT / Low Latency — done.** 47 lessons across 8 sections with
+Concept → Deep Dive → Visualize → Benchmark → Practice steps, dual‑language code,
+interview questions, coding/build problems, and 7 interactive simulators. Possible
+future enhancements:
+- Runnable, in‑browser benchmarks for the latency/cache/branch demos.
+- More simulators (matching engine, Disruptor pipeline, NUMA/affinity visualizer).
+- Firm‑specific interview tracks expanded into per‑firm question banks.
+
+**Module 3 — System Design (content):**
 - Fill the placeholder panels with real concept text, diagrams (consider an
   Excalidraw‑style embed), key interview points, and question banks.
 - Add an interactive "design canvas" for drawing architectures.
-
-**Module 3 — HFT / Low Latency (content):**
-- Real C++/Python snippets with syntax highlighting, runnable benchmarks, and the
-  benchmark/comparison tables.
-- Firm‑specific interview tracks (Jane Street, Citadel, Tower, HRT, Optiver).
 
 **Platform:**
 - Optional accounts + DB to sync progress across devices (the current `localStorage`

@@ -1,0 +1,114 @@
+{
+  "slug": "price-formation",
+  "sectionId": "microstructure",
+  "order": 5,
+  "title": "Spread, Mid & Microprice",
+  "tagline": "What 'the price' even is — and why the naive mid-price is the wrong fair value.",
+  "level": "Intermediate",
+  "track": ["research", "trader", "dev"],
+  "estMinutes": 16,
+  "visualizer": "microprice",
+  "concept": {
+    "analogy": "Ask 'what's the price of this house?' and you'll get several answers: what buyers are bidding, what sellers are asking, and a 'fair value' an appraiser estimates somewhere in between — but skewed toward whichever side has more pressure. If ten eager buyers are circling one reluctant seller, the fair value sits much closer to the asking price than a naive midpoint. The microprice is exactly that pressure-adjusted appraisal for a stock, computed continuously.",
+    "paragraphs": [
+      "There is no single 'price' — there's a bid (best buy), an ask (best sell), and various summary statistics. The spread (ask − bid) is the cost of immediacy: cross it and you pay to trade now. The mid-price (bid+ask)/2 is the simplest 'fair value', but it's naive: it ignores how much size sits on each side.",
+      "The microprice corrects this. When the bid has far more resting size than the ask, buyers are queued up and the ask is more likely to be lifted next — so true fair value sits above the mid, toward the ask. A simple, widely used form weights the two prices by the opposite side's imbalance: micro = ask·I + bid·(1−I), where I = bidSize/(bidSize+askSize). More rigorous microprice definitions (Stoikov) account for the dynamics, but the imbalance intuition is the core.",
+      "These quantities drive everything: market makers quote around a fair-value estimate (better the microprice than the mid), execution algos measure slippage against a benchmark, and signals like order-flow imbalance predict the next tick. Getting fair value slightly more right than competitors is, quite literally, the edge.",
+      "Related concepts: slippage (difference between expected and realized execution price), market impact (how your own trading moves the price), and effective spread (what you actually paid vs. the mid at the time)."
+    ],
+    "points": [
+      "Spread = ask − bid (the price of immediacy); mid = (bid+ask)/2 (naive fair value).",
+      "Microprice tilts fair value toward the side with less size: heavy bids ⇒ fair value near the ask.",
+      "Imbalance I = bidSize/(bidSize+askSize); a simple microprice = ask·I + bid·(1−I).",
+      "Slippage, market impact, and effective spread measure real execution cost vs. a benchmark.",
+      "A better fair-value estimate than the competition is directly monetizable."
+    ],
+    "keyIdea": "The mid-price ignores book imbalance. The microprice weights fair value toward the thin side, predicting the next move — a small accuracy edge in fair value compounds into real P&L."
+  },
+  "deepDive": {
+    "intro": "Open the Visualize tab to push size onto each side and watch the microprice move. Here's the reasoning behind it.",
+    "steps": [
+      {
+        "title": "Why mid is biased",
+        "detail": "If best bid = 99.99 (size 800) and best ask = 100.01 (size 200), the mid is 100.00 — but that's not where the next trade is likely to print. With 800 buyers queued under only 200 sellers, the ask will probably get lifted and the price tick up. Fair value is above 100.00."
+      },
+      {
+        "title": "Imbalance and the simple microprice",
+        "detail": "Define I = bidSize/(bidSize+askSize) ∈ [0,1]; high I means bid-heavy. A simple microprice micro = ask·I + bid·(1−I) slides from the bid (when ask-heavy, I→0) to the ask (when bid-heavy, I→1). In the example, I = 800/1000 = 0.8, so micro = 100.01·0.8 + 99.99·0.2 = 100.006 — above the mid, as intuition demands."
+      },
+      {
+        "title": "Order-flow imbalance (OFI) as a signal",
+        "detail": "Changes in book imbalance and the sequence of adds/cancels/trades (order-flow imbalance) are among the most robust short-horizon predictors of price. A maker can quote around the microprice and skew quotes when OFI signals an imminent move, reducing adverse selection."
+      },
+      {
+        "title": "Measuring execution: slippage and effective spread",
+        "detail": "Slippage = realized price − decision/benchmark price. Effective spread = 2·|trade price − mid at trade time| (what you actually paid to cross). Market impact = how much your own order pushed the price. Execution algos exist to minimize these for large orders."
+      },
+      {
+        "title": "Stoikov's microprice (deeper)",
+        "detail": "The Stoikov microprice models the expected mid-price conditional on imbalance and spread, learned from data, and is a martingale (no predictable drift once you've used the info). The simple imbalance form above is a practical approximation of the same idea."
+      }
+    ],
+    "pitfalls": [
+      "Quoting around the naive mid and getting adversely selected when the book is imbalanced.",
+      "Confusing spread (a market state) with slippage/impact (properties of your execution).",
+      "Treating microprice as a guaranteed predictor — it shifts probabilities, it doesn't promise the next tick.",
+      "Computing imbalance with stale top-of-book sizes; it must be updated on every book change."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-micro",
+        "q": "Best bid is 50.00 with 1000 shares; best ask is 50.02 with 200 shares. What's the mid, and is fair value above or below it? Compute a simple imbalance-weighted microprice.",
+        "tag": "Microstructure",
+        "a": [
+          "Mid = (50.00 + 50.02)/2 = 50.01. The bid is much heavier (1000 vs 200), so buyers dominate the queue and the ask is likely to be lifted — fair value is ABOVE the mid.",
+          "Imbalance I = 1000/(1000+200) = 0.833. Microprice = ask·I + bid·(1−I) = 50.02·0.833 + 50.00·0.167 ≈ 50.0167. As expected, it sits above the mid of 50.01, biased toward the thin (ask) side."
+        ]
+      },
+      {
+        "id": "q-ofi",
+        "q": "Why is order-flow imbalance considered a strong short-horizon signal, and how would a market maker use it?",
+        "tag": "Strategy",
+        "a": [
+          "Order-flow imbalance captures real-time pressure: a buildup of bids relative to asks (and a stream of buy-side aggressions) tends to precede an up-tick because that queued demand will consume the offers. Empirically it's one of the more robust predictors of the next price move over very short horizons.",
+          "A maker uses it to (a) anchor fair value at the microprice rather than the mid, (b) skew quotes — lean the ask up / pull the bid when imbalance signals an imminent up-move — to avoid being adversely selected, and (c) size down or widen when imbalance + volatility indicate toxic conditions. It directly reduces the rate at which informed flow picks them off."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-micro",
+        "title": "Imbalance-weighted microprice",
+        "difficulty": "Core",
+        "statement": "Given bestBid, bidSize, bestAsk, askSize, compute the imbalance I = bidSize/(bidSize+askSize) and the microprice = bestAsk*I + bestBid*(1-I). If total size is 0, return the mid (bestBid+bestAsk)/2.",
+        "hint": "Guard the zero-size case; otherwise it's a direct weighted average that leans toward the ask when bids dominate.",
+        "tests": "Turning book imbalance into a fair-value estimate.",
+        "solution": {
+          "approach": [
+            "Compute total = bidSize + askSize. If it's 0 the book is empty at the touch, so fall back to the mid.",
+            "Otherwise I = bidSize/total and microprice = ask·I + bid·(1−I). Note when I→1 (bid-heavy) the result → ask, and when I→0 (ask-heavy) it → bid — exactly the desired tilt toward the thin side."
+          ],
+          "complexity": { "time": "O(1)", "space": "O(1)" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "microprice.cpp",
+              "source": "double microprice(double bestBid, long long bidSz,\n                  double bestAsk, long long askSz){\n    long long tot = bidSz + askSz;\n    if (tot == 0) return (bestBid + bestAsk) / 2.0;\n    double I = (double)bidSz / tot;\n    return bestAsk * I + bestBid * (1.0 - I);\n}"
+            },
+            {
+              "language": "python",
+              "title": "microprice.py",
+              "source": "def microprice(best_bid, bid_sz, best_ask, ask_sz):\n    tot = bid_sz + ask_sz\n    if tot == 0:\n        return (best_bid + best_ask) / 2.0\n    I = bid_sz / tot\n    return best_ask * I + best_bid * (1.0 - I)"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "'The Micro-Price'", "by": "Sasha Stoikov", "note": "The reference paper formalizing the imbalance-adjusted fair value." },
+    { "title": "Trading and Exchanges", "by": "Larry Harris", "note": "Chapters on spreads, price discovery, and transaction costs." }
+  ]
+}

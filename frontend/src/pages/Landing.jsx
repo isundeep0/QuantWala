@@ -6,7 +6,6 @@ import {
   Cpu,
   ArrowRight,
   PlayCircle,
-  Route as RouteIcon,
   Gauge,
   ListChecks,
   Sparkles,

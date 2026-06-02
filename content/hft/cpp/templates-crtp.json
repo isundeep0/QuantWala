@@ -1,0 +1,115 @@
+{
+  "slug": "templates-crtp",
+  "sectionId": "cpp",
+  "order": 3,
+  "title": "Zero-Cost Abstractions: Templates & CRTP",
+  "tagline": "Get polymorphism and reuse with no runtime overhead — resolve at compile time, not via vtables.",
+  "level": "Advanced",
+  "track": ["dev", "systems"],
+  "estMinutes": 20,
+  "concept": {
+    "analogy": "A virtual function call is like calling a phone operator who looks up the right extension before connecting you — flexible, but every call pays for that lookup. Templates and CRTP are like having the number wired straight to the right desk at build time: the connection is direct, instantaneous, and the compiler can even merge the conversation into yours (inlining). You keep the abstraction, you drop the lookup.",
+    "paragraphs": [
+      "Runtime polymorphism (virtual functions) decides which function to call at runtime via a vtable pointer. That costs an indirection (a memory load to find the vtable, then the function pointer), it usually prevents inlining (the compiler can't see through it), and it can cause cache misses and branch mispredicts. On a hot path called millions of times, that overhead matters.",
+      "Templates provide compile-time (static) polymorphism: the compiler generates a specialized version of the code for each concrete type, resolves calls directly, and can inline aggressively. This is the basis of 'zero-cost abstraction' — the abstraction compiles away to the same code you'd write by hand. The cost moves to compile time (and code size) instead of runtime.",
+      "CRTP (the Curiously Recurring Template Pattern) is the classic way to get polymorphic-style interfaces without vtables: a base class template is parameterized on the derived type — `struct Derived : Base<Derived>` — so the base can call into the derived via static_cast at compile time. You get an 'interface' and code reuse, but every call is statically dispatched and inlinable.",
+      "The trade-off: static polymorphism is fast but the set of types must be known at compile time (no runtime plugin of new types), and it increases code size/compile time. HFT hot paths overwhelmingly favor static dispatch (templates/CRTP, and modern alternatives like concepts and std::variant + visitation) and reserve virtual functions for cold, configuration-time code."
+    ],
+    "points": [
+      "Virtual calls cost an indirection, block inlining, and can miss cache / mispredict branches.",
+      "Templates = compile-time polymorphism: specialized code per type, direct calls, inlinable ('zero-cost').",
+      "CRTP: `struct D : Base<D>` lets the base dispatch to the derived statically (no vtable).",
+      "Static dispatch is fast but needs types known at compile time; costs code size + compile time.",
+      "Hot path → static dispatch; cold/config code → virtual is fine for flexibility."
+    ],
+    "keyIdea": "Replace runtime virtual dispatch with compile-time polymorphism (templates, CRTP, concepts) on the hot path: the compiler resolves and inlines the call so the abstraction costs nothing at runtime — at the price of compile time and needing types fixed at build time."
+  },
+  "deepDive": {
+    "intro": "How the dispatch differs, and how to write CRTP correctly.",
+    "steps": [
+      {
+        "title": "What a virtual call really does",
+        "detail": "An object with virtual functions stores a hidden vptr pointing to its class's vtable. A call `obj->f()` loads the vptr, indexes the vtable to get f's address, then calls through that pointer. That's two dependent loads and an indirect call the branch predictor must guess — and the compiler generally can't inline f. Fine occasionally; costly in a tight loop."
+      },
+      {
+        "title": "Templates as static polymorphism",
+        "detail": "A function template `template<class Strategy> void run(Strategy& s) { s.onTick(); }` generates a dedicated version per Strategy type, calling onTick directly (no vtable) and inlining it. The 'interface' is implicit (duck-typed) or enforced with concepts (C++20). Same source, multiple specialized machine-code versions."
+      },
+      {
+        "title": "CRTP mechanics",
+        "detail": "Define `template<class D> struct Base { void handle(){ static_cast<D*>(this)->impl(); } };` and `struct Strat : Base<Strat> { void impl(){ /*...*/ } };`. Base::handle dispatches to Strat::impl with a compile-time static_cast — no vtable, fully inlinable. Use it to share boilerplate in the base while the derived supplies the specifics."
+      },
+      {
+        "title": "Concepts and variant alternatives",
+        "detail": "C++20 concepts constrain template parameters so errors are readable and the interface is explicit, without runtime cost. When you need a closed set of types chosen at runtime, std::variant + std::visit gives type-safe dispatch that's often faster and more cache-friendly than virtual inheritance (a tagged union plus a switch/jump table)."
+      },
+      {
+        "title": "When virtual is still right",
+        "detail": "For cold paths — configuration, setup, infrequent control operations, or open-ended plugin systems where new types load at runtime — virtual functions are clearer and the overhead is irrelevant. Don't templatize everything; reserve static dispatch for the measured hot path, where its inlining and lack of indirection pay off."
+      }
+    ],
+    "notes": [
+      {
+        "title": "Code bloat and compile time",
+        "detail": "Templates instantiate per type, which can balloon binary size and compile time, and too much inlining can hurt the instruction cache. Like all optimizations, measure — sometimes a single non-inlined function is better for I-cache than many inlined copies. The goal is the fast path being tight, not maximal templating."
+      }
+    ],
+    "pitfalls": [
+      "Using virtual functions in a hot loop where the type is actually known — pay vtable + lost inlining for nothing.",
+      "CRTP mistakes: forgetting the static_cast<Derived*>, or accidental cross-casts between unrelated CRTP bases.",
+      "Over-templatizing cold code, exploding compile times and binary size for no runtime benefit.",
+      "Assuming inlining is always good — excessive inlining can thrash the instruction cache; measure."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-virtual-cost",
+        "q": "Precisely, what does a virtual function call cost compared to a direct call, and why does it matter on the hot path?",
+        "tag": "C++",
+        "a": [
+          "A virtual call adds: a load of the object's vptr, a load of the function address from the vtable (a dependent memory access, possibly a cache miss), and an indirect call through that pointer (which the branch predictor must guess — a mispredict flushes the pipeline). Crucially, the compiler usually can't inline through it, so it also loses all the optimizations inlining would enable (constant propagation, dead-code elimination, fusing with surrounding code).",
+          "On a hot path executed millions of times per second, these costs compound: the indirection and missed inlining can dominate a small function's runtime, and the indirect branch hurts the predictor. That's why HFT replaces virtual dispatch with templates/CRTP on the critical path, while keeping virtuals for cold code where flexibility matters more than nanoseconds."
+        ]
+      },
+      {
+        "id": "q-crtp",
+        "q": "Explain CRTP and how it provides polymorphism without a vtable.",
+        "tag": "C++",
+        "a": [
+          "CRTP (Curiously Recurring Template Pattern) is when a class derives from a base class template instantiated with the derived class itself: `struct Derived : Base<Derived>`. Because Base is parameterized on Derived, the base's methods can `static_cast<Derived*>(this)` and call the derived's methods — all resolved at compile time.",
+          "This gives you the 'shared interface + per-type behavior' benefit of inheritance, but every dispatch is a compile-time static cast and direct call, so there's no vtable, no runtime indirection, and the calls can be fully inlined. The trade-off vs. virtual: the concrete type must be known at compile time (it's not runtime polymorphism over a heterogeneous container of unknown types), and you get the usual template code-size/compile-time costs."
+        ],
+        "followups": ["How would you store a heterogeneous collection if you used CRTP?", "When would std::variant be a better fit than CRTP?"]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-crtp",
+        "title": "CRTP static dispatch",
+        "difficulty": "Intermediate",
+        "statement": "Implement a CRTP base `Handler<Derived>` with a method `process(const Tick& t)` that does common pre/post work and calls `static_cast<Derived*>(this)->onTick(t)` for the type-specific logic, with no virtual functions. Then sketch a `MyStrategy : Handler<MyStrategy>` that implements onTick. Explain why the call to onTick is inlinable.",
+        "hint": "The base template takes the derived type as a parameter and uses static_cast to call into it at compile time.",
+        "tests": "Implementing zero-overhead static polymorphism.",
+        "solution": {
+          "approach": [
+            "Base<Derived>::process performs shared work, then calls static_cast<Derived*>(this)->onTick(t). Because Derived is a concrete type known at instantiation, the compiler resolves onTick directly — there's no vtable lookup and the call can be inlined into process.",
+            "MyStrategy derives from Handler<MyStrategy> and provides onTick. Calling process on a MyStrategy generates code where onTick is dispatched and inlined statically. The call is inlinable precisely because the target is known at compile time (no runtime indirection through a function pointer)."
+          ],
+          "complexity": { "time": "O(1) dispatch (inlined)", "space": "O(1)" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "crtp.cpp",
+              "source": "struct Tick { double px; long long qty; };\n\ntemplate <class Derived>\nstruct Handler {\n    inline void process(const Tick& t) noexcept {\n        // ... common pre-work (timestamp, validation) ...\n        static_cast<Derived*>(this)->onTick(t);   // static, inlinable dispatch\n        // ... common post-work (metrics) ...\n    }\n};\n\nstruct MyStrategy : Handler<MyStrategy> {\n    double position = 0;\n    inline void onTick(const Tick& t) noexcept {\n        // type-specific hot-path logic, no virtual call\n        if (t.px < fair_) position += t.qty;\n    }\n    double fair_ = 100.0;\n};\n\n// Usage: MyStrategy s; s.process(tick);  // onTick resolved & inlined at compile time"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Effective Modern C++ & C++ Templates: The Complete Guide", "by": "Meyers / Vandevoorde et al.", "note": "Templates, CRTP, and forwarding in depth." },
+    { "title": "CppCon: 'Inheritance Is The Base Class of Evil' / static polymorphism talks", "note": "On choosing static vs dynamic dispatch and variant-based designs." }
+  ]
+}

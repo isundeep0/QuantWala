@@ -5,7 +5,12 @@
   "title": "The HFT-Ready Checklist",
   "tagline": "The capstone: a self-assessment across every domain. If you can do all of this, you're ready to interview with confidence.",
   "level": "Core",
-  "track": ["dev", "research", "systems", "trader"],
+  "track": [
+    "dev",
+    "research",
+    "systems",
+    "trader"
+  ],
   "estMinutes": 16,
   "concept": {
     "analogy": "Before a pilot flies solo, they don't just 'feel ready' — they run a checklist, item by item, and only fly when every box is genuinely ticked. This lesson is that pre-flight checklist for quant interviews. Be honest: a box you can't tick is a gift, because it tells you exactly what to drill next. The goal isn't to have read about these things — it's to be able to do them, out loud, under pressure.",
@@ -23,8 +28,16 @@
       "Readiness = track items consistently green AND demonstrable in mock interviews."
     ],
     "callouts": [
-      { "type": "tip", "title": "Do it out loud", "body": "For each checklist item, actually say the answer aloud or whiteboard it as if to an interviewer. The gap between 'I know this' and 'I can explain this clearly under time pressure' is exactly what mock interviews close." },
-      { "type": "info", "title": "Track-weight the checklist", "body": "All items make you well-rounded, but prioritize your primary track: dev/systems must be green on C++/systems/architecture; trader/researcher must be green on probability/mental-math/games (and research on modeling/backtesting)." }
+      {
+        "type": "tip",
+        "title": "Do it out loud",
+        "body": "For each checklist item, actually say the answer aloud or whiteboard it as if to an interviewer. The gap between 'I know this' and 'I can explain this clearly under time pressure' is exactly what mock interviews close."
+      },
+      {
+        "type": "info",
+        "title": "Track-weight the checklist",
+        "body": "All items make you well-rounded, but prioritize your primary track: dev/systems must be green on C++/systems/architecture; trader/researcher must be green on probability/mental-math/games (and research on modeling/backtesting)."
+      }
     ],
     "keyIdea": "Readiness is a checklist, not a feeling. Honestly rate every domain green/yellow/red, drive your primary track to all-green using the linked sections, and prove it in mock interviews — all while practicing the two meta-skills (clear reasoning and good judgment) and the mindset of reasoning from first principles when you don't know."
   },
@@ -57,9 +70,18 @@
       }
     ],
     "notes": [
-      { "title": "Mock interviews are the real test", "detail": "Schedule regular mocks (with a peer or platform) covering your track's items. Performing under time pressure, with someone probing follow-ups, is the only honest measure of green." },
-      { "title": "Keep a weakness log", "detail": "Every time you stumble — a probability you fumbled, a C++ pitfall you missed, an order-book edge case — write it down and drill it. The log shrinking over time is your readiness curve." },
-      { "title": "Don't neglect the basics under stress", "detail": "Most failures aren't exotic; they're a fumbled EV calculation, an off-by-one in a clean coding problem, or forgetting to handle a gap. Keep the fundamentals sharp." }
+      {
+        "title": "Mock interviews are the real test",
+        "detail": "Schedule regular mocks (with a peer or platform) covering your track's items. Performing under time pressure, with someone probing follow-ups, is the only honest measure of green."
+      },
+      {
+        "title": "Keep a weakness log",
+        "detail": "Every time you stumble — a probability you fumbled, a C++ pitfall you missed, an order-book edge case — write it down and drill it. The log shrinking over time is your readiness curve."
+      },
+      {
+        "title": "Don't neglect the basics under stress",
+        "detail": "Most failures aren't exotic; they're a fumbled EV calculation, an off-by-one in a clean coding problem, or forgetting to handle a gap. Keep the fundamentals sharp."
+      }
     ],
     "complexity": {
       "time": "Re-run until your track is green",
@@ -85,7 +107,23 @@
           "Readiness is demonstrable, not a feeling. Concretely: along my primary track, every checklist item is green — I can explain and apply it out loud, with examples and numbers, to a sharp interviewer. For a low-latency dev/systems track that means fluent DS&A, C++ cost model/memory model, the systems topics (caches, false sharing, branch prediction, lock-free, measurement), and the ability to design a feed handler/order book/order path with a latency budget. For a trading track it means Zetamac-level mental math, EV/conditional probability/Bayes, and confident market-making games.",
           "And I've proven it under realistic conditions: regular mock interviews where someone probes follow-ups and I perform under time pressure, a shrinking weakness log, and the two meta-skills in place — I narrate my reasoning clearly and show judgment about when to optimize and when not to. I also accept I won't know everything and can reason from first principles when I don't. When the track items are consistently green in mocks and my motivation/'why this firm' is specific and authentic, I'm ready."
         ],
-        "followups": ["What's your weakest area right now and your plan for it?", "How do you handle a question you don't know?"]
+        "followups": [
+          "What's your weakest area right now and your plan for it?",
+          "How do you handle a question you don't know?"
+        ]
+      },
+      {
+        "id": "q-dont-know",
+        "q": "How should you handle a question you genuinely don't know the answer to?",
+        "tag": "Career",
+        "a": [
+          "Don't bluff and don't freeze — reason from first principles out loud. Say honestly that you're not certain, then show *how you'd approach it*: state what you do know, make reasonable assumptions, estimate or derive, and propose how you'd verify or find the real answer. Interviewers deliberately probe past the edge of your knowledge specifically to see this — they're testing how you think under uncertainty, which is the actual job, not whether you've memorized everything.",
+          "Concretely: 'I haven't worked with X directly, but based on first principles I'd expect… because…; to confirm I'd test/measure/look up…'. For a quant/estimation question, decompose and estimate with stated assumptions. For a technical one, reason from the fundamentals you do know (e.g., 'I don't recall that API, but the memory model says I'd need a release store here, so…'). This intellectual honesty plus structured reasoning scores far better than a confident wrong answer (which follow-ups quickly expose) or shutting down. Knowing how to make progress when you don't know is itself a top signal."
+        ],
+        "followups": [
+          "Why does bluffing backfire?",
+          "How do you make progress on an unfamiliar estimation question?"
+        ]
       }
     ],
     "problems": [
@@ -103,14 +141,45 @@
             "Validate in mocks: schedule regular mock interviews on your track (coding + C++/systems-design for dev/systems; probability + mental math + market-making games for trading/research), have a peer or platform probe follow-ups under time pressure, and keep a weakness log that you watch shrink. Track-weight your effort (~70% core bar, ~30% adjacent).",
             "Close with intent: write one line stating your target track and a specific, authentic 'why this firm' (citing a real product, tech, paper, or team) for a firm you'd apply to. When your track items are consistently green in mocks, your weakness log is short, you communicate reasoning clearly, and your motivation is specific — you are HFT-ready. Back yourself."
           ],
-          "complexity": { "time": "Iterative until track is green in mocks", "space": "Weakness log + mock schedule" }
+          "complexity": {
+            "time": "Iterative until track is green in mocks",
+            "space": "Weakness log + mock schedule"
+          }
+        }
+      },
+      {
+        "id": "p-mock-plan",
+        "title": "Run a full mock-interview gauntlet and score yourself",
+        "difficulty": "Core",
+        "statement": "Design a single end-to-end mock-interview session for your target track that exercises every type of round you'll face, with explicit pass/fail criteria for each, and a scoring rubric that tells you whether you're interview-ready. Then describe how you'd use the results to drive your remaining prep.",
+        "hint": "Cover each round type for your track; define concrete 'ready' criteria (time, correctness, clear reasoning); turn misses into a weakness log and targeted drills.",
+        "tests": "Operationalizing readiness with a self-scored mock.",
+        "solution": {
+          "approach": [
+            "Design the gauntlet to mirror a real onsite for your track. Dev/systems: (1) a timed coding round (fresh medium-hard in ~25–30 min, correct + optimal complexity, clean code); (2) a C++/systems deep-dive (explain the cost model, memory ordering, and fix a hot-path snippet out loud); (3) a systems-design round (design a feed handler/order book/order path with a latency budget, handling correctness/failure/trade-offs); (4) a behavioral round (2–3 project stories, 'why this firm'). Trading/research: (1) a timed mental-math test (Zetamac-style); (2) probability/EV + brainteasers; (3) a live market-making game with someone trading against you; (4) behavioral. Do them back-to-back to simulate fatigue/pressure, ideally with a peer probing follow-ups.",
+            "Pass/fail criteria per round (the 'ready' bar): coding — solved cleanly within time with correct complexity and narrated reasoning; C++/systems — could explain and defend each concept with examples/numbers and fix the snippet; systems-design — produced a structured, budgeted, failure-aware design as a dialogue; mental math — hit your target score under time; probability — correct with clear reasoning; market-making — sensible fair value + spread, updated correctly when traded against, didn't get repeatedly picked off; behavioral — specific, authentic stories and motivation. Score each round green (met bar)/yellow (shaky)/red (missed).",
+            "Use the results: every yellow/red goes into a weakness log mapped to the module section that fixes it (e.g., shaky memory ordering → Modern C++ + implement an SPSC ring; slow arithmetic → daily Zetamac; fumbled order-book design → Architecture + code an O(1) book). Re-run the relevant round after drilling until it's green, and repeat the full gauntlet periodically. You're interview-ready when your track's rounds are consistently green under realistic time pressure with a peer probing follow-ups, your weakness log is short, you communicate reasoning clearly, and you can reason from first principles when you don't know. Then back yourself."
+          ],
+          "complexity": {
+            "time": "iterative until green",
+            "space": "weakness log"
+          }
         }
       }
     ]
   },
   "resources": [
-    { "title": "Every prior section of this module", "note": "The checklist links straight back to them — use them to turn reds and yellows green." },
-    { "title": "Pramp / interviewing.io / peers for mock interviews", "note": "Practice reasoning and speed under realistic, probed conditions." },
-    { "title": "A Practical Guide to Quantitative Finance Interviews; Cracking the Coding Interview", "note": "Targeted practice banks for the quant and coding rounds respectively." }
+    {
+      "title": "Every prior section of this module",
+      "note": "The checklist links straight back to them — use them to turn reds and yellows green."
+    },
+    {
+      "title": "Pramp / interviewing.io / peers for mock interviews",
+      "note": "Practice reasoning and speed under realistic, probed conditions."
+    },
+    {
+      "title": "A Practical Guide to Quantitative Finance Interviews; Cracking the Coding Interview",
+      "note": "Targeted practice banks for the quant and coding rounds respectively."
+    }
   ]
 }

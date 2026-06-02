@@ -5,7 +5,12 @@
   "title": "Firm-by-Firm Guide",
   "tagline": "Who the major quant/HFT firms are, what they're known for, and what their interviews emphasize.",
   "level": "Core",
-  "track": ["dev", "research", "systems", "trader"],
+  "track": [
+    "dev",
+    "research",
+    "systems",
+    "trader"
+  ],
   "estMinutes": 18,
   "concept": {
     "analogy": "Applying to quant firms without knowing their differences is like auditioning for orchestras without knowing which want a violinist and which want a drummer. They're all elite, but each has a culture, a house style, and signature audition pieces. Knowing them lets you target your prep and your story to what each actually values — and avoid generic answers that signal you didn't do your homework.",
@@ -23,8 +28,16 @@
       "Research each firm (careers page, blogs, talks) and connect genuine interests/projects to their work."
     ],
     "callouts": [
-      { "type": "warn", "title": "Verify, don't rely on rumors", "body": "Interview formats and question styles change. Use community reports as priors but confirm the current process on the firm's careers page and recruiter emails, and prepare the underlying skills rather than memorizing a rumored question set." },
-      { "type": "tip", "title": "'Why this firm' must be specific", "body": "Reference something real — a paper/talk, the product (e.g., ETF market making), the tech stack (OCaml at Jane Street, heavy C++/FPGA elsewhere), or the research style. Generic answers read as low effort." }
+      {
+        "type": "warn",
+        "title": "Verify, don't rely on rumors",
+        "body": "Interview formats and question styles change. Use community reports as priors but confirm the current process on the firm's careers page and recruiter emails, and prepare the underlying skills rather than memorizing a rumored question set."
+      },
+      {
+        "type": "tip",
+        "title": "'Why this firm' must be specific",
+        "body": "Reference something real — a paper/talk, the product (e.g., ETF market making), the tech stack (OCaml at Jane Street, heavy C++/FPGA elsewhere), or the research style. Generic answers read as low effort."
+      }
     ],
     "keyIdea": "The quant/HFT field is a small set of elite firms across market-making/prop, quant hedge funds, and ultra-low-latency specialists, hiring for trading, research, dev, and systems/FPGA roles. Use firm knowledge to target your skills and craft authentic 'why this firm' stories — but treat reputations as priors, verify current processes, and prepare the durable track skills every firm filters for."
   },
@@ -53,9 +66,18 @@
       }
     ],
     "notes": [
-      { "title": "Internships are the main pipeline", "detail": "For students, summer internships at these firms are the dominant route to full-time offers and convert at high rates — prioritize landing one, and apply early in the cycle." },
-      { "title": "Compensation and competition", "detail": "These roles are among the best-paid in tech/finance, which is why the bar is so high and recruiting so competitive. That's all the more reason to target and prepare deliberately." },
-      { "title": "Beyond the famous names", "detail": "Many excellent smaller prop shops and desks exist; the same skill set applies. Don't fixate only on the biggest names — broaden your applications along your track." }
+      {
+        "title": "Internships are the main pipeline",
+        "detail": "For students, summer internships at these firms are the dominant route to full-time offers and convert at high rates — prioritize landing one, and apply early in the cycle."
+      },
+      {
+        "title": "Compensation and competition",
+        "detail": "These roles are among the best-paid in tech/finance, which is why the bar is so high and recruiting so competitive. That's all the more reason to target and prepare deliberately."
+      },
+      {
+        "title": "Beyond the famous names",
+        "detail": "Many excellent smaller prop shops and desks exist; the same skill set applies. Don't fixate only on the biggest names — broaden your applications along your track."
+      }
     ],
     "complexity": {
       "time": "Orientation, then targeted prep",
@@ -81,7 +103,10 @@
           "The answer must be specific and authentic: reference something concrete about the firm — its product or market (e.g., ETF/options market making), its technology or research style (e.g., OCaml and a culture of clear reasoning at Jane Street, deep low-latency C++/FPGA engineering at an HRT/Jump-style shop, statistics/ML research at a Two Sigma/DE Shaw-style fund), a talk or blog post you found compelling, or the specific track and team — and connect it to your genuine interests and projects.",
           "How to approach it: research the firm via its careers page, engineering/research blog, and public talks; pick one or two things that truly resonate with what you want to do (trade, research, build fast systems, design FPGAs); and tie them to evidence from your background. Avoid generic praise ('you're the best/smartest') — interviewers hear it constantly and it signals low effort. Specificity plus honesty is what lands."
         ],
-        "followups": ["Which track and why?", "What do you know about how we make money?"]
+        "followups": [
+          "Which track and why?",
+          "What do you know about how we make money?"
+        ]
       },
       {
         "id": "q-fit",
@@ -90,6 +115,19 @@
         "a": [
           "Match the work to your strengths and interests. If you love decision-making under uncertainty, fast math, and markets, target trading roles at market makers (Optiver, IMC, Jane Street, SIG, etc.). If you love building ultra-fast software and computer-science depth, target quant dev / low-latency systems roles (HRT, Jump, Citadel Securities, Tower) and lean on C++/systems/architecture. If you love statistics, ML, and modeling with data rigor, target quant research at funds like Two Sigma, DE Shaw, or Citadel. If you love hardware, look at FPGA/low-latency specialist roles.",
           "Then weight your preparation to that track's bar (per the hiring-funnel lesson) and apply broadly within it — including smaller shops, not just the famous names. The underlying skills (probability + mental math, C++, systems, microstructure, architecture) transfer across firms, so building them deeply gives you the most options while you decide."
+        ]
+      },
+      {
+        "id": "q-research-firm",
+        "q": "How do you research a firm well enough to give a credible 'why this firm' and choose a track?",
+        "tag": "Career",
+        "a": [
+          "Go past the homepage. Read the firm's careers page and specific job description (which tells you the track and the actual interview emphasis), their engineering and/or research blog (reveals tech stack, problems they care about, and culture — e.g., OCaml and clear-reasoning culture at Jane Street, deep low-latency C++/FPGA at HRT/Jump-style shops, statistics/ML research at Two Sigma/DE Shaw-style funds), and any public talks (CppCon, firm tech talks) or podcasts. Note their product/market (market making in equities/options, multi-strategy, etc.) and how they make money.",
+          "Use that to (1) craft a specific, authentic 'why this firm' that references something real — a talk, a product, the tech, the research style — connected to your own interests/projects, not generic praise; and (2) choose/confirm your track by matching the firm's strengths to what you want to do (trade, research, build fast systems, design FPGAs). Treat community reports (Glassdoor/forums) as priors to *verify*, not facts, since processes change. The signal you're sending is that you understand and genuinely want *their* work — which recruiters can easily distinguish from a mass application, and which also helps you target the right preparation."
+        ],
+        "followups": [
+          "What sources are authoritative vs just priors?",
+          "How specific should a 'why this firm' answer be?"
         ]
       }
     ],
@@ -107,14 +145,45 @@
             "Module mapping: trading/research → Quant-Math (probability, Bayes, mental math, market-making games) and Strategies/microstructure; quant dev/systems → C++ section, Systems section, Architecture section, plus the Algorithms module for DS&A and the low-latency coding-patterns and systems-design lessons here; research → Strategies (alpha signals, backtesting) and stats.",
             "Verify the current process: read each firm's careers page and any recruiter communications, check engineering/research blogs and recent public talks, and treat community reports (Glassdoor/forums) as priors to confirm, not facts. Then prepare the durable track skills rather than memorizing a rumored question set, and craft a specific 'why this firm' for each."
           ],
-          "complexity": { "time": "A few hours of research + targeted review", "space": "n/a" }
+          "complexity": {
+            "time": "A few hours of research + targeted review",
+            "space": "n/a"
+          }
+        }
+      },
+      {
+        "id": "p-compare-firms",
+        "title": "Compare two firms and decide where to apply",
+        "difficulty": "Core",
+        "statement": "You're a strong C++/systems-leaning candidate who also enjoys some markets reasoning. Compare a low-latency prop-trading/engineering-heavy firm (HRT/Jump-style) with an options market maker known for trading games and mental math (Optiver/IMC-style). For each: the role you'd target, what their process emphasizes, why you might fit, and which module sections you'd prioritize. Then make and justify a decision.",
+        "hint": "Match your strengths (C++/systems) to the role and process; weight prep accordingly; pick where your edge is strongest while staying authentic.",
+        "tests": "Translating firm differences into a personal decision.",
+        "solution": {
+          "approach": [
+            "Low-latency prop/engineering firm (HRT/Jump-style): target a quant developer / core-systems engineer role. Process emphasis: high-bar DS&A, deep C++ (cost/memory model, templates), systems/performance (caches, lock-free, kernel bypass, measurement), and a systems-design / 'make it fast' round. You'd fit because your C++/systems strength is the core bar. Prioritize: Modern C++, Low-Latency Systems, Architecture sections, plus the low-latency coding-patterns and systems-design lessons, and timed DS&A from the Algorithms module.",
+            "Options market maker (Optiver/IMC-style): for a *trading* role, the process emphasizes fast mental math (e.g., Optiver's arithmetic test), probability/EV, and live market-making games — less about your C++. They also hire developers, where C++/systems matters. If you target the trading role, your C++ edge is largely irrelevant to the bar and you'd compete on math/games where you're less differentiated; if you target their dev role, it's closer to the first firm. Prioritize (trading): the Quant-Math section (mental math, EV, Bayes, market-making games) and microstructure; (dev): same as the first firm.",
+            "Decision and justification: as a C++/systems-leaning candidate, apply primarily to the engineering-heavy prop firm's quant-dev role (and equivalent dev roles at the market maker), because that's where your demonstrable edge meets their bar — you maximize your hit rate by competing on your strength. Keep enough markets/probability literacy to be credible and to enjoy the domain, but don't pivot to a pure trading role where mental-math speed is the filter and your advantage doesn't apply, unless you genuinely want to trade and will drill that bar. The principle: pick the role whose core bar matches your strongest skills, weight prep ~70% to it, stay authentic about why, and apply broadly within that track (including smaller shops)."
+          ],
+          "complexity": {
+            "time": "n/a",
+            "space": "n/a"
+          }
         }
       }
     ]
   },
   "resources": [
-    { "title": "Each firm's careers page, engineering & research blogs", "note": "The authoritative, current source for process, values, and tech — always verify here." },
-    { "title": "Jane Street Tech Blog & 'Signals and Threads' podcast", "note": "Insight into one firm's engineering/research culture and reasoning style." },
-    { "title": "Public talks (CppCon, exchange/firm tech talks) and team blogs", "note": "Concrete, citable material for authentic 'why this firm' answers." }
+    {
+      "title": "Each firm's careers page, engineering & research blogs",
+      "note": "The authoritative, current source for process, values, and tech — always verify here."
+    },
+    {
+      "title": "Jane Street Tech Blog & 'Signals and Threads' podcast",
+      "note": "Insight into one firm's engineering/research culture and reasoning style."
+    },
+    {
+      "title": "Public talks (CppCon, exchange/firm tech talks) and team blogs",
+      "note": "Concrete, citable material for authentic 'why this firm' answers."
+    }
   ]
 }

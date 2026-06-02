@@ -5,7 +5,12 @@
   "title": "The Hiring Funnel by Role",
   "tagline": "What each round actually tests for quant dev, quant researcher/trader, and low-latency systems roles — and how to prepare for the real bar.",
   "level": "Core",
-  "track": ["dev", "research", "systems", "trader"],
+  "track": [
+    "dev",
+    "research",
+    "systems",
+    "trader"
+  ],
   "estMinutes": 18,
   "concept": {
     "analogy": "Applying to a quant firm is like trying out for a specialist sports team, not a general gym membership. They don't ask 'are you fit?'; they run position-specific drills. The keeper faces penalties, the striker takes shots. If you train generically you'll fail the drills; if you know which drills your position runs, you train exactly the right skills. This lesson maps the drills for each quant position.",
@@ -23,8 +28,16 @@
       "Strategy: pick your primary track and weight prep to its specific bar; communicate reasoning, not just answers."
     ],
     "callouts": [
-      { "type": "tip", "title": "Mental math is a hard filter for trading", "body": "Many trading-role assessments include a fast arithmetic test (e.g., 'Zetamac': as many correct sums/products in 2 minutes as you can). It's a genuine gate — practice it daily for weeks before applying." },
-      { "type": "info", "title": "The bar is reasoning + speed", "body": "Top firms care how you think under uncertainty and pressure, not just whether you reach the answer. Narrate your assumptions, estimate, sanity-check, and update — that's what gets graded." }
+      {
+        "type": "tip",
+        "title": "Mental math is a hard filter for trading",
+        "body": "Many trading-role assessments include a fast arithmetic test (e.g., 'Zetamac': as many correct sums/products in 2 minutes as you can). It's a genuine gate — practice it daily for weeks before applying."
+      },
+      {
+        "type": "info",
+        "title": "The bar is reasoning + speed",
+        "body": "Top firms care how you think under uncertainty and pressure, not just whether you reach the answer. Narrate your assumptions, estimate, sanity-check, and update — that's what gets graded."
+      }
     ],
     "keyIdea": "Quant hiring is a multi-stage, role-specific gauntlet. Identify your primary track — quant dev, researcher/trader, or systems engineer — and weight your preparation to its actual bar (DS&A + C++/systems for dev; probability + mental math + market games for trading/research; OS/hardware/networking/perf for systems). Across all of them, interviewers grade clear reasoning under pressure, not just final answers."
   },
@@ -53,9 +66,18 @@
       }
     ],
     "notes": [
-      { "title": "Referrals and timing matter", "detail": "Many of these firms recruit early and competitively; internships are a primary pipeline to full-time offers. Apply early in the cycle, and a referral or a strong competition record (Codeforces/IOI/IMO/Putnam, Kaggle) meaningfully helps get past the first filter." },
-      { "title": "Generalist vs specialist firms", "detail": "Some firms hire generalists and place you later; others hire into a specific desk. Read the JD: it tells you which lens (dev/research/trader/systems) the interview will use." },
-      { "title": "It's okay to not know — show how you'd find out", "detail": "Interviewers probe edges to see how you reason when you don't immediately know. 'I'm not sure, but here's how I'd approach it / estimate it / test it' scores far better than bluffing." }
+      {
+        "title": "Referrals and timing matter",
+        "detail": "Many of these firms recruit early and competitively; internships are a primary pipeline to full-time offers. Apply early in the cycle, and a referral or a strong competition record (Codeforces/IOI/IMO/Putnam, Kaggle) meaningfully helps get past the first filter."
+      },
+      {
+        "title": "Generalist vs specialist firms",
+        "detail": "Some firms hire generalists and place you later; others hire into a specific desk. Read the JD: it tells you which lens (dev/research/trader/systems) the interview will use."
+      },
+      {
+        "title": "It's okay to not know — show how you'd find out",
+        "detail": "Interviewers probe edges to see how you reason when you don't immediately know. 'I'm not sure, but here's how I'd approach it / estimate it / test it' scores far better than bluffing."
+      }
     ],
     "complexity": {
       "time": "Months of targeted prep",
@@ -81,7 +103,10 @@
           "A quant developer is primarily tested on CS fundamentals and data structures & algorithms at a high bar (clean, correct, optimal-complexity code), plus language and systems depth — for low-latency teams, serious C++ (cost model, move semantics, templates, memory model) and performance reasoning (caches, allocation, branches), often with a systems-design or 'build a fast component' round. So prep weights toward timed coding practice and the C++/Systems material.",
           "A quant trader is primarily tested on probability and expected value, fast and accurate mental math, structured reasoning under uncertainty, and live market-making/estimation games played out loud under time pressure. So prep weights toward daily mental-math drilling, mastering EV/conditional probability/Bayes, and practicing trading games with a partner. Both value clear communication of reasoning and cultural fit, but the core skills they filter on are different — which is why you pick a primary track and weight your prep to its bar."
         ],
-        "followups": ["What does a typical superday look like?", "How would you prep for a systems-engineer role specifically?"]
+        "followups": [
+          "What does a typical superday look like?",
+          "How would you prep for a systems-engineer role specifically?"
+        ]
       },
       {
         "id": "q-stages",
@@ -90,6 +115,19 @@
         "a": [
           "Broadly: (1) Application/referral — apply early; referrals and strong competition/research records help pass the first filter. (2) Online assessment — timed coding (DS&A) for dev/systems and/or a mental-math and probability test (Zetamac-style arithmetic, probability questions) for trading/research. (3) Technical phone/virtual screens — deeper role-specific questions: harder coding and C++/systems for dev/systems; probability, brainteasers, and markets for trading/research. (4) Superday/onsite — multiple rounds mixing hard coding, role-specific deep dives (C++/systems design, or probability + live market-making/estimation games), and behavioral/fit conversations.",
           "Throughout, the firms grade reasoning under pressure as much as final answers, so narrating assumptions, estimating, sanity-checking, and updating is essential. The specifics vary by firm and desk — read the job description to know which lens the interview will apply."
+        ]
+      },
+      {
+        "id": "q-grade-on",
+        "q": "Beyond getting the right answer, what are interviewers actually grading you on?",
+        "tag": "Career",
+        "a": [
+          "Reasoning under uncertainty and clear communication, as much as correctness. They want to see you state assumptions, structure the problem, estimate and sanity-check, and update when given new information — because that mirrors the actual job (making decisions with incomplete information, fast). A correct answer reached by a clear, well-narrated process scores far higher than a correct answer mumbled, and a *wrong* final number reached by sound reasoning can still score well.",
+          "They also grade: how you handle being stuck or wrong (do you panic and bluff, or reason from first principles and gracefully recover?), intellectual honesty ('I'm not sure, here's how I'd find out' beats confidently-wrong), speed and accuracy under pressure (especially mental math for trading), code quality and complexity-awareness for dev/systems, and cultural fit/curiosity. The meta-point: think out loud. Interviewers can't grade reasoning they can't hear, so narrate your assumptions, trade-offs, and checks throughout — silent problem-solving, even if correct, undersells you."
+        ],
+        "followups": [
+          "How do you recover when you realize mid-answer you were wrong?",
+          "Why narrate assumptions out loud?"
         ]
       }
     ],
@@ -108,14 +146,47 @@
             "Measure readiness: can you solve a fresh medium-hard cleanly in ~25–30 min with correct complexity? Can you explain and defend a latency/jitter trade-off with numbers (e.g., why release/acquire over seq_cst, why SoA, p99 vs mean)? Can you design and critique a feed handler or order book end-to-end? Track weak areas in a list and drill them deliberately until these criteria are consistently met.",
             "(A trader/researcher plan would instead center daily mental-math drills, the Quant-Math section, market-making game practice with a partner, and modeling/data rigor for researchers — same structure, different weighting, because the track's bar is different.)"
           ],
-          "complexity": { "time": "Sustained weekly routine over months", "space": "n/a" }
+          "complexity": {
+            "time": "Sustained weekly routine over months",
+            "space": "n/a"
+          }
+        }
+      },
+      {
+        "id": "p-mock-oa",
+        "title": "Mock-answer an OA-style question for your track",
+        "difficulty": "Core",
+        "statement": "Pick your track and write out how you'd tackle a representative online-assessment item under time pressure, narrating your reasoning as the interviewer wants to hear it: (dev/systems) 'find the k-th largest element in a stream efficiently'; or (trading/research) 'a bag has 3 red and 2 blue balls; you draw 2 without replacement — P(both red)? Now make a market on the number of red balls drawn.'",
+        "hint": "State approach + complexity (dev) or compute the probability cleanly then quote a two-sided market and explain your spread (trading).",
+        "tests": "Practicing a narrated, structured OA answer.",
+        "solution": {
+          "approach": [
+            "Dev/systems (k-th largest in a stream): 'I'll keep a min-heap of size k. For each element, if the heap has fewer than k, push; else if the element is larger than the heap's min, pop the min and push it. The heap's min is always the k-th largest seen so far. Time O(n log k), space O(k) — better than sorting O(n log n) and works for a stream. I'd clarify whether k is fixed and whether duplicates count.' Then I'd write clean code and state edge cases (n<k, ties). The graded skills: choosing the right structure, correct complexity, clarifying, and clean code.",
+            "Trading/research (probability + market): P(both red) = (3/5)·(2/4) = 6/20 = 3/10 = 0.3. (Or C(3,2)/C(5,2) = 3/10.) Then 'make a market on the number of red balls drawn (0, 1, or 2)': compute the distribution — P(0 red)=C(2,2)/C(5,2)=1/10; P(1)=C(3,1)C(2,1)/C(5,2)=6/10; P(2)=3/10. Expected reds = 0·0.1 + 1·0.6 + 2·0.3 = 1.2. I'd quote a market around 1.2 with a spread reflecting uncertainty, e.g., '1.0 at 1.4', and say I'd tighten it as I'm more confident and update if the interviewer trades against me. The graded skills: clean probability, computing the EV, quoting a sensible two-sided market, and reasoning about spread/updating.",
+            "In both, the key is to narrate: state assumptions, the approach, the complexity/answer, and a sanity check — that visible structured reasoning is what the assessment (and the human follow-up) is really testing."
+          ],
+          "complexity": {
+            "time": "dev: O(n log k); trading: O(1)",
+            "space": "dev: O(k)"
+          }
         }
       }
     ]
   },
   "resources": [
-    { "title": "A Practical Guide To Quantitative Finance Interviews", "by": "Xinfeng Zhou ('the green book')", "note": "Standard prep for probability/brainteaser/quant rounds." },
-    { "title": "Heard on the Street", "by": "Timothy Crack", "note": "Classic quant interview questions across probability and finance." },
-    { "title": "Zetamac arithmetic game; firm careers pages (Jane Street, Citadel, HRT, Optiver, IMC, Jump)", "note": "Practice the math filter and read each firm's stated process/values." }
+    {
+      "title": "A Practical Guide To Quantitative Finance Interviews",
+      "by": "Xinfeng Zhou ('the green book')",
+      "note": "Standard prep for probability/brainteaser/quant rounds."
+    },
+    {
+      "title": "Heard on the Street",
+      "by": "Timothy Crack",
+      "note": "Classic quant interview questions across probability and finance."
+    },
+    {
+      "title": "Zetamac arithmetic game; firm careers pages (Jane Street, Citadel, HRT, Optiver, IMC, Jump)",
+      "note": "Practice the math filter and read each firm's stated process/values."
+    }
   ]
 }

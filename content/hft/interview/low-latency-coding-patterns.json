@@ -5,7 +5,10 @@
   "title": "Low-Latency Coding Patterns",
   "tagline": "The recurring C++/systems questions HFT interviewers love — and the principled answers that show you think in nanoseconds.",
   "level": "Advanced",
-  "track": ["dev", "systems"],
+  "track": [
+    "dev",
+    "systems"
+  ],
   "estMinutes": 22,
   "concept": {
     "analogy": "Interviewers don't ask you to rebuild a Formula 1 car from scratch; they hand you a part and ask 'why is this fast, and how would you make it faster?' The patterns repeat: a queue, a parser, a counter, a hot loop. If you've internalized the principles (no allocation, no locks, cache-friendly, branch-predictable, measured), you can take almost any 'make this fast' prompt and reason your way to a strong answer instead of memorizing solutions.",
@@ -23,8 +26,16 @@
       "Narrate trade-offs out loud with specific, correct reasoning — that's what gets graded."
     ],
     "callouts": [
-      { "type": "tip", "title": "Always ask 'how would you measure it?'", "body": "Whenever you optimize, state the benchmark: warm steady-state, representative load, record p50/p99/p99.9 with rdtsc into a histogram, change one thing at a time. Interviewers love candidates who refuse to claim a win without numbers." },
-      { "type": "warn", "title": "Beware premature micro-opt", "body": "Spraying tricks before clarifying requirements or writing a correct version signals immaturity. First correctness and the right data structure; then targeted, measured optimization where it matters." }
+      {
+        "type": "tip",
+        "title": "Always ask 'how would you measure it?'",
+        "body": "Whenever you optimize, state the benchmark: warm steady-state, representative load, record p50/p99/p99.9 with rdtsc into a histogram, change one thing at a time. Interviewers love candidates who refuse to claim a win without numbers."
+      },
+      {
+        "type": "warn",
+        "title": "Beware premature micro-opt",
+        "body": "Spraying tricks before clarifying requirements or writing a correct version signals immaturity. First correctness and the right data structure; then targeted, measured optimization where it matters."
+      }
     ],
     "keyIdea": "Low-latency coding rounds test a mindset: avoid allocation, locks, cache misses, and unpredictable branches on the hot path; prefer static dispatch; and never claim 'faster' without a measurement plan. Clarify the workload, write correct-then-fast, know when the stdlib suffices, and narrate specific, correct trade-offs out loud."
   },
@@ -65,9 +76,18 @@
       }
     ],
     "notes": [
-      { "title": "Correct-then-fast", "detail": "State 'let me write a correct version first, then optimize the hot path' — and mean it. A correct baseline plus a measured optimization beats a clever-but-buggy one." },
-      { "title": "Complexity AND constants", "detail": "Give the Big-O, then immediately discuss the real-world constant factors (cache misses, allocation, branches) — HFT interviewers care about both, and constants often dominate." },
-      { "title": "Know the stdlib's hot-path traps", "detail": "Be ready to name why std::function, std::shared_ptr, std::map, std::list, std::string, and unbounded std::vector growth are hot-path hazards — and what you'd use instead." }
+      {
+        "title": "Correct-then-fast",
+        "detail": "State 'let me write a correct version first, then optimize the hot path' — and mean it. A correct baseline plus a measured optimization beats a clever-but-buggy one."
+      },
+      {
+        "title": "Complexity AND constants",
+        "detail": "Give the Big-O, then immediately discuss the real-world constant factors (cache misses, allocation, branches) — HFT interviewers care about both, and constants often dominate."
+      },
+      {
+        "title": "Know the stdlib's hot-path traps",
+        "detail": "Be ready to name why std::function, std::shared_ptr, std::map, std::list, std::string, and unbounded std::vector growth are hot-path hazards — and what you'd use instead."
+      }
     ],
     "complexity": {
       "time": "Pattern-recognition, not new algorithms",
@@ -93,7 +113,10 @@
           "First clarify the context: what's the workload (message rate, single vs multi producer/consumer), is the path latency- or throughput-critical, what's the target, and is correctness fixed? Then read for the classic hot-path costs and name each precisely: allocations (new/delete, std::string concatenation, vector growth, hidden temporaries), indirection/type-erasure (virtuals, std::function, std::shared_ptr), pointer-chasing/poor layout (std::map/list, AoS fat structs → prefer contiguous/SoA, open-addressing maps), unnecessary copies (use move/views), unpredictable data-dependent branches (sort/group or go branchless), false sharing on adjacent atomics, and locks/syscalls/logging inline.",
           "I'd propose a correct baseline, then apply targeted fixes with reasons, and — crucially — say how I'd verify: benchmark at warm steady state under representative load, use rdtsc into a histogram to get p50/p99/p99.9, and use perf to check cache-misses, branch-misses, and IPC, changing one thing at a time. I'd avoid micro-optimizing cold paths and reserve hand-tuning for the part profiling shows dominates."
         ],
-        "followups": ["Which stdlib types do you avoid on the hot path and why?", "How do you decide if it's memory-bound or branch-bound?"]
+        "followups": [
+          "Which stdlib types do you avoid on the hot path and why?",
+          "How do you decide if it's memory-bound or branch-bound?"
+        ]
       },
       {
         "id": "q-orderings",
@@ -102,6 +125,19 @@
         "a": [
           "Use relaxed when you need atomicity but no cross-thread ordering — e.g., a statistics counter, or reading an index your own thread exclusively owns. Use acquire/release for the message-passing pattern: the producer writes data then does a release store on a flag/index, and the consumer does an acquire load of that flag/index and is then guaranteed to see the data written before the release — this is exactly the SPSC ring buffer publish/observe, and it's cheaper than seq_cst because it only orders around that one variable. Use seq_cst when you genuinely need a single total order across multiple atomics observed consistently by all threads (e.g., certain Dekker-style or multi-flag algorithms) — it's the safe default but adds full barriers you usually don't need.",
           "Concrete example: in an SPSC queue, the producer does buffer[tail]=x; tail.store(next, release); the consumer does if (head != tail.load(acquire)) read buffer[head]; — release/acquire makes the payload visible without the cost of seq_cst. I'd pick the weakest ordering that's provably correct, and verify on weakly-ordered hardware (ARM) and with ThreadSanitizer."
+        ]
+      },
+      {
+        "id": "q-clarify-first",
+        "q": "Before optimizing a 'make this fast' problem, what do you clarify, and why does that matter?",
+        "tag": "C++",
+        "a": [
+          "I clarify the workload and constraints first, because the right design depends entirely on them: the message/throughput rate and worst-case burst; single vs multiple producers/consumers (this alone decides SPSC vs MPMC/Disruptor); whether it's latency- or throughput-critical and the target (p50 vs p99/p99.9); whether the structure is bounded (fixed capacity) or unbounded; the data sizes and access pattern; correctness invariants that can't change; and whether this is genuinely the hot path or cold code where the stdlib is fine.",
+          "It matters because optimizing without these is guessing — you might build a complex lock-free MPMC queue when SPSC suffices, or micro-optimize a cold path, or pick a structure ill-suited to the access pattern. Clarifying also signals seniority: it shows you optimize deliberately, write correct-then-fast, and reserve hand-tuning for where it's measured to matter. After clarifying, I'd write a correct baseline, then apply targeted optimizations with reasons, and state how I'd measure the win (p50/p99/p99.9 via rdtsc + perf). Jumping straight to tricks before understanding the problem is the classic junior mistake."
+        ],
+        "followups": [
+          "How does 'single vs multiple producers' change your design?",
+          "When is the stdlib the right answer?"
         ]
       }
     ],
@@ -119,7 +155,10 @@
             "Rewrite: take a pre-allocated Record* from a pool (no shared_ptr/new, no atomic refcount); use std::string_view for the key (no copy/alloc); if an index is truly needed, use a pre-sized open-addressing hash map keyed by a fixed-size/interned key (O(1), cache-friendly) instead of std::map — or skip it if it's per-call scratch; template the logging callback (or pass a concrete type) to avoid std::function and enable inlining; and move logging off the hot path by pushing a compact binary record into an SPSC ring that a background thread formats and writes. If the branch must stay, keep it predictable or compute branchlessly.",
             "Measure: benchmark the old vs new at warm steady state under representative message rate; time with rdtsc into an HdrHistogram and compare p50/p99/p99.9/max (not just mean); use perf stat to confirm fewer allocations (track via a counting allocator), lower cache-miss and branch-miss rates, and higher IPC. Change one thing at a time so each improvement is attributable, and verify correctness is unchanged."
           ],
-          "complexity": { "time": "O(1) per call, allocation/lock/indirection-free", "space": "Pooled Record + pre-sized map" },
+          "complexity": {
+            "time": "O(1) per call, allocation/lock/indirection-free",
+            "space": "Pooled Record + pre-sized map"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -128,12 +167,48 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-spot-cost-2",
+        "title": "Spot the costs: a logging call on the hot path",
+        "difficulty": "Advanced",
+        "statement": "Critique and rewrite this hot-path logging, naming each cost: `void log_fill(const Fill& f) { std::stringstream ss; ss << \"fill \" << f.sym << \" \" << f.qty << \" @ \" << f.price; logfile << ss.str() << std::endl; }`. The function is called on every fill in the strategy's hot path.",
+        "hint": "stringstream (allocation + formatting), string construction, std::endl (flush = syscall), synchronous file I/O — all on the hot path.",
+        "tests": "Recognizing logging/IO as a hot-path hazard and fixing it.",
+        "solution": {
+          "approach": [
+            "Costs, all on the hot path: (1) std::stringstream allocates and is heavyweight for formatting; (2) building the message does string allocation and number→string formatting (expensive); (3) `<< std::endl` not only writes a newline but *flushes* the stream — a synchronous I/O/syscall — on every fill; (4) writing to logfile synchronously does disk/OS I/O inline, which is microseconds-to-milliseconds and wildly jittery. Doing any of this per fill can dominate (and destabilize) the strategy's latency entirely.",
+            "Rewrite: do NO formatting or I/O on the hot path. Instead, push a compact, fixed-size *binary* record (e.g., a struct with an enum tag, symbol id, qty, price, and a timestamp) into a pre-allocated lock-free SPSC ring. A separate, non-pinned background thread drains the ring and does the expensive formatting and buffered file writes off the critical path (and never flushes per record — it batches). The hot-path cost drops to a few nanoseconds (one ring push, no alloc/lock/syscall).",
+            "This is the standard low-latency logging pattern: the hot path records *what happened* in the cheapest possible binary form; humans-readable formatting and durable I/O happen asynchronously. Verify by measuring the strategy's p99 with logging on vs off — it should barely move after the rewrite, whereas the original would show large, jittery spikes on every fill."
+          ],
+          "complexity": {
+            "time": "hot path O(1) ~few ns; format/IO off-path",
+            "space": "pre-allocated ring"
+          },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "fast_log.cpp",
+              "source": "struct LogRec { enum K{FILL} kind; uint32_t sym_id; uint32_t qty; int64_t price_ticks; uint64_t ts; };\n\n// Hot path: just push a binary record. No alloc, no format, no I/O, no flush.\ninline void log_fill(const Fill& f, LogRing& ring) noexcept {\n    ring.push(LogRec{LogRec::FILL, f.sym_id, f.qty, f.price_ticks, rdtsc_ns()});\n}\n\n// Background thread (not pinned): drain, format, and buffer-write off the hot path.\nvoid log_drain(LogRing& ring, std::ostream& out) {\n    LogRec r;\n    while (ring.pop(r)) {\n        // format r into a buffer; batch writes; flush periodically, NOT per record\n    }\n}"
+            }
+          ]
+        }
       }
     ]
   },
   "resources": [
-    { "title": "CppCon low-latency talks (Carl Cook 'When a Microsecond Is an Eternity', Fedor Pikus)", "note": "The exact mindset and patterns these interviews probe." },
-    { "title": "Optimized C++ / Effective Modern C++", "by": "Kurt Guntheroth / Scott Meyers", "note": "Performance reasoning and hot-path C++ idioms." },
-    { "title": "This module's C++ and Systems sections", "note": "The source material for every pattern above — review them before interviewing." }
+    {
+      "title": "CppCon low-latency talks (Carl Cook 'When a Microsecond Is an Eternity', Fedor Pikus)",
+      "note": "The exact mindset and patterns these interviews probe."
+    },
+    {
+      "title": "Optimized C++ / Effective Modern C++",
+      "by": "Kurt Guntheroth / Scott Meyers",
+      "note": "Performance reasoning and hot-path C++ idioms."
+    },
+    {
+      "title": "This module's C++ and Systems sections",
+      "note": "The source material for every pattern above — review them before interviewing."
+    }
   ]
 }

@@ -125,6 +125,33 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-race-fix",
+        "title": "Classify and fix a data race; one-time init done right",
+        "difficulty": "Advanced",
+        "statement": "(a) Is this a data race? Two threads run `if (!ready) { ready = true; init(); }` on a plain bool `ready` and a shared resource. Explain. (b) A 'ready flag' pattern: producer does `data = compute(); ready = true;` (plain bool); consumer does `while(!ready){} use(data);`. Identify the bug and fix it with correct atomics/ordering. (c) What's the idiomatic C++ way to do thread-safe one-time initialization?",
+        "hint": "Plain non-atomic shared access with a writer = data race (UB). Use atomic<bool> with release/acquire for the flag pattern. For one-time init use std::call_once or a function-local static.",
+        "tests": "Recognizing data races and applying correct ordering / init idioms.",
+        "solution": {
+          "approach": [
+            "(a) Yes — it's a data race and undefined behavior. `ready` is a plain (non-atomic) bool read and written by multiple threads without synchronization, and `init()`/the resource are accessed concurrently. There's also a check-then-act race (both threads can see !ready and both run init). Plain concurrent access where at least one is a write, without synchronization, is UB in C++ — the compiler/CPU may tear, reorder, or cache the value arbitrarily.",
+            "(b) The ready-flag pattern is broken for two reasons: `ready` is non-atomic (data race), and even if made atomic with relaxed ordering there's no guarantee the consumer sees the `data` write before it sees `ready==true` (no happens-before). Fix: make `ready` a `std::atomic<bool>`; the producer writes `data` then `ready.store(true, std::memory_order_release)`; the consumer spins on `ready.load(std::memory_order_acquire)` and only then reads `data`. The release/acquire pair guarantees the consumer that observes ready==true also sees the completed `data` write — the message-passing pattern (same as the SPSC queue).",
+            "(c) Idiomatic thread-safe one-time init: use `std::call_once` with a `std::once_flag`, or rely on a function-local `static` (whose initialization is guaranteed thread-safe and run exactly once by the standard since C++11 — the 'magic statics' rule). Both avoid the buggy hand-rolled double-checked-locking that people get wrong; if you must hand-roll DCLP, the flag must be atomic with acquire/release. Prefer call_once / function-local static for clarity and correctness.",
+            "The throughline: any shared mutable state touched by multiple threads needs synchronization; use atomics with the weakest *correct* ordering (release/acquire for publish/observe), and use the standard one-time-init facilities rather than ad-hoc flags."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "fix.cpp",
+              "source": "#include <atomic>\n#include <mutex>\n\n// (b) correct ready-flag (message passing)\nstd::atomic<bool> ready{false};\nData data;\nvoid producer() { data = compute(); ready.store(true, std::memory_order_release); }\nvoid consumer() { while (!ready.load(std::memory_order_acquire)) {} use(data); }\n\n// (c) one-time init\nstd::once_flag once;\nvoid init_once() { std::call_once(once, []{ /* runs exactly once, thread-safe */ }); }\n\nConfig& config() { static Config c = load();  // 'magic static': thread-safe, once\n                   return c; }"
+            }
+          ]
+        }
       }
     ]
   },

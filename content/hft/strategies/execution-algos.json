@@ -80,7 +80,7 @@
         ]
       },
       {
-        "id": "q-twap-vwap",
+        "id": "q-twap-vwap-2",
         "q": "Compare TWAP, VWAP, POV, and Implementation Shortfall execution algorithms. When would you use each?",
         "tag": "Execution",
         "a": [

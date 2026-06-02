@@ -138,6 +138,25 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-rvo",
+        "title": "Does returning by value copy? Explain RVO",
+        "difficulty": "Intermediate",
+        "statement": "A teammate insists you must return large objects via out-parameters or heap pointers to avoid a copy, e.g. `void make(BigThing& out)` instead of `BigThing make()`. Explain why `BigThing make() { BigThing b; ...; return b; }` is usually NOT a copy in modern C++, what RVO/NRVO and guaranteed copy elision do, and when a move (not a copy) happens. Give the guidance you'd actually follow.",
+        "hint": "Return-value optimization constructs the result directly in the caller's storage; C++17 guarantees elision for prvalues; otherwise the return is a move, not a copy.",
+        "tests": "Understanding copy elision and return-by-value cost.",
+        "solution": {
+          "approach": [
+            "Returning by value is usually free of any copy. With (Named) Return Value Optimization, the compiler constructs the local `b` directly in the caller's return slot, so there's no separate copy or move at all. In C++17, copy elision is *guaranteed* for prvalues (e.g., `return BigThing{...};`), so `BigThing make()` returning a temporary is constructed in place by mandate. For NRVO (returning a named local like `b`), elision is allowed and almost always applied by real compilers; if for some reason it isn't, the return falls back to a *move* (because the local is treated as an rvalue on return), not a deep copy — and if the type has a noexcept move, that's cheap.",
+            "So the teammate's out-parameter/heap-pointer pattern is unnecessary for avoiding copies and is usually worse: it's less readable, can't be used in expressions, may require default-constructing then assigning (two-phase init), and heap pointers add allocation and lifetime burden. Return by value is both clean and efficient.",
+            "Guidance I'd follow: prefer returning by value for results (clarity + RVO/move). Use out-parameters only when you must fill an existing buffer, return multiple values without a struct, or reuse a caller-owned allocation on a hot path (e.g., write into a pre-allocated buffer to avoid even the result's allocation). Make types' move constructors noexcept so the fallback (and container growth) is cheap. Verify with a counting allocator or by inspecting assembly that no copy occurs. The lesson: modern C++ return-by-value is not the copy people fear — RVO/elision and moves handle it."
+          ],
+          "complexity": {
+            "time": "no copy (elided) or O(1) move",
+            "space": "O(1) extra"
+          }
+        }
       }
     ]
   },

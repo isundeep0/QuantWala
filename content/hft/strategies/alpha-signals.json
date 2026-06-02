@@ -90,7 +90,7 @@
         ]
       },
       {
-        "id": "q-ic",
+        "id": "q-ic-2",
         "q": "What is the information coefficient (IC) of a signal, and why can a tiny IC still be very profitable in HFT?",
         "tag": "Research",
         "a": [
@@ -103,7 +103,7 @@
         ]
       },
       {
-        "id": "q-lookahead",
+        "id": "q-lookahead-2",
         "q": "What is lookahead bias and how does it sneak into signal research?",
         "tag": "Research",
         "a": [

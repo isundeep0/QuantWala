@@ -124,7 +124,7 @@
         }
       },
       {
-        "id": "p-zscore",
+        "id": "p-zscore-2",
         "title": "Build a pairs-trading signal from a spread z-score",
         "difficulty": "Advanced",
         "statement": "You have two cointegrated stocks with hedge ratio β=1.5, so spread = A − 1.5·B. Over a lookback the spread has mean $0.20 and standard deviation $0.10. Right now A=$50.00 and B=$33.00. Compute the current spread and its z-score, state the trade you'd put on (and the hedge), and define sensible entry/exit/stop rules. What's the main risk?",

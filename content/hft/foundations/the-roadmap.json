@@ -122,6 +122,27 @@
             "space": "n/a"
           }
         }
+      },
+      {
+        "id": "p-next-step",
+        "title": "Diagnose the gap and pick the next thing to learn",
+        "difficulty": "Core",
+        "statement": "For each learner, name the single highest-leverage next topic (and the module section) given their goal, and justify by dependency: (a) wants quant-dev roles, strong at LeetCode, but can't explain what a cache miss costs or why a std::map is slow on the hot path; (b) wants to be a trader, good at probability theory, but freezes and is slow on timed mental arithmetic; (c) wants systems roles, solid C++, but has never built or reasoned about a lock-free queue; (d) comfortable with all the theory but has never done a mock interview.",
+        "hint": "Find the missing prerequisite that currently blocks the most progress toward their goal, and map it to the section that closes it.",
+        "tests": "Applying the roadmap to self-diagnose the next step.",
+        "solution": {
+          "approach": [
+            "(a) Next: the Low-Latency Systems section (start with CPU caches, then data-structure/layout choices). They have algorithmic skill but lack the performance-reasoning bar that quant-dev/low-latency interviews actually probe; learning the memory hierarchy and why node-based containers are slow is the highest-leverage gap because every systems and 'make-it-fast' question assumes it. (Modern C++ next, for the language depth.)",
+            "(b) Next: daily mental-math drilling (Quant-Math → mental math, plus Zetamac). Probability theory is necessary but mental-math speed is an explicit early *filter* for trading roles (e.g., timed arithmetic tests); freezing on it can end the process before the probability strength is ever seen. It's the binding constraint on their goal right now.",
+            "(c) Next: the lock-free SPSC queue lesson (and the memory model it depends on) — implement and test one. Strong C++ without lock-free/memory-ordering fluency is the classic missing piece for systems roles, which lean on concurrency primitives and the memory model; building one makes the knowledge concrete and defensible in a systems-design round.",
+            "(d) Next: Interview Mastery → mock interviews. Theory without rehearsal under time pressure doesn't convert to offers; the gap isn't knowledge but performance/communication, so the highest-leverage step is running full mocks (with follow-ups) to expose and fix where reasoning or speed breaks down.",
+            "The method in all four: identify the *binding constraint* on the person's specific goal — the missing prerequisite that currently blocks the most progress — and attack that, rather than adding more of what they're already good at. That's how to sequence learning efficiently along the roadmap."
+          ],
+          "complexity": {
+            "time": "n/a",
+            "space": "n/a"
+          }
+        }
       }
     ]
   },

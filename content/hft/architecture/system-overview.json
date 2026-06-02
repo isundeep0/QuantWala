@@ -5,7 +5,11 @@
   "title": "The Tick-to-Trade Path",
   "tagline": "The end-to-end pipeline from a packet on the wire to an order on the wire — and where every nanosecond goes.",
   "level": "Intermediate",
-  "track": ["dev", "systems", "research"],
+  "track": [
+    "dev",
+    "systems",
+    "research"
+  ],
   "estMinutes": 18,
   "visualizer": "latency-ladder",
   "concept": {
@@ -24,8 +28,16 @@
       "Everything non-essential to the decision (logging, recovery, config) lives off the critical path."
     ],
     "callouts": [
-      { "type": "tip", "title": "Know your latency budget", "body": "Assign a nanosecond budget per stage (e.g., parse 50 ns, book update 50 ns, strategy 100 ns, risk 30 ns, encode+send 100 ns) and measure each hop. Optimization should follow the budget, not guesses." },
-      { "type": "info", "title": "Software vs hardware split", "body": "In the fastest shops, the simplest, hottest stages (parse, top-of-book, risk gate, fire pre-armed order) live in an FPGA on the NIC, while complex strategy/OMS logic stays in software — but the logical pipeline is identical." }
+      {
+        "type": "tip",
+        "title": "Know your latency budget",
+        "body": "Assign a nanosecond budget per stage (e.g., parse 50 ns, book update 50 ns, strategy 100 ns, risk 30 ns, encode+send 100 ns) and measure each hop. Optimization should follow the budget, not guesses."
+      },
+      {
+        "type": "info",
+        "title": "Software vs hardware split",
+        "body": "In the fastest shops, the simplest, hottest stages (parse, top-of-book, risk gate, fire pre-armed order) live in an FPGA on the NIC, while complex strategy/OMS logic stays in software — but the logical pipeline is identical."
+      }
     ],
     "keyIdea": "Every trading system is one pipeline — NIC → feed handler → order book → strategy → OMS → risk → NIC — built as lock-free handoffs between pinned threads, doing minimal work per stage, with timing/risk/control running off the hot path. Master the map and the per-stage latency budget, and the rest of the architecture follows."
   },
@@ -58,9 +70,18 @@
       }
     ],
     "notes": [
-      { "title": "Correctness gates speed", "detail": "A faster system that books incorrectly, mis-sequences, or skips a risk check is worse than useless — it loses money fast. Build correct, deterministic stages first, then optimize within that envelope." },
-      { "title": "The control plane", "detail": "Alongside the data plane sits a control plane: start/stop, parameter updates, kill switch, position/PNL, and monitoring. It must be able to halt and flatten instantly, but it never sits in the hot path." },
-      { "title": "Colocation and the wire", "detail": "Much of tick-to-trade is outside your code: cross-connect, switch, and NIC latency. Firms colocate next to the matching engine and minimize hops because the wire is part of the budget." }
+      {
+        "title": "Correctness gates speed",
+        "detail": "A faster system that books incorrectly, mis-sequences, or skips a risk check is worse than useless — it loses money fast. Build correct, deterministic stages first, then optimize within that envelope."
+      },
+      {
+        "title": "The control plane",
+        "detail": "Alongside the data plane sits a control plane: start/stop, parameter updates, kill switch, position/PNL, and monitoring. It must be able to halt and flatten instantly, but it never sits in the hot path."
+      },
+      {
+        "title": "Colocation and the wire",
+        "detail": "Much of tick-to-trade is outside your code: cross-connect, switch, and NIC latency. Firms colocate next to the matching engine and minimize hops because the wire is part of the budget."
+      }
     ],
     "complexity": {
       "time": "~hundreds of ns end-to-end (software)",
@@ -86,7 +107,10 @@
           "The NIC receives the exchange packet (ideally via kernel bypass, hardware-timestamped). The feed handler parses and sequences the protocol — detecting gaps, arbitrating A/B feeds, recovering via snapshots if needed — and emits normalized book events. The order book applies each event to maintain the current market picture. The strategy reads the book and decides whether to quote/cancel/take, computing its signal. The OMS turns that decision into an exchange order and manages its lifecycle and routing. Pre-trade risk gates it (size/price/notional/position/rate limits and the kill switch). Finally the order is encoded and sent back out the NIC.",
           "Across all of it, stages are pinned threads connected by lock-free rings (or a Disruptor), doing minimal allocation-free, lock-free, syscall-free work for determinism, while logging/recovery/analytics/config run off the hot path. The whole chain is hundreds of nanoseconds in software (tens with FPGA fast paths), and you care about both its median and its tail."
         ],
-        "followups": ["Which stage would you move to hardware first?", "Where do you put logging so it doesn't hurt latency?"]
+        "followups": [
+          "Which stage would you move to hardware first?",
+          "Where do you put logging so it doesn't hurt latency?"
+        ]
       },
       {
         "id": "q-budget",
@@ -95,6 +119,19 @@
         "a": [
           "First, measure per-stage: hardware-timestamp ingress on the NIC, then take cheap rdtsc timestamps at each hop (feed, book, strategy, OMS, risk, send) and record them into per-stage latency histograms (p50/p99/p99.9). This tells you which stage owns the latency and the jitter rather than guessing.",
           "Then attack the biggest contributor with the right tool: kernel bypass and busy-poll for network-in; allocation-free, branch-light parsing for the feed handler; cache-friendly book layout; branchless/predictable strategy math; lean OMS encoding. Reduce jitter with pinning/isolation, pre-faulting+mlock, huge pages, and removing locks/allocations from the path. Re-measure after each change (one variable at a time), and remember the wire (cross-connect/switch/NIC) is part of the budget — sometimes the win is colocation or fewer hops, not code."
+        ]
+      },
+      {
+        "id": "q-data-control",
+        "q": "What's the difference between the data plane and the control plane in a trading system, and why keep them separate?",
+        "tag": "Architecture",
+        "a": [
+          "The data plane is the hot path that turns market events into orders: NIC → feed handler → book → strategy → OMS → risk → NIC. It must be minimal, deterministic, allocation/lock/syscall-free, and as low-latency/low-jitter as possible. The control plane is everything around it: start/stop, parameter and config updates, position/P&L tracking, monitoring/telemetry, logging, the kill switch, and recovery. It values flexibility, observability, and safety over nanoseconds.",
+          "You keep them separate so the control plane's heavier, less predictable work never adds latency or jitter to the hot path. Concretely: logging is done by pushing compact records to a ring that a control-plane thread drains and writes; parameter updates are computed off-path and swapped into the data plane atomically; monitoring reads snapshots without blocking the hot loop. The kill switch is special — it's a control-plane action but must be able to halt the data plane instantly. This separation lets you make the data plane tiny and deterministic while still having rich control, observability, and safety running alongside on non-critical threads/cores."
+        ],
+        "followups": [
+          "How does logging cross the boundary without hurting latency?",
+          "How does the kill switch reach the data plane fast?"
         ]
       }
     ],
@@ -112,14 +149,46 @@
             "Example budget toward ~400 ns of software path: parse/sequence 60 ns, book update 50 ns, strategy/signal 120 ns, OMS encode + state 90 ns, risk gate 30 ns, send 50 ns — plus NIC/switch latency outside the software budget. Logging is a side thread fed by a ring (binary records, formatted off-path); feed recovery (snapshot/retransmit) and analytics/config also run on non-pinned side threads so they never touch the hot chain.",
             "Optimize first the two stages your histograms show dominate — commonly (a) the strategy/signal if the math is heavy or branchy (make it branch-predictable/precomputed), and (b) network-in/out if you're still on kernel sockets (switch to bypass+busy-poll). But the data decides: instrument per stage and target the biggest median+tail contributor, then re-measure."
           ],
-          "complexity": { "time": "Target ~hundreds of ns, budgeted per stage", "space": "Pre-allocated books/rings/order state" }
+          "complexity": {
+            "time": "Target ~hundreds of ns, budgeted per stage",
+            "space": "Pre-allocated books/rings/order state"
+          }
+        }
+      },
+      {
+        "id": "p-find-bottleneck",
+        "title": "Find and fix the dominant latency stage",
+        "difficulty": "Advanced",
+        "statement": "Per-stage tick-to-trade measurements (p50 / p99): parse 40/60 ns; book update 50/70 ns; strategy 120/180 ns; OMS encode 90/130 ns; risk 30/40 ns; send 50/70 ns; plus wire RTT. The p99 *end-to-end* is far worse than the sum of per-stage p99s. What does that tell you, where do you look, and how do you proceed?",
+        "hint": "If end-to-end p99 >> sum of stage p99s, the tail comes from something not captured per-stage: queueing between stages, jitter sources, or coordinated omission.",
+        "tests": "Reasoning about where tail latency really comes from.",
+        "solution": {
+          "approach": [
+            "Key observation: per-stage p99s don't add up to the end-to-end p99 because (a) percentiles aren't additive (the p99 of a sum isn't the sum of p99s), but more importantly (b) a much larger end-to-end tail signals latency that isn't captured *inside* a stage — most likely queueing/waiting *between* stages (an event sitting in an SPSC ring while the consumer is busy), or a jitter source hitting the whole pipeline (a scheduler tick, page fault, frequency transition, or NUMA-remote access), or coordinated omission masking per-stage stalls.",
+            "Where to look: (1) Measure the *queue wait* at each hand-off (time between enqueue and dequeue), not just the processing time — the gap is often the real tail. (2) Measure from the hardware ingress timestamp to avoid coordinated omission, so backlog shows up. (3) Check for system jitter on the pinned cores (isolation, IRQs, page faults, C-states/governor) — a periodic spike pattern points here. (4) Confirm threads aren't migrating and memory is NUMA-local.",
+            "Proceed: instrument per-stage queue waits and end-to-end from true arrival; if the tail is queueing, the strategy stage (120/180 — the slowest) is likely the backlog source under bursts, so optimize or parallelize it, and size rings/backpressure appropriately. If the tail is system jitter, apply isolation/mlock/governor fixes and re-measure. The lesson: don't optimize the biggest *median* stage by reflex; the end-to-end *tail* usually comes from queueing or jitter between/around stages, so measure those explicitly and attack the actual source, changing one thing at a time."
+          ],
+          "complexity": {
+            "time": "targets p99 tail",
+            "space": "per-stage + queue-wait histograms"
+          }
         }
       }
     ]
   },
   "resources": [
-    { "title": "Developing High-Frequency Trading Systems", "by": "Donadio, Ghosh, Rossier", "note": "End-to-end build of a trading system: feed, book, strategy, OMS, risk." },
-    { "title": "QuantCup / open-source matching-engine & feed-handler projects", "note": "Real code to study the stages and their interfaces." },
-    { "title": "Exchange protocol specs (Nasdaq ITCH/OUCH, CME MDP)", "note": "What the feed handler and OMS actually parse and produce." }
+    {
+      "title": "Developing High-Frequency Trading Systems",
+      "by": "Donadio, Ghosh, Rossier",
+      "note": "End-to-end build of a trading system: feed, book, strategy, OMS, risk."
+    },
+    {
+      "title": "QuantCup / open-source matching-engine & feed-handler projects",
+      "note": "Real code to study the stages and their interfaces."
+    },
+    {
+      "title": "Exchange protocol specs (Nasdaq ITCH/OUCH, CME MDP)",
+      "note": "What the feed handler and OMS actually parse and produce."
+    }
   ]
 }

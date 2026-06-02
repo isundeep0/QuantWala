@@ -5,7 +5,10 @@
   "title": "Order Management & Smart Routing",
   "tagline": "From 'I want to buy' to a live order at the exchange — managing lifecycle, protocol, and which venue to hit.",
   "level": "Advanced",
-  "track": ["dev", "systems"],
+  "track": [
+    "dev",
+    "systems"
+  ],
   "estMinutes": 20,
   "concept": {
     "analogy": "If the strategy is the customer who says 'get me 100 shares, cheap and fast', the OMS is the expert broker who actually places the calls. It knows each exchange's paperwork (protocol), tracks every order it has working and what's come back, decides which counter to walk up to (routing), and never loses count of what's outstanding. A sloppy broker who double-sends, forgets an order is still live, or can't tell you your true position will eventually cause an expensive disaster.",
@@ -23,8 +26,16 @@
       "Smart Order Routing: pick/split across venues on price, fill probability, fees/rebates, latency, and best-ex rules."
     ],
     "callouts": [
-      { "type": "warn", "title": "Idempotency or chaos", "body": "Never send the same order twice because you didn't get an ack quickly. Use unique client order ids, a clear pending state, and timeouts that query status rather than blindly resend — duplicate live orders are how firms accidentally take huge positions." },
-      { "type": "tip", "title": "Reconcile with drop-copy", "body": "Exchanges offer a 'drop-copy' feed mirroring your executions/orders. Continuously reconcile your OMS state against it (and your position) so you detect any divergence immediately rather than trading on a wrong position." }
+      {
+        "type": "warn",
+        "title": "Idempotency or chaos",
+        "body": "Never send the same order twice because you didn't get an ack quickly. Use unique client order ids, a clear pending state, and timeouts that query status rather than blindly resend — duplicate live orders are how firms accidentally take huge positions."
+      },
+      {
+        "type": "tip",
+        "title": "Reconcile with drop-copy",
+        "body": "Exchanges offer a 'drop-copy' feed mirroring your executions/orders. Continuously reconcile your OMS state against it (and your position) so you detect any divergence immediately rather than trading on a wrong position."
+      }
     ],
     "keyIdea": "The OMS owns the exchange relationship: it encodes strategy intent into a reliable, sequenced order-entry protocol, manages the session, and is the single source of truth for working orders and true position — handling out-of-order/late messages idempotently and recovering after disconnects. Smart Order Routing layers on the decision of which venue(s) to hit based on price, fill odds, fees, latency, and best-execution rules."
   },
@@ -65,9 +76,18 @@
       }
     ],
     "notes": [
-      { "title": "Persist intent before sending", "detail": "Log the order intent (and clid) durably before/at send so that after a crash you can reconstruct what you tried to do and reconcile against the exchange — never rely solely on in-memory state for orders that move real money." },
-      { "title": "Cancel-on-disconnect", "detail": "Many exchanges support 'cancel on disconnect': if your session drops, the exchange pulls your resting orders. Configure it as a safety net, but still reconcile on reconnect." },
-      { "title": "Throttles and limits", "detail": "Exchanges enforce message rate limits and order-to-trade ratios. The OMS must throttle/queue outbound messages to stay within limits, and pre-trade risk (next lesson) gates every send." }
+      {
+        "title": "Persist intent before sending",
+        "detail": "Log the order intent (and clid) durably before/at send so that after a crash you can reconstruct what you tried to do and reconcile against the exchange — never rely solely on in-memory state for orders that move real money."
+      },
+      {
+        "title": "Cancel-on-disconnect",
+        "detail": "Many exchanges support 'cancel on disconnect': if your session drops, the exchange pulls your resting orders. Configure it as a safety net, but still reconcile on reconnect."
+      },
+      {
+        "title": "Throttles and limits",
+        "detail": "Exchanges enforce message rate limits and order-to-trade ratios. The OMS must throttle/queue outbound messages to stay within limits, and pre-trade risk (next lesson) gates every send."
+      }
     ],
     "complexity": {
       "time": "O(1) per order event; SOR O(venues)",
@@ -93,7 +113,10 @@
           "An order goes PendingNew (sent with a unique client order id, awaiting ack) → Working once acked → PartiallyFilled/Filled as executions arrive → or Cancelled/Rejected/Expired; cancels/replaces add PendingCancel/PendingReplace states. The OMS correlates every inbound exchange message to its working order by client order id and updates a precise state machine, also updating true position on each fill.",
           "Tricky orderings: a fill can arrive before its ack (reconcile by id, don't assume order isn't live); a cancel can race a fill, so a cancel-reject usually means 'already filled' — trust the fill; executions can arrive out of order or be duplicated; and an ack timeout must trigger a status query, never a blind resend (the order may be live). Handling these idempotently and correctly — backed by drop-copy reconciliation and a durable order log for crash recovery — is what makes an OMS trustworthy."
         ],
-        "followups": ["How do you guarantee you never duplicate an order?", "How do you recover working orders after a crash?"]
+        "followups": [
+          "How do you guarantee you never duplicate an order?",
+          "How do you recover working orders after a crash?"
+        ]
       },
       {
         "id": "q-sor",
@@ -102,6 +125,19 @@
         "a": [
           "Smart Order Routing decides which venue(s) to send an order to (and how to split it) when an instrument trades on multiple exchanges, to get the best execution. For an aggressive (liquidity-taking) order it ranks venues by effective price net of fees/rebates and expected fill, then sweeps/splits across them to capture displayed size — while respecting order-protection/best-execution rules. For a passive (posting) order it picks the venue with the best expected queue position and rebate.",
           "Key factors: displayed price and size, expected fill probability and queue position, maker-taker fees and rebates, latency to each venue (a venue you reach slower may have moved by the time you arrive), and regulatory constraints. The router emits child orders under a parent, tracks them across venues, and re-routes the unfilled remainder as books update."
+        ]
+      },
+      {
+        "id": "q-fix-session",
+        "q": "How does a FIX (or similar) order-entry session stay reliable, and what happens on a disconnect?",
+        "tag": "Architecture",
+        "a": [
+          "A session-based order-entry protocol like FIX maintains an ordered, reliable channel with: logon (authenticate, agree starting sequence numbers), heartbeats (periodic messages to detect a dead connection; a TestRequest is sent if the peer goes silent), and monotonic inbound/outbound sequence numbers on every message. If a sequence gap is detected, the protocol recovers with a ResendRequest (ask the peer to retransmit the missing messages) and SequenceReset/GapFill — so no order/ack is silently lost. This is the order-entry analog of market-data sequencing, but point-to-point and reliable (usually over TCP, or a kernel-bypass TCP stack for low latency).",
+          "On a disconnect, you reconnect and re-establish the session: log on again, resync sequence numbers (resend/gap-fill any messages missed during the outage), and reconcile your working-order state — request order/execution status (and/or replay the drop-copy and your durable order log) to learn the true state of any orders that were in flight. Many setups also enable exchange-side cancel-on-disconnect as a safety net (the exchange pulls your resting orders if your session drops) so you're not left with unmonitored live orders. The OMS must handle all this idempotently — never blindly resend an order whose fate is unknown; query status instead."
+        ],
+        "followups": [
+          "Why is cancel-on-disconnect a useful backstop?",
+          "How do sequence numbers enable gap recovery?"
         ]
       }
     ],
@@ -119,14 +155,45 @@
             "Session & recovery: run the order-entry session (logon, heartbeats, in/out sequence numbers, gap fill/resend). Enable cancel-on-disconnect as a safety net. On reconnect, resync sequences and request open-order/execution status; on process crash, rebuild the working set from the durable order log + exchange status + drop-copy, then reconcile against net position. In steady state, continuously reconcile OMS working orders and position with the drop-copy feed and alert on any divergence.",
             "Edge cases: fill-before-ack — apply the fill by clid (update fills/leaves/position) and accept the later ack without double-counting; the order is clearly live. Cancel-reject — interpret 'too late to cancel' as the order having filled (or already terminal); trust the execution reports / drop-copy rather than your assumption, and update state accordingly. Out-of-order or duplicate executions are deduped by execution id. The net effect is an OMS that is idempotent, always reconciled to the exchange's truth, and able to reconstruct itself after failure."
           ],
-          "complexity": { "time": "O(1) per order event", "space": "O(working orders) + durable log" }
+          "complexity": {
+            "time": "O(1) per order event",
+            "space": "O(working orders) + durable log"
+          }
+        }
+      },
+      {
+        "id": "p-idempotent",
+        "title": "Make order submission idempotent under timeouts",
+        "difficulty": "Advanced",
+        "statement": "You send a new order but don't receive an ack within your timeout. The naive reaction — resend it — risks creating a duplicate live order (and a runaway position). Design the correct handling that guarantees you never duplicate an order, yet still recovers if the order truly never reached the exchange. Specify the mechanism and the states involved.",
+        "hint": "Unique client order id per request, a PendingNew state, and status-query-on-timeout (not blind resend). The exchange dedupes by clid; you reconcile via status/drop-copy.",
+        "tests": "Idempotent order submission and recovery.",
+        "solution": {
+          "approach": [
+            "Assign every new-order request a unique client order id (clid) and durably log the intent+clid before/at send. Keep the order in a PendingNew state until you get a definitive response (ack, reject, or fill). The clid is the idempotency key: the exchange will reject a duplicate clid, so even if a resend slipped through, it can't create a second order.",
+            "On ack timeout, do NOT blindly resend. Instead, query the true state: send an order-status request for that clid (or consult the drop-copy / execution feed). Three outcomes: (1) the exchange knows the order (acked/working/filled) → it did arrive; transition out of PendingNew accordingly and do nothing else. (2) the exchange has no record of that clid → it genuinely never arrived; now it's safe to (re)submit, ideally with the same clid (so any late-arriving original is deduped) or a fresh clid with care. (3) ambiguous/no response → stay in PendingNew, keep querying, and surface an alert; never assume.",
+            "States involved: PendingNew (sent, fate unknown) → New/Working (acked) / Filled / Rejected, with the status-query loop driving the transition on timeout. Combined with a durable order log (for crash recovery) and continuous drop-copy reconciliation of working orders and position, this guarantees no duplicate live orders while still recovering lost ones. The cardinal rule: on uncertainty, *query the truth*, don't *act on assumption* — blind resend is how firms accidentally double their position."
+          ],
+          "complexity": {
+            "time": "O(1) per order event",
+            "space": "O(working orders) + durable log"
+          }
         }
       }
     ]
   },
   "resources": [
-    { "title": "FIX Protocol specification & QuickFIX", "note": "The dominant order-entry protocol; QuickFIX is a reference engine to study sessions/recovery." },
-    { "title": "Nasdaq OUCH / exchange order-entry specs", "note": "Low-latency binary order-entry protocols and their lifecycle messages." },
-    { "title": "SEC Reg NMS / best-execution & order-protection rules", "note": "The regulatory backdrop that shapes smart order routing in US equities." }
+    {
+      "title": "FIX Protocol specification & QuickFIX",
+      "note": "The dominant order-entry protocol; QuickFIX is a reference engine to study sessions/recovery."
+    },
+    {
+      "title": "Nasdaq OUCH / exchange order-entry specs",
+      "note": "Low-latency binary order-entry protocols and their lifecycle messages."
+    },
+    {
+      "title": "SEC Reg NMS / best-execution & order-protection rules",
+      "note": "The regulatory backdrop that shapes smart order routing in US equities."
+    }
   ]
 }

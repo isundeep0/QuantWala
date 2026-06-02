@@ -5,7 +5,11 @@
   "title": "The Strategy Engine",
   "tagline": "Where the book becomes a decision — event-driven, deterministic, and fast enough to act before the edge evaporates.",
   "level": "Advanced",
-  "track": ["dev", "research", "systems"],
+  "track": [
+    "dev",
+    "research",
+    "systems"
+  ],
   "estMinutes": 20,
   "concept": {
     "analogy": "The strategy engine is the driver of a race car who only gets to act on what the dashboard shows right now. Every time the dashboard updates (a market event), the driver instantly decides: accelerate, brake, or hold. The decision logic must be rehearsed and reflexive — there's no time to 'think' from scratch. The car (OMS) and the safety system (risk) carry out and constrain the driver's commands, but the split-second judgment lives here.",
@@ -23,8 +27,16 @@
       "React to your own order lifecycle (acks/fills/rejects), not just the market."
     ],
     "callouts": [
-      { "type": "tip", "title": "One event loop, one source of truth", "body": "Run the strategy on a single thread processing a single ordered event stream (market + own-order events merged). No locks, no shared-state races, fully reproducible — and trivially fast because there's no synchronization on the hot path." },
-      { "type": "warn", "title": "Don't put research in the hot path", "body": "Fitting, optimization, and model inference belong offline or on a side thread that hands parameters in. The hot callback should be a few comparisons and arithmetic ops, not a solver." }
+      {
+        "type": "tip",
+        "title": "One event loop, one source of truth",
+        "body": "Run the strategy on a single thread processing a single ordered event stream (market + own-order events merged). No locks, no shared-state races, fully reproducible — and trivially fast because there's no synchronization on the hot path."
+      },
+      {
+        "type": "warn",
+        "title": "Don't put research in the hot path",
+        "body": "Fitting, optimization, and model inference belong offline or on a side thread that hands parameters in. The hot callback should be a few comparisons and arithmetic ops, not a solver."
+      }
     ],
     "keyIdea": "The strategy engine is a single-threaded, event-driven loop that turns each market/own-order event into a fast, branch-predictable decision over precomputed parameters, while maintaining compact O(1) state (orders, queue position, inventory, PnL). Separating offline research from hot-path execution — and running the same code in backtest, paper, and live — gives both alpha and determinism."
   },
@@ -65,9 +77,18 @@
       }
     ],
     "notes": [
-      { "title": "Re-quote by diffing", "detail": "Don't cancel-and-replace every event; compute the desired quotes and only send the orders that changed (or use modify) to minimize message traffic and preserve queue priority where possible." },
-      { "title": "Parameter swaps must be safe", "detail": "Update params via an atomic pointer/double-buffer so the hot path always reads a consistent ParamSet without locking; never mutate the live set field-by-field." },
-      { "title": "Time is an input", "detail": "Many strategies act on timers (refresh quotes, age out signals). Drive timers from the same event clock so backtest and live behave identically." }
+      {
+        "title": "Re-quote by diffing",
+        "detail": "Don't cancel-and-replace every event; compute the desired quotes and only send the orders that changed (or use modify) to minimize message traffic and preserve queue priority where possible."
+      },
+      {
+        "title": "Parameter swaps must be safe",
+        "detail": "Update params via an atomic pointer/double-buffer so the hot path always reads a consistent ParamSet without locking; never mutate the live set field-by-field."
+      },
+      {
+        "title": "Time is an input",
+        "detail": "Many strategies act on timers (refresh quotes, age out signals). Drive timers from the same event clock so backtest and live behave identically."
+      }
     ],
     "complexity": {
       "time": "O(1) per event, ~tens-hundreds of ns",
@@ -93,7 +114,10 @@
           "Separate research from execution. The heavy thinking — fitting signals, calibrating thresholds, training models — happens offline or on a non-critical side thread and produces a compact parameter set (coefficients, thresholds, sizes, skew). The hot-path callback just reads those precomputed parameters plus current book state and applies a small, branch-predictable decision rule (e.g., compute microprice/imbalance, compare to thresholds, decide quotes), emitting order actions over a lock-free ring. No fitting, no allocation, no locks on the path.",
           "Determinism comes from running the strategy single-threaded over a single ordered event stream, so there are no data races and behavior is reproducible. Parameters are swapped in atomically (double-buffer) so the hot path never sees a torn update. This gives you alpha (from the research that shaped the parameters) without sacrificing nanosecond, low-jitter execution."
         ],
-        "followups": ["How do you update parameters without locking the hot path?", "Why is single-threaded often better here than multi-threaded?"]
+        "followups": [
+          "How do you update parameters without locking the hot path?",
+          "Why is single-threaded often better here than multi-threaded?"
+        ]
       },
       {
         "id": "q-backtest-live",
@@ -102,6 +126,19 @@
         "a": [
           "Because the biggest risk is 'it worked in backtest but behaves differently live.' If the live and backtest logic are different code, your tests don't actually validate what you run. Sharing one strategy implementation means the behavior you measured historically is the behavior you deploy, which massively reduces surprises and debugging time.",
           "How: make the strategy depend only on abstract interfaces — an event source and an order interface — not on concrete feeds or gateways. Swap the event source (historical file → simulator → live multicast) and the order sink (simulated matcher → paper account → live exchange gateway) without touching strategy code. Drive timers from the same event clock. The only differences between modes are at the edges (I/O and a realistic fill model in simulation), so the decision logic is identical everywhere."
+        ]
+      },
+      {
+        "id": "q-single-thread",
+        "q": "Why do many HFT strategy engines run single-threaded, and isn't that leaving performance on the table?",
+        "tag": "Architecture",
+        "a": [
+          "A single-threaded event loop processes one ordered stream of events (market + own-order + timers) through deterministic callbacks, with no shared mutable state between threads. The benefits are large: no locks or atomics on the hot path (no contention, no synchronization latency), no data races, and — crucially — fully reproducible behavior given the same event sequence, which makes debugging, replay, and backtest=live parity possible. It's also often *faster* per event because there's zero synchronization overhead and the working set stays hot in one core's cache.",
+          "It's not really leaving performance on the table, because the parallelism in a trading system is across *stages* (feed handler, book, strategy, OMS each on their own pinned core, connected by lock-free rings or a Disruptor) and across *instruments/strategies* (shard by symbol to different cores), not within a single strategy's decision loop. Trying to multi-thread one strategy's state would add locking/coordination that usually costs more latency and determinism than it gains. So the pattern is: single-threaded, deterministic engine per shard, with parallelism achieved by pipelining stages and sharding instruments — keeping each hot loop lock-free and reproducible."
+        ],
+        "followups": [
+          "How would you scale to thousands of instruments?",
+          "How does single-threading enable backtest=live parity?"
         ]
       }
     ],
@@ -120,14 +157,46 @@
             "Backtest = live: the engine depends only on an EventSource and an OrderSink interface. In backtest, the source is a historical/simulated feed and the sink is a realistic fill simulator (queue-position-aware, with latency); in live, the source is the multicast feed/book and the sink is the exchange gateway. The strategy code is identical; only the edges differ.",
             "Own-order edge cases to handle: partial fills (reduce remaining qty, keep the order), a fill arriving before its ack (reconcile by id), rejects (from pre-trade risk or the exchange — don't assume the order rests), cancel-reject (the order may have just filled), and out-of-order acks. Mishandling these is the top source of live bugs, so model them explicitly and replay recorded sequences to test."
           ],
-          "complexity": { "time": "O(1) per event", "space": "O(working orders + state)" }
+          "complexity": {
+            "time": "O(1) per event",
+            "space": "O(working orders + state)"
+          }
+        }
+      },
+      {
+        "id": "p-fill-races",
+        "title": "Handle own-order races correctly",
+        "difficulty": "Advanced",
+        "statement": "Your market-making engine sends a buy order, then a cancel for it. Design how the engine's state machine handles these out-of-order/edge sequences correctly: (a) a fill arrives before the order's ack; (b) the order partially fills, then your cancel is acked for the remainder; (c) you send a cancel but get a cancel-reject because it already fully filled; (d) two partial fills arrive out of order. Why are these the top source of live bugs?",
+        "hint": "Key everything by client order id; track leaves/filled; treat the exchange's execution reports as ground truth; cancel-reject often means 'already filled'.",
+        "tests": "Robust own-order lifecycle handling.",
+        "solution": {
+          "approach": [
+            "Model each order by a unique client order id with explicit state and quantities (ordered, filled, leaves) and treat the exchange's execution reports as ground truth, reconciling by id. (a) Fill-before-ack: apply the fill by id (reduce leaves, update inventory/P&L) even though you haven't seen the ack yet — the fill proves the order is live; when the ack arrives, don't double-count, just confirm the order rests/rested. (b) Partial fill then cancel-ack-for-remainder: reduce leaves on the partial; the cancel-ack tells you the *remaining* leaves are cancelled, so set leaves=0 and the order terminal — never assume the cancel removed the already-filled portion. (c) Cancel-reject because already filled: interpret 'too late to cancel' as the order having fully filled (or otherwise terminal); trust the fills/drop-copy, mark the order filled, and update inventory — do not assume it's still working. (d) Out-of-order partial fills: dedupe by execution id and apply each once; track cumulative filled and recompute leaves from cumulative quantities rather than assuming arrival order, so reordering/duplication can't corrupt the position.",
+            "General principle: the engine's view of position and working orders must be driven by reconciling exchange messages (acks/fills/cancels/rejects) by id and execution id, idempotently, with the exchange (and drop-copy) as the source of truth — never by optimistic local assumptions about message order.",
+            "Why these are the top source of live bugs: they're rare, timing-dependent edge cases that don't occur in simple backtests or happy-path testing, but happen constantly in production under load (the network and matching engine don't guarantee your assumed ordering). Mishandling them causes phantom positions, double-counted fills, 'I thought I cancelled that', and risk-limit breaches — real money lost. That's why robust engines model these explicitly and test them by replaying recorded adversarial message sequences."
+          ],
+          "complexity": {
+            "time": "O(1) per event by id",
+            "space": "O(working orders)"
+          }
         }
       }
     ]
   },
   "resources": [
-    { "title": "Developing High-Frequency Trading Systems", "by": "Donadio et al.", "note": "Event-driven engine design and the backtest/live symmetry." },
-    { "title": "Backtrader / nautilus_trader / lean (open-source event engines)", "note": "Study event-driven architectures with shared backtest/live code." },
-    { "title": "Avellaneda–Stoikov market making (for the decision rule)", "note": "A principled inventory-aware quoting model whose params feed the hot path." }
+    {
+      "title": "Developing High-Frequency Trading Systems",
+      "by": "Donadio et al.",
+      "note": "Event-driven engine design and the backtest/live symmetry."
+    },
+    {
+      "title": "Backtrader / nautilus_trader / lean (open-source event engines)",
+      "note": "Study event-driven architectures with shared backtest/live code."
+    },
+    {
+      "title": "Avellaneda–Stoikov market making (for the decision rule)",
+      "note": "A principled inventory-aware quoting model whose params feed the hot path."
+    }
   ]
 }

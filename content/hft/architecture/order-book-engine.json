@@ -5,7 +5,10 @@
   "title": "Building a Fast Order Book",
   "tagline": "The data structure at the heart of every trading system: O(1) updates, instant top-of-book, exchange-exact correctness.",
   "level": "Advanced",
-  "track": ["dev", "systems"],
+  "track": [
+    "dev",
+    "systems"
+  ],
   "estMinutes": 22,
   "visualizer": "order-book",
   "concept": {
@@ -24,8 +27,16 @@
       "Must exactly mirror the exchange's matching (price-time/pro-rata, tick size, modify rules) — correctness first."
     ],
     "callouts": [
-      { "type": "tip", "title": "Index by tick, not raw price", "body": "Convert price to an integer tick offset from a reference (e.g., (price - base) / tickSize) and index a dense array. Integer indexing is branchless and cache-friendly; floating-point prices and maps are not." },
-      { "type": "warn", "title": "Queue priority is subtle", "body": "On most exchanges a price-improving modify or a size increase loses time priority (goes to the back of the queue), while a pure size decrease keeps it. Model this exactly or your fill predictions and queue-position signals will be wrong." }
+      {
+        "type": "tip",
+        "title": "Index by tick, not raw price",
+        "body": "Convert price to an integer tick offset from a reference (e.g., (price - base) / tickSize) and index a dense array. Integer indexing is branchless and cache-friendly; floating-point prices and maps are not."
+      },
+      {
+        "type": "warn",
+        "title": "Queue priority is subtle",
+        "body": "On most exchanges a price-improving modify or a size increase loses time priority (goes to the back of the queue), while a pure size decrease keeps it. Model this exactly or your fill predictions and queue-position signals will be wrong."
+      }
     ],
     "keyIdea": "A fast order book uses a dense price(tick)-indexed array of levels backed by an intrusive list of pooled order nodes plus an order-id→node hash map, giving O(1) add/cancel/execute and O(1) top-of-book with contiguous, allocation-free memory. But it must replicate the exchange's exact matching rules — correctness gates the optimization."
   },
@@ -66,9 +77,18 @@
       }
     ],
     "notes": [
-      { "title": "Top-of-book vs full depth", "detail": "If your strategy only needs L1/shallow depth, a tiny fixed array of the top N levels is far cheaper than a full order-by-order book. Build the least book your strategy needs." },
-      { "title": "Bitset for the touch", "detail": "A bitmap of populated levels lets you jump to the next active price with a single find-first-set instruction when the touch empties, avoiding a linear scan in sparse books." },
-      { "title": "Rebasing the window", "detail": "Prices can drift outside your pre-sized tick window over a session. Handle a rebase/resize (or use a large enough range) so far-touch moves don't corrupt indexing." }
+      {
+        "title": "Top-of-book vs full depth",
+        "detail": "If your strategy only needs L1/shallow depth, a tiny fixed array of the top N levels is far cheaper than a full order-by-order book. Build the least book your strategy needs."
+      },
+      {
+        "title": "Bitset for the touch",
+        "detail": "A bitmap of populated levels lets you jump to the next active price with a single find-first-set instruction when the touch empties, avoiding a linear scan in sparse books."
+      },
+      {
+        "title": "Rebasing the window",
+        "detail": "Prices can drift outside your pre-sized tick window over a session. Handle a rebase/resize (or use a large enough range) so far-touch moves don't corrupt indexing."
+      }
     ],
     "complexity": {
       "time": "O(1) add/cancel/execute; O(1) top-of-book",
@@ -94,7 +114,10 @@
           "Represent price levels as a dense array indexed by integer tick offset from a reference (tick = (price-base)/tickSize), each slot holding aggregate size and, for full depth, an intrusive time-ordered queue of order nodes drawn from a pre-allocated pool. Keep an order-id→node hash map so cancels/modifies find their order in O(1): add appends to the level's tail, cancel unlinks the node, execute consumes from the head. Track best bid/ask incrementally (or jump via a populated-levels bitset). All hot ops are O(1) and the memory is contiguous and allocation-free.",
           "std::map is a red-black tree: each lookup/insert chases pointers across heap-scattered nodes, costing a cache miss per step and log(n) steps — terrible on a structure updated millions of times/sec. Array indexing by tick is branchless, O(1), and cache-friendly, which is why production books use dense arrays + pools rather than node-based ordered maps."
         ],
-        "followups": ["How do you find the next best level when the touch empties?", "How do you handle a modify that loses priority?"]
+        "followups": [
+          "How do you find the next best level when the touch empties?",
+          "How do you handle a modify that loses priority?"
+        ]
       },
       {
         "id": "q-correct",
@@ -103,6 +126,19 @@
         "a": [
           "The strategy makes decisions based on the book — best prices, depth, imbalance, and its own queue position. If your book diverges from the exchange's real state (wrong matching rule, wrong tick size, mishandled modify priority, missed cancel), the strategy quotes and hedges against a market that doesn't exist: it mis-estimates fill probability and queue position, may cross the spread unintentionally, and can take losing trades — fast.",
           "So you must replicate the venue's exact rules: price-time vs pro-rata matching, tick size, whether a modify keeps or loses priority, partial-fill handling, and self-trade prevention, plus snapshot/reset handling. The right order of work is correctness first (validated against exchange-published examples and a known-good reference), then optimize the data layout within that envelope — a fast but subtly wrong book is worse than a slower correct one."
+        ]
+      },
+      {
+        "id": "q-depth-choice",
+        "q": "How do you decide between maintaining only top-of-book vs a full-depth book?",
+        "tag": "Architecture",
+        "a": [
+          "Build the least book your strategy actually needs. If the strategy only reads the best bid/ask and maybe a couple of levels (many taking strategies, simple signals), maintain just top-of-book or a small fixed array of the top N levels — far cheaper to update (O(1), tiny memory, cache-resident) and you can often use a lighter L1/L2 feed. If the strategy needs depth, imbalance across many levels, or your own queue position (queue-aware market making), you need a full-depth, order-by-order book with the dense-level-array + order-id→node-map design and a full order-by-order (ITCH-style) feed.",
+          "The trade-off is cost vs information: a full book costs more parsing, memory, and update work and needs a richer (higher-bandwidth) feed, but enables the most precise microstructure signals and queue-position tracking. A top-of-book is cheap and fast but blind to depth and your queue position. So the decision is driven by the strategy's information requirements: don't pay for a full order-by-order book if you only trade on the touch, but don't try to do queue-aware market making on an aggregated feed. Match the book (and the feed) to the signal."
+        ],
+        "followups": [
+          "Which strategies truly need order-by-order depth?",
+          "How does the feed type constrain this choice?"
         ]
       }
     ],
@@ -120,7 +156,10 @@
             "Operations: add → pool.alloc, fill fields, append to level tail (time priority), bump total, insert into id map, update touch if this price improves it. cancel → id-map lookup, unlink node O(1), decrement total, free to pool, and if the level emptied at the touch, advance best bid/ask via the bitset. execute(side, qty) → consume from the head of the best level (oldest first = FIFO), reducing/removing nodes and the level total, walking to the next level if a level is fully consumed. best_bid/ask → read the cached tick (convert back to price).",
             "Testing: (1) unit tests for add/cancel/execute and touch maintenance including emptying/refilling levels and FIFO order; (2) replay a recorded exchange feed through the book and compare best bid/ask/depth against the exchange's published book or a reference implementation at each step; (3) targeted tests for the tricky rules — modify priority (size-decrease keeps, price/size-increase loses), partial fills, crossed/locked states, snapshots/resets, and prices near the window edge; (4) fuzz/property tests asserting invariants (total = sum of node qtys, best_bid < best_ask unless crossed). Only after correctness, benchmark add/cancel throughput and confirm no allocation/cache-miss hotspots with perf."
           ],
-          "complexity": { "time": "O(1) add/cancel/execute; O(1) top-of-book", "space": "O(active levels + resting orders), pre-allocated" },
+          "complexity": {
+            "time": "O(1) add/cancel/execute; O(1) top-of-book",
+            "space": "O(active levels + resting orders), pre-allocated"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -129,12 +168,48 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-reseat-touch",
+        "title": "Advance the best level efficiently when the touch empties",
+        "difficulty": "Advanced",
+        "statement": "In your dense tick-indexed book, when the best-bid level is fully consumed/cancelled you must find the next non-empty bid level. A linear scan downward is O(levels) and slow for a sparse book. Design an O(1)-ish approach and explain it. Provide the core operation.",
+        "hint": "Maintain a bitset of populated levels; finding the next active level = a find-last/first-set (count-leading-zeros) over the bitmap words.",
+        "tests": "Efficient best-level maintenance with a bitset.",
+        "solution": {
+          "approach": [
+            "Keep a bitmap (array of 64-bit words) where bit i is set iff level i has nonzero resting size. When you add the first order at a level, set its bit; when a level's total size hits zero, clear its bit. Then 'find the next active bid level below the emptied one' becomes a bit-scan over the bitmap rather than a linear walk over (possibly many empty) levels.",
+            "Operation: for bids you want the highest set bit at or below the old best index. Mask the current word to bits ≤ the position, and if nonzero use a find-last-set (63 − countl_zero) to get the level within that word; otherwise move to the next lower word and take its highest set bit. That's a handful of word reads and a CLZ/CTZ instruction — effectively O(1) for typical book densities (and O(words) worst case, where words = levels/64, far better than O(levels)). Asks are symmetric using find-first-set upward.",
+            "This keeps top-of-book maintenance fast even in sparse books with wide gaps between active levels, which a naive linear scan would handle poorly. It pairs with the dense-level-array + pool + id-map design to keep all hot operations (add/cancel/execute/reseat-touch) at O(1)-ish with great cache behavior. Verify by stress-testing books with large gaps and confirming the best-level update cost stays flat as gap size grows."
+          ],
+          "complexity": {
+            "time": "O(1)-ish (O(levels/64) worst case)",
+            "space": "O(levels/64) bitmap"
+          },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "reseat.cpp",
+              "source": "#include <bit>\n#include <cstdint>\n// words[]: bit i set iff level i has resting size. Find highest active level <= 'from' (bids).\nint next_active_bid(const uint64_t* words, int from) {\n    int w = from >> 6;\n    uint64_t bits = words[w] & (~0ull >> (63 - (from & 63))); // mask bits above 'from'\n    if (bits) return (w << 6) + (63 - std::countl_zero(bits));\n    for (--w; w >= 0; --w)\n        if (words[w]) return (w << 6) + (63 - std::countl_zero(words[w]));\n    return -1; // empty side\n}"
+            }
+          ]
+        }
       }
     ]
   },
   "resources": [
-    { "title": "How to Build a Fast Limit Order Book", "by": "WK Selph (classic blog post)", "note": "The canonical array-of-levels + intrusive-list + id-map design." },
-    { "title": "QuantCup limit order book challenge & winning entries", "note": "Real competitive implementations to study for speed." },
-    { "title": "Exchange matching specs (price-time vs pro-rata)", "note": "Ground truth your book must replicate exactly." }
+    {
+      "title": "How to Build a Fast Limit Order Book",
+      "by": "WK Selph (classic blog post)",
+      "note": "The canonical array-of-levels + intrusive-list + id-map design."
+    },
+    {
+      "title": "QuantCup limit order book challenge & winning entries",
+      "note": "Real competitive implementations to study for speed."
+    },
+    {
+      "title": "Exchange matching specs (price-time vs pro-rata)",
+      "note": "Ground truth your book must replicate exactly."
+    }
   ]
 }

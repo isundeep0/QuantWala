@@ -5,7 +5,10 @@
   "title": "The Feed Handler",
   "tagline": "Turn raw exchange packets into a correct, gap-free event stream — at line rate, with no allocation.",
   "level": "Advanced",
-  "track": ["dev", "systems"],
+  "track": [
+    "dev",
+    "systems"
+  ],
   "estMinutes": 20,
   "concept": {
     "analogy": "A feed handler is a simultaneous interpreter at the UN who also catches missing pages. The exchange speaks a terse, fast binary dialect; the interpreter must translate it instantly into your system's vocabulary, never lag behind the speaker, and immediately notice if page 47 was skipped — then quietly fetch it from a backup transcript without interrupting the flow. Speed alone isn't enough; a single missed or mistranslated message corrupts everything downstream.",
@@ -23,8 +26,16 @@
       "Hardest cases are bursts (auctions/news) and recovery, not the steady state — design for headroom and correctness."
     ],
     "callouts": [
-      { "type": "warn", "title": "A silent desync is the nightmare", "body": "If the handler mishandles a gap or an out-of-order A/B message, your book diverges from the exchange and the strategy trades on a phantom market. Sequence checking and recovery must be airtight and continuously monitored (gap counters, checksum/consistency checks)." },
-      { "type": "tip", "title": "Decode lazily", "body": "Parse only the fields you need to act; defer or skip the rest. For many strategies, top-of-book and trade messages matter most — don't pay to fully decode every field of every message type." }
+      {
+        "type": "warn",
+        "title": "A silent desync is the nightmare",
+        "body": "If the handler mishandles a gap or an out-of-order A/B message, your book diverges from the exchange and the strategy trades on a phantom market. Sequence checking and recovery must be airtight and continuously monitored (gap counters, checksum/consistency checks)."
+      },
+      {
+        "type": "tip",
+        "title": "Decode lazily",
+        "body": "Parse only the fields you need to act; defer or skip the rest. For many strategies, top-of-book and trade messages matter most — don't pay to fully decode every field of every message type."
+      }
     ],
     "keyIdea": "The feed handler converts raw UDP exchange packets into a normalized, ordered, gap-free event stream with zero-copy, allocation-free parsing on the hot path — while correctly handling the hard cases: A/B feed arbitration, sequence-gap detection, and snapshot/retransmit recovery. It must be fast in the common case and provably correct in the rare one."
   },
@@ -65,9 +76,18 @@
       }
     ],
     "notes": [
-      { "title": "Endianness and packing", "detail": "Wire formats are usually little-endian and tightly packed; use packed structs/explicit byte reads and convert on read. Don't assume host layout matches the wire — test on the target." },
-      { "title": "Conflated vs full-depth feeds", "detail": "Some feeds give every order (order-by-order, e.g., ITCH) enabling a full book; others give aggregated level updates or conflated snapshots. Your handler and book design depend on which you consume." },
-      { "title": "Monitor relentlessly", "detail": "Expose gap counts, recovery events, per-message-type rates, and feed-to-feed skew. A handler that 'looks fine' but silently dropped to a stale book is the worst failure; continuous consistency checks catch it." }
+      {
+        "title": "Endianness and packing",
+        "detail": "Wire formats are usually little-endian and tightly packed; use packed structs/explicit byte reads and convert on read. Don't assume host layout matches the wire — test on the target."
+      },
+      {
+        "title": "Conflated vs full-depth feeds",
+        "detail": "Some feeds give every order (order-by-order, e.g., ITCH) enabling a full book; others give aggregated level updates or conflated snapshots. Your handler and book design depend on which you consume."
+      },
+      {
+        "title": "Monitor relentlessly",
+        "detail": "Expose gap counts, recovery events, per-message-type rates, and feed-to-feed skew. A handler that 'looks fine' but silently dropped to a stale book is the worst failure; continuous consistency checks catch it."
+      }
     ],
     "complexity": {
       "time": "~tens of ns/message; millions/sec in bursts",
@@ -93,7 +113,10 @@
           "Every message carries a sequence number, so the handler tracks the expected next sequence and classifies each arrival: in-order (process, advance), duplicate/old (drop), or ahead (gap — reordered or lost). To minimize loss it consumes the exchange's redundant A/B feeds and arbitrates by sequence, acting on the first copy to arrive and discarding the duplicate, so loss on one path is usually covered by the other.",
           "On a genuine gap it enters recovery: request a retransmit of the missing messages if the exchange offers it, or re-sync from the snapshot channel (which periodically broadcasts full book state) and then re-apply incrementals from that point, buffering the live stream to replay once caught up. At startup it always begins from a snapshot before going live. Throughout, it monitors gap/recovery counters so a desync is detected immediately rather than silently corrupting the book."
         ],
-        "followups": ["How do you size the reorder/recovery buffers?", "What happens to the strategy during recovery?"]
+        "followups": [
+          "How do you size the reorder/recovery buffers?",
+          "What happens to the strategy during recovery?"
+        ]
       },
       {
         "id": "q-perf",
@@ -102,6 +125,19 @@
         "a": [
           "Fast: receive via kernel bypass into user-space buffers; parse zero-copy in place at fixed offsets with a branch-light switch/jump-table dispatch; allocate nothing on the hot path (pre-allocated event structs and pools); decode lazily (only fields you need); and batch-process bursts to stay cache-hot and amortize overhead. Pin it to an isolated core busy-polling the NIC.",
           "It breaks under bursts — auction opens/closes and news spikes push message rates far above average. If receive rings or downstream queues are undersized, you overflow and lose messages (forcing expensive recovery or, worse, a silent desync). The fixes are headroom (size for worst-case bursts), batching, back-pressure with a defined policy, and keeping per-message work minimal so catch-up is fast. Recovery logic is also a common correctness break point, so it must be tested against real loss scenarios."
+        ]
+      },
+      {
+        "id": "q-conflated",
+        "q": "What's the difference between an order-by-order (full-depth) feed and a conflated/aggregated feed, and how does it affect your design?",
+        "tag": "Architecture",
+        "a": [
+          "An order-by-order feed (e.g., Nasdaq ITCH) reports every individual order event — add/modify/delete with order ids — so you can reconstruct the full book *and* track individual orders' queue positions. An aggregated/level feed reports total size per price level (L2), not individual orders. A conflated feed deliberately *coalesces* updates over a short window (e.g., sends the latest state every few ms) to reduce bandwidth, so you lose intermediate states and exact timing.",
+          "Design impact: order-by-order requires more parsing/state (an order-id→node map, full book engine) but enables queue-position-aware market making and the finest microstructure signals — it's what HFT typically consumes. Aggregated/level feeds need less work and suffice for depth/imbalance signals without per-order tracking. Conflated feeds are unsuitable for latency-sensitive strategies (you can't see or react to intermediate book states and timing is blurred) — they're for display/less-sensitive use. So you choose the feed type your strategy needs: full-depth order-by-order for queue-aware HFT, accepting the extra parsing and state cost; lighter feeds when you only need aggregates and want less bandwidth/work."
+        ],
+        "followups": [
+          "Which feed lets you track your own queue position?",
+          "Why is a conflated feed bad for HFT?"
         ]
       }
     ],
@@ -120,14 +156,46 @@
             "Recovery state machine: state ∈ {INIT, LIVE, RECOVERING}. At INIT, load the latest snapshot to build the book, note its sequence, then transition to LIVE applying incrementals from that seq. In LIVE, a true gap (neither feed delivered seq) → RECOVERING: keep buffering the live stream, request retransmit or re-subscribe to the snapshot channel, rebuild/patch state, then replay buffered messages from the recovered sequence forward and return to LIVE.",
             "Downstream behavior: in LIVE, the book applies each normalized event in order. During RECOVERING, the handler signals 'stale' so the strategy stops quoting (or quotes conservatively) until the book is known-good again — never trade on a desynced book. Monitor: gap count, recovery count/duration, per-feed arrival skew, message-type rates, and a periodic consistency check; alert on any gap that isn't covered by A/B."
           ],
-          "complexity": { "time": "~tens of ns/msg in LIVE; recovery bounded by snapshot size", "space": "Pre-allocated events + reorder window + live replay buffer" }
+          "complexity": {
+            "time": "~tens of ns/msg in LIVE; recovery bounded by snapshot size",
+            "space": "Pre-allocated events + reorder window + live replay buffer"
+          }
+        }
+      },
+      {
+        "id": "p-burst",
+        "title": "Survive an auction-open message burst",
+        "difficulty": "Advanced",
+        "statement": "Your feed handler keeps up at the 1M msg/s average but drops messages during the open when rates spike to 5M msg/s for a few hundred milliseconds. Dropping forces expensive recovery and risks a desync. Redesign so the burst becomes a brief catch-up instead of a loss event. Address buffering, batching, the downstream hand-off, and back-pressure policy.",
+        "hint": "Size receive rings for the peak (not the average), batch-process, keep per-message work minimal, and define what happens if downstream can't keep up.",
+        "tests": "Designing a feed handler for worst-case bursts.",
+        "solution": {
+          "approach": [
+            "Size for the peak, not the average: the NIC receive rings and the handler's input buffers must hold the worst-case burst (5M/s × the burst duration + safety margin), so packets queue briefly rather than being dropped. Bandwidth/headroom must support the peak too (a 5M × 50B = 250MB/s ≈ 2Gbit/s peak needs 10GbE-class hardware with room).",
+            "Batch-process to raise effective throughput during the burst: read and parse messages in batches (amortize per-message overhead, keep instructions and ring data cache-hot), which is exactly when per-message cost should drop. Keep per-message work minimal (zero-copy parse, no allocation, decode only needed fields) so a single pinned core can drain the backlog quickly once the burst passes — turning the spike into a sub-second catch-up rather than overflow.",
+            "Downstream hand-off and back-pressure: the SPSC ring(s) to the book/strategy must also be sized for the burst. Define an explicit policy if a downstream consumer can't keep up: either apply back-pressure (the handler slows/queues, acceptable if it can still avoid dropping the *input* by buffering), or a controlled drop with a clear signal (e.g., drop to the strategy but never lose sequencing state, marking 'behind'); never silently overflow into a desync. For market data you generally must not lose sequence continuity — if you truly can't keep up, you mark 'stale' and recover via snapshot, but the goal of sizing+batching is to make that unnecessary during normal opens.",
+            "Net: peak-sized buffers + batching + minimal per-message work + isolated pinned core converts the auction burst into a brief, bounded catch-up. You validate by replaying recorded open data at 5M/s and confirming zero drops and bounded catch-up latency, with gap counters at zero."
+          ],
+          "complexity": {
+            "time": "drains burst in O(burst) at minimal per-msg cost",
+            "space": "rings sized for peak burst"
+          }
         }
       }
     ]
   },
   "resources": [
-    { "title": "Nasdaq TotalView-ITCH & CME MDP 3.0 / SBE specifications", "note": "Real wire formats a feed handler parses, including sequencing and recovery channels." },
-    { "title": "SBE (Simple Binary Encoding) and FAST", "note": "Encodings designed for low-latency, zero-copy decode." },
-    { "title": "Open-source feed handlers / matching engines on GitHub", "note": "Study production-style parse + sequencing + recovery code." }
+    {
+      "title": "Nasdaq TotalView-ITCH & CME MDP 3.0 / SBE specifications",
+      "note": "Real wire formats a feed handler parses, including sequencing and recovery channels."
+    },
+    {
+      "title": "SBE (Simple Binary Encoding) and FAST",
+      "note": "Encodings designed for low-latency, zero-copy decode."
+    },
+    {
+      "title": "Open-source feed handlers / matching engines on GitHub",
+      "note": "Study production-style parse + sequencing + recovery code."
+    }
   ]
 }

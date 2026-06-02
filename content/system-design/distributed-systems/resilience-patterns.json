@@ -1,0 +1,123 @@
+{
+  "slug": "resilience-patterns",
+  "sectionId": "distributed-systems",
+  "order": 7,
+  "title": "Resilience Patterns",
+  "tagline": "Timeouts, retries with backoff, circuit breakers, bulkheads, and backpressure — how systems fail gracefully instead of cascading.",
+  "summary": "Timeouts, retries+backoff, circuit breakers, bulkheads, backpressure.",
+  "difficulty": "Intermediate",
+  "estMinutes": 16,
+  "tags": ["distributed", "reliability"],
+  "prereqs": ["availability-reliability", "idempotency"],
+  "sections": [
+    {
+      "id": "cascading",
+      "title": "How one failure takes down everything",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "In a system of dependent services, a single slow or failing dependency can cascade into total collapse. Service A calls slow service B; A's threads/connections pile up waiting on B; A runs out of resources and becomes unresponsive; A's callers then back up too — and the whole chain falls like dominoes. The goal of resilience patterns is to **contain failure** so a sick dependency degrades gracefully instead of sinking the ship."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "timeouts-retries",
+      "title": "Timeouts & retries with backoff",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Timeouts", "detail": "Never wait indefinitely on a dependency. Set aggressive timeouts so a stuck call fails fast and frees resources. A missing timeout is one of the most common causes of cascading failure." },
+            { "term": "Retries", "detail": "Transient failures (a blip, a brief overload) often succeed on retry. But retry only idempotent operations, and cap the number of attempts." },
+            { "term": "Exponential backoff", "detail": "Wait increasingly longer between retries (1s, 2s, 4s, …) so you don't hammer a struggling service." },
+            { "term": "Jitter", "detail": "Add randomness to backoff so thousands of clients don't retry in lockstep and create a synchronized 'retry storm' that re-overloads the recovering service." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Retries can make outages worse",
+          "text": "Naive retries amplify load on an already-overloaded service (a retry storm), turning a partial outage into a total one. Always pair retries with backoff + jitter, a max attempt cap, and ideally a circuit breaker — and never retry non-idempotent operations without an idempotency key."
+        }
+      ]
+    },
+    {
+      "id": "circuit-breaker",
+      "title": "Circuit breakers",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Borrowed from electrical engineering: a **circuit breaker** monitors calls to a dependency and 'trips' when failures exceed a threshold. While tripped (open), calls fail instantly (or return a fallback) *without* even attempting the dead dependency — giving it room to recover and protecting the caller's resources. After a cooldown it goes 'half-open', letting a few test calls through; if they succeed it closes (resumes normal), if not it re-opens."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Closed", "detail": "Normal operation; requests flow; failures are counted." },
+            { "term": "Open", "detail": "Threshold exceeded → fail fast immediately (or serve fallback), don't call the dependency." },
+            { "term": "Half-open", "detail": "After cooldown, allow a trickle of test requests to check if the dependency recovered." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Pair circuit breakers with graceful degradation: when the breaker is open, return cached/stale data, a default, or a reduced experience instead of an error. 'Fail fast + fall back' beats 'wait and cascade'."
+        }
+      ]
+    },
+    {
+      "id": "isolation-backpressure",
+      "title": "Bulkheads & backpressure",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Bulkhead isolation", "detail": "Like watertight compartments in a ship: isolate resources (separate thread pools / connection pools per dependency) so one saturated dependency can't consume all of a service's threads and starve the others. One leak floods one compartment, not the whole hull." },
+            { "term": "Backpressure", "detail": "When a consumer can't keep up, signal upstream to slow down (bounded queues that reject when full, flow control) rather than buffering infinitely until memory explodes. The system pushes back instead of falling over." },
+            { "term": "Load shedding", "detail": "Under extreme load, deliberately drop or reject low-priority requests (return 429/503) to protect the system's ability to serve the rest. Better to serve 90% well than 100% badly." },
+            { "term": "Rate limiting", "detail": "Cap inbound request rates (see the rate-limiting lesson) to keep load within capacity." }
+          ]
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "A single slow/failing dependency can cascade — resilience patterns contain failure.",
+    "Always set timeouts (fail fast, free resources); retry only idempotent ops, capped, with exponential backoff + jitter.",
+    "Naive retries cause retry storms that worsen outages — backoff + jitter + circuit breaker required.",
+    "Circuit breaker: closed → open (fail fast on threshold) → half-open (test) — protects caller and lets the dependency recover.",
+    "Bulkheads isolate resources per dependency; backpressure/load-shedding reject excess instead of buffering to death.",
+    "Combine with graceful degradation: serve cached/default/reduced responses when a dependency is down."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "A downstream recommendation service slows to a crawl, and soon your entire product-page service is unresponsive — even though recommendations are a non-critical sidebar widget. What went wrong and how do you prevent it?",
+      "hint": "Where did the product-page threads go, and why should a non-critical widget take down the page?",
+      "answer": [
+        "The product-page service called the recommendation service synchronously with no (or too-long) timeout, so its threads/connections piled up waiting on the slow dependency until the pool was exhausted — making the *whole* page service unresponsive. A non-critical widget brought down a critical page because failure wasn't contained.",
+        "Prevent it with several layers: (1) a tight **timeout** so slow recommendation calls fail fast; (2) a **circuit breaker** that, after enough failures, stops calling recommendations entirely and returns instantly; (3) **graceful degradation** — render the page without the recommendations widget (or with cached recs) instead of failing; (4) **bulkhead isolation** so recommendation calls use a separate, bounded thread pool that can't starve the page-rendering threads. The principle: a non-critical dependency must never be able to take down a critical path."
+      ],
+      "keyPoints": ["No/long timeout → thread pool exhausted waiting on slow dep", "Add tight timeouts (fail fast)", "Circuit breaker + graceful degradation (drop widget / cached recs)", "Bulkhead: isolate recommendation calls in their own pool"],
+      "followUps": ["How would you decide the timeout value for the recommendation call?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "Why must retries use exponential backoff with jitter rather than retrying immediately and uniformly?",
+      "hint": "Imagine thousands of clients all retrying at the same instant against a recovering service.",
+      "answer": [
+        "Immediate, uniform retries pile even more load onto a service that's already struggling — a 'retry storm' that can keep it (or push it back) into overload, turning a transient blip into a sustained outage. And if many clients fail at the same moment and retry on the same fixed schedule, they retry in lockstep, hitting the recovering service with synchronized spikes.",
+        "Exponential backoff spaces out retries with growing delays so load decreases over time and the dependency gets room to recover. Jitter (randomized delay) de-synchronizes the clients so their retries spread out instead of arriving all at once. Together they let the system recover instead of self-inflicting a thundering herd."
+      ],
+      "keyPoints": ["Immediate retries amplify load → retry storm worsens outage", "Lockstep retries cause synchronized spikes", "Exponential backoff reduces load over time", "Jitter de-synchronizes clients to spread retries"],
+      "followUps": ["How does a circuit breaker complement backoff during a longer outage?"]
+    }
+  ]
+}

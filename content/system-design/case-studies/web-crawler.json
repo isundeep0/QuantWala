@@ -1,0 +1,204 @@
+{
+  "slug": "web-crawler",
+  "sectionId": "case-studies",
+  "order": 8,
+  "title": "Design a Web Crawler",
+  "tagline": "A polite, distributed crawler that fetches billions of pages without melting the internet — or itself.",
+  "summary": "BFS frontier, politeness, dedup, distributed workers, traps.",
+  "difficulty": "Intermediate",
+  "estMinutes": 26,
+  "tags": ["case-study", "must-know"],
+  "prereqs": ["message-queues", "consistent-hashing", "blob-storage"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Clarify requirements",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A web crawler systematically downloads web pages, starting from a set of seed URLs and following links. It's used for search-engine indexing, web archiving, data mining, and monitoring. Scope it before designing — crawlers have wildly different requirements."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Given seed URLs, download the pages and extract links to discover new URLs.",
+            "Repeat: a giant breadth-first traversal of the web graph.",
+            "Store the page content (for an indexer or archive)."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Scalable — must crawl billions of pages.",
+            "Polite — never hammer a single site; respect robots.txt and rate limits.",
+            "Robust — survive malformed HTML, crawler traps, slow servers, duplicate content.",
+            "Extensible — easy to add new content types or processing modules.",
+            "Freshness — re-crawl pages so the index doesn't go stale."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "The two ideas that signal maturity here are politeness (you can crash a small website if you crawl it carelessly) and the scale of dedup (you'll see the same URL and the same content millions of times). Lead with those."
+        }
+      ]
+    },
+    {
+      "id": "estimation",
+      "title": "2. Back-of-the-envelope",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Pages", "detail": "Target 1B pages/month → 1e9 / 2.5e6 sec ≈ ~400 pages/sec average; design for 2× peak (~800/sec)." },
+            { "term": "Storage", "detail": "Average page ~500 KB compressed-ish → 1B × 500 KB = 500 TB/month of raw content. Store in blob storage (S3/HDFS), not a DB." },
+            { "term": "Frontier", "detail": "Billions of URLs queued. URLs are ~100 bytes → tens of GB of URLs in flight; mostly on disk, hot portion in memory." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "3. High-level design",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "At its core the crawler is a loop over a queue (the *URL frontier*): pop a URL, download it, extract links, push new URLs back. Everything else exists to make that loop scalable, polite, and robust."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "A pipeline of stages connected by the URL frontier and dedup checks.",
+          "direction": "lr",
+          "groups": [
+            { "label": "Seed", "nodes": [{ "label": "Seed URLs", "icon": "Globe", "accent": "#0ea5e9" }] },
+            { "label": "Frontier", "nodes": [{ "label": "URL Frontier", "sub": "priority + politeness queues", "icon": "Layers", "accent": "#8b5cf6" }] },
+            { "label": "Fetch", "nodes": [{ "label": "HTML Downloader", "sub": "+ DNS resolver", "icon": "Server", "accent": "#d97706" }] },
+            { "label": "Process", "nodes": [{ "label": "Parser", "sub": "extract links" }, { "label": "Content dedup", "sub": "checksum" }] },
+            { "label": "Store", "nodes": [{ "label": "Blob store", "sub": "page content", "icon": "Database", "accent": "#10b981" }, { "label": "URL-seen?", "sub": "bloom filter", "icon": "Filter", "accent": "#f59e0b" }] }
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Pop URL", "detail": "Take the next URL from the frontier (respecting priority and politeness)." },
+            { "title": "DNS resolve + download", "detail": "Resolve the host (cache DNS!) and fetch the HTML over HTTP with timeouts." },
+            { "title": "Content-seen check", "detail": "Compute a checksum/hash of the content. If we've stored identical content before (mirror/duplicate), skip storing it." },
+            { "title": "Parse & extract links", "detail": "Parse HTML, extract outbound URLs, normalize them (resolve relative paths, strip fragments)." },
+            { "title": "URL-seen filter", "detail": "For each extracted URL, check a 'URL seen' set (Bloom filter / hash store). If new, add to the frontier." },
+            { "title": "Store", "detail": "Write the page content to blob storage for downstream indexing." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "frontier",
+      "title": "4. The URL frontier (politeness + priority)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The frontier is the heart of the design. It's not a simple FIFO queue — it must enforce *politeness* (don't overload any one host) and *priority* (crawl important/fresh pages first). The classic Mercator design uses two layers of queues."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Politeness (back queues)", "detail": "Maintain a set of queues where each queue maps to a single host, and a worker thread is bound to one queue. A queue is only dequeued after a polite delay (e.g., 1 request/sec per host). This guarantees we never hit one site with parallel requests." },
+            { "term": "Priority (front queues)", "detail": "A prioritizer assigns each URL a priority (based on PageRank, update frequency, freshness need) and routes it into one of N priority queues. Higher-priority queues are selected more often." },
+            { "term": "Storage", "detail": "Billions of URLs won't fit in memory — keep the bulk on disk and buffer the head/tail in memory for speed." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Politeness is per-host, not global",
+          "text": "Mapping each host to a dedicated queue handled by one worker is the trick: it serializes requests to a host (polite) while letting thousands of workers crawl thousands of different hosts in parallel (fast). Always check robots.txt first and cache it per host."
+        }
+      ]
+    },
+    {
+      "id": "dedup-traps",
+      "title": "5. Dedup, traps & robustness",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "URL dedup", "detail": "Before queuing, check if a URL was already seen. A Bloom filter gives a memory-efficient probabilistic check (tiny false-positive rate, never false negatives) over billions of URLs; back it with a hash store for certainty if needed." },
+            { "term": "Content dedup", "detail": "Different URLs often serve identical content (mirrors, www vs non-www, tracking params). Hash the content (e.g., MD5 / SimHash for near-duplicates) and skip storing duplicates." },
+            { "term": "Crawler traps", "detail": "Infinitely deep URLs (calendars, dynamically generated link mazes) can trap a crawler. Defend with max URL length, max depth per domain, and per-domain page caps." },
+            { "term": "Robustness", "detail": "Set timeouts on slow servers, handle malformed HTML gracefully, retry transient failures with backoff, and checkpoint frontier state so a crash doesn't lose progress." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "DNS is a hidden bottleneck",
+          "text": "DNS resolution is synchronous and slow (tens of ms). At hundreds of pages/sec it becomes a bottleneck. Cache DNS results aggressively and run a dedicated, possibly async, DNS resolver."
+        }
+      ]
+    },
+    {
+      "id": "scaling",
+      "title": "6. Scaling & distribution",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Distribute by host", "detail": "Shard URLs across crawler workers by hash of the hostname (consistent hashing). This naturally keeps all of one host's URLs on one worker — preserving politeness — and balances load across the cluster." },
+            { "term": "Decouple stages with queues", "detail": "Downloader → parser → storage are connected via message queues so each stage scales independently and slow stages apply backpressure rather than dropping work." },
+            { "term": "Freshness", "detail": "Re-crawl pages on a schedule weighted by how often they change (a news homepage hourly, a static archive monthly). Track last-modified / ETag to skip unchanged pages cheaply." },
+            { "term": "Storage tier", "detail": "Raw pages → blob storage (S3/HDFS); extracted links/metadata → a scalable store; the 'seen' set → a distributed Bloom filter or key-value store." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "If asked to extend it: mention focused/incremental crawling (only re-crawl changed pages), distributed coordination so two workers never crawl the same URL, and separating the crawl from the index build (the crawler produces a stream of pages; an offline pipeline builds the inverted index)."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Crawler = loop over a URL frontier: pop → download → parse → extract links → dedup → enqueue → store.",
+    "Politeness: map each host to a dedicated queue served by one worker + a per-host delay; always honor robots.txt.",
+    "Priority: front queues weighted by importance/freshness route URLs before the politeness (back) queues.",
+    "URL dedup with a Bloom filter (memory-efficient, no false negatives); content dedup with a content hash / SimHash.",
+    "Defend against traps (max depth, URL length, per-domain caps) and cache DNS (hidden bottleneck).",
+    "Distribute by hash(hostname) so politeness is preserved per worker; store raw pages in blob storage.",
+    "Freshness via scheduled re-crawls weighted by change rate; use ETag/Last-Modified to skip unchanged pages."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Design",
+      "difficulty": "Medium",
+      "prompt": "How do you ensure your crawler is 'polite' and never overwhelms a single website, while still crawling fast overall?",
+      "hint": "Think about per-host serialization vs cross-host parallelism.",
+      "answer": [
+        "Politeness is a *per-host* constraint, not a global one. The standard approach: maintain a set of back queues where each queue holds URLs for exactly one host, and bind each worker thread to a single queue. The worker dequeues a URL, fetches it, then waits a politeness delay (e.g., 1 request/sec, or derive it from the site's response time) before taking the next. Because one host maps to one queue served by one worker, requests to that host are serialized — we never hit it in parallel.",
+        "Crucially, this doesn't slow the whole crawler: we run thousands of workers, each handling a different host, so we crawl thousands of sites concurrently while staying polite to each. We also fetch and cache robots.txt per host and obey its Crawl-delay and disallow rules. When sharding across machines, we shard by hash(hostname) so all of a host's URLs land on the same worker, preserving this guarantee."
+      ],
+      "keyPoints": ["Per-host queue served by one worker → serialized requests per host", "Politeness delay between requests (respect robots.txt Crawl-delay)", "Thousands of workers over thousands of hosts → still fast", "Shard by hash(hostname) to keep the per-host guarantee across machines"],
+      "followUps": ["How would you dynamically tune the politeness delay based on a server's response time or error rate?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Trade-off",
+      "difficulty": "Medium",
+      "prompt": "You need to check whether a URL has already been seen, across billions of URLs. Why use a Bloom filter, and what's the catch?",
+      "hint": "Probabilistic set membership with bounded memory.",
+      "answer": [
+        "A hash set of billions of URLs would consume huge memory (hundreds of GB). A Bloom filter is a compact probabilistic structure that answers 'have I seen this?' using a bit array and k hash functions, at a fixed small cost per element (a few bits). It never produces false negatives — if it says 'not seen', the URL is genuinely new — which is exactly the guarantee we need so we don't drop new URLs.",
+        "The catch is false positives: it may occasionally say 'seen' for a URL we haven't actually crawled, causing us to skip it. We tune the bit-array size and number of hashes to keep the false-positive rate tiny (e.g., <1%), accepting that we'll miss a negligible fraction of pages. If we need certainty, we back the Bloom filter with an authoritative hash store: the Bloom filter is a fast front-line filter, and only on a 'maybe seen' do we consult the store."
+      ],
+      "keyPoints": ["Hash set of billions of URLs = too much memory", "Bloom filter: bounded memory, no false negatives (won't drop new URLs)", "Trade-off: small false-positive rate → skip a tiny fraction of pages", "Back with an authoritative store if exactness is required"],
+      "followUps": ["How does content-level dedup (same page, different URL) differ, and what hashing would you use for near-duplicates?"]
+    }
+  ]
+}

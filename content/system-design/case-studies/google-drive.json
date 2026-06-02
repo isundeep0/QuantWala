@@ -1,0 +1,188 @@
+{
+  "slug": "google-drive",
+  "sectionId": "case-studies",
+  "order": 10,
+  "title": "Design a File Storage & Sync Service (Google Drive / Dropbox)",
+  "tagline": "Sync files across devices reliably and efficiently — the magic is in chunking, dedup, and delta sync.",
+  "summary": "Chunking, dedup, metadata vs blocks, delta sync, conflicts.",
+  "difficulty": "Advanced",
+  "estMinutes": 28,
+  "tags": ["case-study", "must-know"],
+  "prereqs": ["blob-storage", "message-queues", "consistency-models"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Clarify requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Upload/download files; access from any device.",
+            "Automatically sync changes across all of a user's devices.",
+            "Share files/folders with other users.",
+            "File history / revisions; offline edits that sync when back online."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Reliable — never lose or corrupt a file (durability is paramount).",
+            "Fast and bandwidth-efficient sync (don't re-upload a whole file for a one-line change).",
+            "Available and consistent enough that users trust it.",
+            "Scalable to billions of files and huge total storage."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Two ideas carry this design: (1) split files into chunks/blocks and only sync the chunks that changed (delta sync), and (2) cleanly separate the *metadata* service (small, transactional) from the *block storage* (huge, in blob storage). Lead with both."
+        }
+      ]
+    },
+    {
+      "id": "estimation",
+      "title": "2. Back-of-the-envelope",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Users & files", "detail": "Tens of millions of DAU, each with thousands of files → tens of billions of files and metadata rows." },
+            { "term": "Storage", "detail": "Average user storage in GBs × tens of millions of users → many petabytes. Blob storage, with dedup to cut waste from identical files." },
+            { "term": "Sync traffic", "detail": "Most syncs are small deltas, not full files — which is exactly why chunk-level diffing matters for bandwidth." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "3. High-level design",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The cleanest mental model: a file is a *list of block references* plus metadata. Blocks live in blob storage; the ordered list and all the bookkeeping live in a metadata database. A device syncs by comparing block lists."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "Metadata path and block path are separate. The notification service tells other devices to sync.",
+          "groups": [
+            { "label": "Devices", "nodes": [{ "label": "Client + watcher", "sub": "chunks files locally", "icon": "Smartphone", "accent": "#0ea5e9" }] },
+            { "label": "Edge", "nodes": [{ "label": "API / LB", "icon": "Scale", "accent": "#ef4444" }] },
+            { "label": "Services", "nodes": [{ "label": "Metadata Service", "sub": "file tree, versions", "icon": "Server", "accent": "#d97706" }, { "label": "Block Service", "sub": "upload/download chunks" }, { "label": "Notification Svc", "sub": "long-poll / push", "icon": "Bell", "accent": "#8b5cf6" }] },
+            { "label": "Stores", "nodes": [{ "label": "Metadata DB", "icon": "Database", "accent": "#10b981" }, { "label": "Block (blob) store", "sub": "+ dedup", "icon": "Cloud", "accent": "#f59e0b" }] }
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Client chunks the file", "detail": "The desktop/mobile client splits each file into fixed or content-defined blocks (e.g., ~4 MB) and computes a hash of each block." },
+            { "title": "Diff against server", "detail": "It asks the metadata service which blocks are already stored. Only *new/changed* blocks are uploaded to the block service → blob storage. Unchanged blocks are skipped entirely." },
+            { "title": "Commit metadata", "detail": "Once blocks are stored, the metadata service records the new file version as an ordered list of block hashes (transactionally)." },
+            { "title": "Notify other devices", "detail": "The notification service tells the user's other online devices that a change exists; they pull the new metadata, see which blocks they're missing, and download only those." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "delta-dedup",
+      "title": "4. Delta sync & deduplication",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Delta sync", "detail": "Because a file is a list of block hashes, editing one part of a large file changes only a few blocks. The client uploads just those blocks and updates the block list — turning a 2 GB re-upload into a few MB. This is the headline efficiency win." },
+            { "term": "Block-level dedup", "detail": "Identical blocks (same hash) are stored once globally. If a million users store the same popular PDF, you store its blocks once. Massive storage savings." },
+            { "term": "Compression & encryption", "detail": "Blocks are compressed and encrypted before storage. Dedup still works if done by hashing the content consistently (careful: per-user encryption can defeat cross-user dedup — a real trade-off between privacy and savings)." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Content-defined chunking",
+          "text": "Fixed-size chunks have a flaw: inserting one byte at the start shifts every subsequent chunk boundary, so every block hash changes and delta sync degrades to a full re-upload. Content-defined chunking (boundaries chosen by a rolling hash of the content) keeps boundaries stable across insertions — only the locally-changed region produces new blocks."
+        }
+      ]
+    },
+    {
+      "id": "conflicts-sync",
+      "title": "5. Conflicts, offline & notifications",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Detecting remote changes", "detail": "Online clients keep a long-poll/websocket connection to the notification service so they learn about changes near-instantly. Offline clients poll the metadata service on reconnect using a version cursor." },
+            { "term": "Offline edits", "detail": "The client queues changes locally while offline and replays them on reconnect, diffing block lists to upload only what changed." },
+            { "term": "Conflict resolution", "detail": "If two devices edit the same file concurrently, you get a conflict. Common strategies: last-writer-wins (simple, can lose data) or — Dropbox-style — keep both as 'conflicted copy' versions and let the user resolve. Versioning every change makes this safe and enables history/restore." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Metadata consistency matters more than block consistency",
+          "text": "Blocks are immutable content-addressed by hash, so they're easy. The hard part is the metadata: the file tree, version numbers, and sharing permissions need strong consistency (a transaction) so a device never sees a version pointing at blocks that aren't stored yet. Commit metadata only after all blocks are durably stored."
+        }
+      ]
+    },
+    {
+      "id": "scaling",
+      "title": "6. Scaling & reliability",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Separate scaling axes", "detail": "Metadata DB scales with number of files/operations (shard by user/account); block storage scales with raw bytes (blob storage scales effectively infinitely). They scale independently." },
+            { "term": "Durability", "detail": "Blob storage replicates blocks across AZs/regions (e.g., 11 nines of durability). Metadata DB is replicated with backups. Never acknowledge a save until it's durable." },
+            { "term": "Hot path = metadata + notifications", "detail": "Most sync traffic is small metadata diffs and notifications, not bytes; keep those services fast and horizontally scalable." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "title": "Senior framing",
+          "text": "Emphasize: content-addressed immutable blocks make storage, dedup, and caching trivial; the genuinely hard, stateful part is the strongly-consistent metadata layer plus conflict handling. Knowing where to put the complexity (and where not to) is the senior signal."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Model a file as metadata + an ordered list of content-hashed blocks; store blocks in blob storage.",
+    "Separate the Metadata Service (small, transactional, sharded by user) from the Block Service (huge, blob storage).",
+    "Delta sync: only upload/download the blocks whose hash changed — turns a full re-upload into a few MB.",
+    "Block-level dedup: identical blocks stored once globally (big storage savings).",
+    "Content-defined chunking keeps boundaries stable so a single insertion doesn't re-hash the whole file.",
+    "Online devices long-poll/websocket a notification service; offline devices replay queued edits on reconnect.",
+    "Commit metadata only after blocks are durable; resolve concurrent edits via versioning / conflicted copies."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Design",
+      "difficulty": "Hard",
+      "prompt": "A user changes one paragraph in a 1 GB document. How do you sync that efficiently to their other devices instead of re-uploading 1 GB?",
+      "hint": "Files as block lists + content-defined chunking + delta sync.",
+      "answer": [
+        "Files aren't stored as monoliths — the client splits each file into blocks (~4 MB) using content-defined chunking, and a file is represented as an ordered list of block hashes. When the user edits one paragraph, only the block(s) containing that region change their hash; every other block's hash is unchanged.",
+        "On save, the client computes the new block list and asks the metadata service which block hashes are already stored. It uploads *only* the one or two changed blocks to the block service, then commits a new file version (the updated ordered list of hashes) transactionally in the metadata DB. A 1 GB file edit becomes a few-MB upload.",
+        "The notification service then tells the user's other online devices a new version exists. Each device pulls the new block list, compares it to what it already has locally, finds it's missing only those one-or-two blocks, downloads just those, and reconstructs the file. Content-defined chunking is what makes this robust even if the edit shifts bytes — boundaries are chosen by the content, so an insertion doesn't cascade into re-hashing the whole file."
+      ],
+      "keyPoints": ["File = ordered list of content-hashed blocks", "Only changed blocks get new hashes → upload just those (delta sync)", "Content-defined chunking prevents boundary-shift cascades", "Commit new version in metadata; notify devices to pull only missing blocks"],
+      "followUps": ["Why would fixed-size chunking perform badly here, and how does a rolling hash fix it?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "Two devices edit the same file while one is offline. They both come online. How do you avoid silently losing someone's work?",
+      "hint": "Versioning + conflict policy; don't blindly overwrite.",
+      "answer": [
+        "Every change creates a new version referencing the previous one, so the metadata service can detect when two edits branch from the same base version — that's a conflict. The dangerous (but simplest) policy is last-writer-wins: whichever commit arrives last overwrites, which silently loses the other user's work. To avoid data loss, the standard approach (à la Dropbox) is to keep *both*: accept one as the file's new version and save the other as a 'conflicted copy' (e.g., `report (Device-B's conflicted copy).docx`), letting the user merge manually.",
+        "Because all versions are retained, nothing is ever destroyed — users can also restore from history. The offline device queues its edits locally; on reconnect it diffs against the server's current version, discovers the base it edited is no longer the latest, and triggers the conflict path rather than blindly overwriting. For richer experiences (collaborative editing), you'd move to operational transforms / CRDTs, but for file sync, version-detection + conflicted copies is the pragmatic, lossless answer."
+      ],
+      "keyPoints": ["Version every change; detect when two edits share a base version", "Last-writer-wins is simple but loses data — avoid silent overwrite", "Keep both via 'conflicted copy' + retain history for restore", "Offline device diffs on reconnect, detects stale base, enters conflict path"],
+      "followUps": ["When would you reach for CRDTs / operational transforms instead of conflicted copies?"]
+    }
+  ]
+}

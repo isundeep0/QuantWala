@@ -1,0 +1,135 @@
+{
+  "slug": "scalability",
+  "sectionId": "fundamentals",
+  "order": 1,
+  "title": "Scalability",
+  "tagline": "Handling 10x the load without rewriting everything — vertical vs horizontal, and the rules that make scale-out work.",
+  "summary": "Vertical vs horizontal scaling and why stateless design matters.",
+  "difficulty": "Beginner",
+  "estMinutes": 16,
+  "tags": ["core", "scaling"],
+  "prereqs": ["scaling-from-zero-to-millions"],
+  "sections": [
+    {
+      "id": "definition",
+      "title": "What scalability means",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "**Scalability** is a system's ability to handle increasing load by adding resources — and ideally to do so *proportionally*: if you double the resources, you'd like to roughly double the capacity. 'Load' can mean more requests per second, more concurrent users, more data, or more complex operations.",
+            "A system is *not* scalable if the only way to serve more users is a full redesign, or if adding hardware yields diminishing or no returns (e.g., a single lock everyone contends on). Scalability is about graceful, predictable growth."
+          ]
+        },
+        {
+          "type": "analogy",
+          "text": "A restaurant that grows by buying a bigger stove (vertical) eventually hits the biggest stove made. A chain that grows by opening identical branches (horizontal) can serve a whole country — but now needs a system to coordinate menus, supplies, and branding across branches. Same trade-off as servers."
+        }
+      ]
+    },
+    {
+      "id": "vertical-horizontal",
+      "title": "Vertical vs horizontal scaling",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Vertical scaling (scale up)", "detail": "Make one machine more powerful — more CPU, RAM, faster disks. Dead simple: no code changes, no distributed-systems headaches. But there's a hard hardware ceiling, it's expensive at the top end, and that one machine is still a single point of failure." },
+            { "term": "Horizontal scaling (scale out)", "detail": "Add more machines and spread load across them with a load balancer. Effectively unlimited ceiling and fault-tolerant (one box dying isn't fatal). The cost: you must design for it — statelessness, data partitioning, and coordination across nodes." }
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["Aspect", "Vertical (scale up)", "Horizontal (scale out)"],
+          "rows": [
+            ["Ceiling", "Hard limit (biggest box)", "Effectively unlimited"],
+            ["Fault tolerance", "Poor — single point of failure", "Good — survives node loss"],
+            ["Complexity", "Low — no code changes", "Higher — needs stateless + coordination"],
+            ["Cost curve", "Cheap at first, expensive at the top", "Linear-ish with commodity hardware"],
+            ["Best for", "Databases early on, simple apps", "Stateless web/app tiers, big systems"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "The expected answer at scale is almost always horizontal scaling, because of the ceiling and the single-point-of-failure problem. But say it explicitly: 'I'd scale up first because it's simple, then scale out once we approach the machine's limits or need redundancy.'"
+        }
+      ]
+    },
+    {
+      "id": "stateless",
+      "title": "The rule that makes scale-out work: statelessness",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Horizontal scaling only works cleanly if any node can serve any request. That requires the app tier to be **stateless** — it keeps no per-user data between requests in local memory. Each request carries everything needed (or fetches it from a shared store), so the load balancer is free to send it anywhere.",
+            "Where does the state go? To a shared, scalable store: a distributed cache (e.g., Redis) for sessions, a database for durable data, object storage for files. The app servers become interchangeable, disposable workers — exactly what lets you autoscale them up and down with traffic."
+          ]
+        },
+        {
+          "type": "tradeoffs",
+          "title": "Sticky sessions (an alternative — usually avoided)",
+          "pros": ["No external session store needed", "Simple to bolt on"],
+          "cons": ["Load can become uneven (a 'whale' user pins one server)", "Losing a server logs out its users", "Defeats easy autoscaling and rolling deploys"]
+        }
+      ]
+    },
+    {
+      "id": "what-limits",
+      "title": "What actually limits scalability",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Shared mutable state", "detail": "A single database row, counter, or lock that everyone touches becomes a bottleneck no matter how many servers you add (think: a global 'likes' counter on a viral post)." },
+            { "term": "Stateful nodes", "detail": "Anything that pins a user to a specific machine limits where requests can go." },
+            { "term": "Synchronous coupling", "detail": "If service A blocks waiting on slow service B, A's capacity is capped by B. Async (queues) decouples them." },
+            { "term": "Coordination overhead", "detail": "More nodes means more communication; some algorithms get *slower* past a point (Amdahl's / Universal Scalability Law)." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Scaling reads vs writes",
+          "text": "Reads scale easily — add replicas and caches, since copies are cheap. Writes are the hard part: a single source of truth must stay consistent, so scaling writes usually means **sharding** (splitting data by key across many primaries), which adds real complexity. When asked to scale, separate the two: reads first, then writes."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Scalability = handle more load by adding resources, ideally proportionally.",
+    "Vertical = bigger box (simple, capped, SPOF). Horizontal = more boxes + LB (the real answer at scale).",
+    "Horizontal scaling needs **stateless** app servers — push state to a shared cache/DB.",
+    "Reads scale with replicas + caches; writes scale with sharding (much harder).",
+    "Watch for bottlenecks: shared mutable state, single locks/counters, synchronous coupling."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "When would you *prefer* vertical scaling even though horizontal scales further?",
+      "hint": "Think about complexity, team size, and the type of workload.",
+      "answer": [
+        "Prefer vertical scaling when simplicity outweighs the ceiling: early-stage products, small teams, or workloads that are genuinely hard to distribute — classically a relational database that relies on transactions and joins. Buying a bigger DB box buys time without the complexity of sharding.",
+        "It's also the right first move generally: scale up until you approach the machine's limits or need redundancy, *then* invest in scaling out. Reaching for distributed complexity prematurely is a common over-engineering mistake."
+      ],
+      "keyPoints": ["Simplicity for small teams/early stage", "Databases are hard to scale out (transactions/joins)", "Scale up first, out later", "Avoid premature distributed complexity"],
+      "followUps": ["At what point would you be forced to scale the database out?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "A viral post gets 1M likes in a minute. Your single 'likes' counter row is the bottleneck. How do you scale that write?",
+      "hint": "The problem is contention on one row. How do you spread or batch it?",
+      "answer": [
+        "The issue is write contention on a single hot key. Options, often combined: (1) **Shard the counter** — keep N sub-counters (e.g., counter_0..counter_15), increment a random one, and sum them on read. This spreads writes across N rows/keys. (2) **Batch/aggregate in memory or a queue** — buffer increments and flush periodically, trading real-time exactness for throughput. (3) Use a store built for atomic counters (e.g., Redis `INCR`) and persist asynchronously.",
+        "State the trade-off: you're sacrificing a single perfectly-consistent number for throughput, accepting slightly stale/approximate counts on read — which is fine for a like count."
+      ],
+      "keyPoints": ["Identify single-row write contention", "Shard the counter into N keys, sum on read", "Or batch/aggregate increments", "Accept approximate/eventually-consistent count for throughput"],
+      "followUps": ["How would you display an exact count vs an approximate one?", "How does this relate to consistent hashing?"]
+    }
+  ]
+}

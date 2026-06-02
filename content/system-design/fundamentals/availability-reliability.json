@@ -1,0 +1,147 @@
+{
+  "slug": "availability-reliability",
+  "sectionId": "fundamentals",
+  "order": 2,
+  "title": "Availability, Reliability & Fault Tolerance",
+  "tagline": "The 'nines', SLAs vs SLOs vs SLIs, and how redundancy keeps a system up when parts fail.",
+  "summary": "The nines, SLA/SLO/SLI, redundancy and failover.",
+  "difficulty": "Beginner",
+  "estMinutes": 18,
+  "tags": ["core", "reliability"],
+  "prereqs": ["scalability"],
+  "sections": [
+    {
+      "id": "definitions",
+      "title": "Availability vs reliability (they're different)",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Availability", "detail": "The fraction of time the system is *up and serving requests*. Measured as a percentage of uptime over a window (the famous 'nines')." },
+            { "term": "Reliability", "detail": "The probability the system performs *correctly* over a period without failing. A system can be available but unreliable (it responds, but with wrong/corrupt results)." },
+            { "term": "Fault tolerance", "detail": "The system keeps working *despite* component failures — achieved through redundancy and failover, so no single failure takes everything down." },
+            { "term": "Durability", "detail": "Once data is acknowledged as written, it is not lost — even through crashes (achieved via replication and persistent storage)." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Reliable usually implies available, but not vice versa. A vending machine that always dispenses the wrong snack is 'available' but useless. In interviews, when asked for high availability, also reason about correctness and durability."
+        }
+      ]
+    },
+    {
+      "id": "nines",
+      "title": "The 'nines' of availability",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Availability is quoted as a number of nines. Each extra nine cuts allowed downtime by ~10x and gets dramatically more expensive and operationally demanding. Know these by heart — they come up constantly."
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["Availability", "Name", "Downtime / year", "Downtime / day"],
+          "rows": [
+            ["99%", "two nines", "~3.65 days", "~14.4 min"],
+            ["99.9%", "three nines", "~8.77 hours", "~1.44 min"],
+            ["99.99%", "four nines", "~52.6 min", "~8.6 sec"],
+            ["99.999%", "five nines", "~5.26 min", "~0.86 sec"]
+          ],
+          "caption": "Most consumer products target 3–4 nines. 'Five nines' is reserved for critical infrastructure and is very costly to sustain."
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Availability multiplies in series",
+          "text": "If a request must pass through 3 independent components each at 99.9%, the end-to-end availability is 0.999³ ≈ 99.7% — *worse* than any single piece. Long synchronous dependency chains erode availability. This is a strong argument for fewer hops and for graceful degradation."
+        }
+      ]
+    },
+    {
+      "id": "sla-slo-sli",
+      "title": "SLA, SLO, SLI",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "SLI — Indicator", "detail": "A *measured* number: e.g., 'p99 latency = 240 ms' or 'success rate = 99.95%'. The raw signal." },
+            { "term": "SLO — Objective", "detail": "Your *internal target* for an SLI: e.g., 'p99 latency < 300 ms' or 'availability ≥ 99.9% monthly'. What you hold yourselves to." },
+            { "term": "SLA — Agreement", "detail": "A *contract* with customers, usually with penalties (refunds) if missed. SLAs are set looser than SLOs so you have headroom before breaching the contract." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "A clean line to drop: 'SLIs are what we measure, SLOs are the targets we set internally, and the SLA is the customer-facing promise with penalties. We keep SLOs stricter than the SLA to give ourselves a safety margin.'"
+        },
+        {
+          "type": "text",
+          "paragraphs": [
+            "The gap between perfect and your SLO is the **error budget**. If your SLO is 99.9% availability, you have ~0.1% (≈ 43 min/month) to 'spend' on deploys, experiments, and incidents. Error budgets let teams balance shipping speed against reliability rationally instead of arguing about it."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "achieving",
+      "title": "How you actually achieve high availability",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Eliminate single points of failure (SPOF)", "detail": "Anything with only one instance — a lone server, a single load balancer, one database primary — can take the whole system down. Add redundancy to each." },
+            { "term": "Redundancy + failover", "detail": "Run standby/secondary instances. On failure, automatically promote a standby (active-passive) or already serve from multiple (active-active). Health checks detect dead nodes." },
+            { "term": "Replication across failure domains", "detail": "Spread replicas across availability zones / regions so a data-center outage doesn't take all copies." },
+            { "term": "Graceful degradation", "detail": "When a dependency is down, serve a reduced experience (cached/stale data, hide a non-critical feature) instead of failing the whole request." },
+            { "term": "Resilience patterns", "detail": "Timeouts, retries with backoff, circuit breakers, and bulkheads stop one slow/failing dependency from cascading into total failure." }
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["Failover model", "How it works", "Trade-off"],
+          "rows": [
+            ["Active–passive", "Standby idle until primary fails, then promoted", "Simpler; brief failover gap; idle capacity"],
+            ["Active–active", "All nodes serve traffic simultaneously", "No idle capacity, instant failover; needs conflict handling + more coordination"]
+          ]
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Availability = % uptime; reliability = correctness over time; durability = acknowledged data is never lost.",
+    "Know the nines: 99.9% ≈ 8.8 h/yr, 99.99% ≈ 52 min/yr, 99.999% ≈ 5 min/yr.",
+    "Availability multiplies in series — long synchronous chains lower it; minimise hops.",
+    "SLI = measured, SLO = internal target, SLA = customer contract with penalties (keep SLO stricter).",
+    "Achieve HA by removing SPOFs: redundancy + automatic failover across availability zones, plus graceful degradation."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "A request flows through a load balancer (99.99%), app server (99.95%), and database (99.9%), all in series. Roughly what's the end-to-end availability, and what does that teach you?",
+      "hint": "Multiply the probabilities; series dependencies compound.",
+      "answer": [
+        "Multiply: 0.9999 × 0.9995 × 0.999 ≈ 0.9984, or about 99.84% — lower than any individual component. Each synchronous hop can only *reduce* availability.",
+        "The lesson: minimise the number of components on the critical synchronous path, add redundancy so a tier's effective availability rises, and use graceful degradation so a single dependency failure doesn't fail the whole request. This is why teams obsess over removing SPOFs and shortening dependency chains."
+      ],
+      "keyPoints": ["Series availabilities multiply", "End-to-end is worse than the weakest link", "Reduce hops, add redundancy per tier", "Graceful degradation to decouple failures"],
+      "followUps": ["How does running components in parallel (redundant) change the math?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Trade-off",
+      "difficulty": "Medium",
+      "prompt": "Compare active-passive and active-active failover. Which gives better availability, and what's the catch?",
+      "hint": "Think about failover time and what happens when both sides accept writes.",
+      "answer": [
+        "Active-active generally gives better availability: all nodes serve traffic, so a node loss means near-instant rerouting with no cold-standby promotion delay, and capacity isn't sitting idle. Active-passive is simpler but has a brief outage window during detection + promotion, and the standby's capacity is wasted until needed.",
+        "The catch with active-active is correctness: when multiple nodes accept writes, you must handle conflicting updates and keep data consistent (conflict resolution, or partitioning writes so each key has one owner). That coordination complexity is the price of the better availability."
+      ],
+      "keyPoints": ["Active-active: instant reroute, no idle capacity, better availability", "Active-passive: simpler, failover gap, idle standby", "Active-active needs conflict resolution / consistency handling"],
+      "followUps": ["How would you detect that the primary is actually dead and not just slow?"]
+    }
+  ]
+}

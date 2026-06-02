@@ -1,0 +1,190 @@
+{
+  "slug": "video-streaming",
+  "sectionId": "case-studies",
+  "order": 9,
+  "title": "Design a Video Streaming Service (YouTube / Netflix)",
+  "tagline": "Upload once, transcode into many formats, and stream smoothly to millions over a CDN.",
+  "summary": "Upload pipeline, transcoding, adaptive bitrate, CDN, metadata.",
+  "difficulty": "Advanced",
+  "estMinutes": 30,
+  "tags": ["case-study", "must-know"],
+  "prereqs": ["cdn", "blob-storage", "message-queues"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Clarify requirements",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A video platform has two very different sides: a heavy, asynchronous *upload + processing* path, and a massive-scale, latency-sensitive *streaming* path. Decide which you're being asked to focus on — usually both, but streaming is the headline."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Users upload videos.",
+            "Users watch (stream) videos smoothly on any device/network.",
+            "Search, recommendations, view counts, likes/comments (often out of scope to keep focus)."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Highly available and globally low-latency for playback.",
+            "Smooth playback that adapts to changing network conditions (no buffering).",
+            "Reliable uploads (resumable for large files).",
+            "Cost-efficient at petabyte scale of storage and bandwidth."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "The single most important insight: you never stream the user's original file. You transcode every upload into multiple resolutions/codecs split into small chunks, and serve those chunks from a CDN. State this early — it drives the whole design."
+        }
+      ]
+    },
+    {
+      "id": "estimation",
+      "title": "2. Back-of-the-envelope",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Read-heavy", "detail": "Watches ≫ uploads (think 100:1 or more). Optimize relentlessly for the streaming path." },
+            { "term": "Bandwidth dominates", "detail": "If 1M concurrent viewers each pull ~5 Mbps (HD), that's ~5 Tbps of egress. This is why a CDN is non-negotiable — origin servers could never serve this." },
+            { "term": "Storage", "detail": "Each upload is stored once as the original, then in ~5 resolutions × multiple codecs as chunked segments → original size is multiplied several times. Petabytes. Use blob storage with tiered/cold storage for rarely-watched videos." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "upload",
+      "title": "3. Upload & transcoding pipeline",
+      "blocks": [
+        {
+          "type": "diagram",
+          "caption": "Uploads land in blob storage, then a queue-driven transcoding pipeline produces streamable chunks.",
+          "direction": "lr",
+          "groups": [
+            { "label": "Creator", "nodes": [{ "label": "Uploader", "icon": "Smartphone", "accent": "#0ea5e9" }] },
+            { "label": "Ingest", "nodes": [{ "label": "Upload Service", "sub": "presigned URL", "icon": "Server", "accent": "#d97706" }] },
+            { "label": "Raw", "nodes": [{ "label": "Blob store", "sub": "original file", "icon": "Database", "accent": "#10b981" }] },
+            { "label": "Process", "nodes": [{ "label": "Transcoding queue", "icon": "ListOrdered", "accent": "#8b5cf6" }, { "label": "Transcoder workers", "sub": "DAG of jobs" }] },
+            { "label": "Output", "nodes": [{ "label": "Chunked renditions", "sub": "240p…4K, HLS/DASH", "icon": "Film", "accent": "#f59e0b" }, { "label": "CDN", "icon": "Globe", "accent": "#ef4444" }] }
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Resumable upload", "detail": "Client gets a presigned URL and uploads the original file directly to blob storage in chunks (resumable so a dropped connection doesn't restart a 4 GB upload)." },
+            { "title": "Enqueue transcode job", "detail": "On upload completion, publish a job to a queue. This decouples the slow processing from the upload request — the user gets an immediate 'processing' response." },
+            { "title": "Transcode (a DAG of tasks)", "detail": "Workers transcode the original into multiple resolutions (240p→4K) and codecs (H.264, VP9, AV1), and split each into small segments (e.g., 2–10s chunks). Steps like thumbnail generation, content moderation, and watermarking run as parallel stages in the pipeline." },
+            { "title": "Publish manifest", "detail": "Generate an adaptive-streaming manifest (HLS .m3u8 / MPEG-DASH .mpd) listing the available bitrates and chunk URLs. Push chunks to the CDN; mark the video 'ready' in the metadata DB." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Why chunk the video?",
+          "text": "Splitting each rendition into small segments enables (1) parallel transcoding across many workers, (2) adaptive bitrate switching mid-playback, and (3) efficient CDN caching — popular chunks stay hot at the edge. Chunking is the enabling trick for everything downstream."
+        }
+      ]
+    },
+    {
+      "id": "streaming",
+      "title": "4. The streaming path & adaptive bitrate",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Playback is where most viewers spend their time, so it must be cheap and smooth. The CDN serves the actual video bytes; your origin only handles the manifest and metadata."
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Get metadata + manifest", "detail": "Client requests the video page → metadata service returns title, description, and the streaming manifest URL." },
+            { "title": "Fetch chunks from CDN", "detail": "The player downloads the manifest, then pulls video chunks from the nearest CDN edge. Origin is barely touched." },
+            { "title": "Adaptive bitrate (ABR)", "detail": "The player monitors available bandwidth and buffer health, and picks the best rendition per chunk — dropping from 1080p to 480p when the network degrades, climbing back when it recovers. This is what prevents buffering." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Adaptive bitrate streaming (HLS/DASH) is the answer to 'how do you avoid buffering on bad networks?' The decision lives in the *client player* — the server just exposes multiple bitrates as chunks and lets the client choose per segment."
+        }
+      ]
+    },
+    {
+      "id": "metadata-cdn",
+      "title": "5. Metadata, CDN strategy & cost",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Metadata store", "detail": "Video metadata (title, owner, status, chunk locations, view count) lives in a database — relational for structured data, or a wide-column/NoSQL store at very large scale. This is separate from the bulky video bytes." },
+            { "term": "CDN is the workhorse", "detail": "Cache popular videos at edge locations near users → low latency, and offloads ~99% of bandwidth from origin. The long tail of rarely-watched videos may be served from origin or a regional cache, not pushed to every edge (cost)." },
+            { "term": "Cost optimization", "detail": "Don't push every video to every edge — popular content gets wide CDN distribution; cold content stays in cheaper storage and is pulled on demand. Tier storage (hot/cold/archive)." },
+            { "term": "View counts", "detail": "Counting every play synchronously would create a write hot spot. Emit view events to a queue and aggregate counts asynchronously (eventual consistency on the counter is fine)." }
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "Push vs pull CDN for a new video",
+          "columns": ["Approach", "When it shines", "Cost"],
+          "rows": [
+            ["Push (pre-distribute)", "Predictably popular launches (a new blockbuster, a celebrity upload)", "Higher — you pay to store everywhere even if not watched"],
+            ["Pull (cache on first miss)", "The long tail / unpredictable popularity", "Lower — only cache what's actually requested; first viewer per edge is slower"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "title": "Senior-level framing",
+          "text": "Frame the whole system as 'decouple the expensive async work (transcoding) from the request path, and serve the read path almost entirely from the CDN.' Then discuss the cost/latency trade-offs of CDN distribution and storage tiering — cost-awareness at petabyte scale is a strong senior signal."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Never stream the original — transcode every upload into multiple resolutions/codecs, split into small chunks.",
+    "Upload: presigned resumable upload to blob storage → enqueue a transcode job (decouple slow processing from the request).",
+    "Transcoding is a DAG of parallel tasks (renditions, thumbnails, moderation) over chunked segments.",
+    "Streaming: client pulls chunks from the CDN; origin only serves the manifest + metadata.",
+    "Adaptive bitrate (HLS/DASH) lets the client switch quality per chunk → smooth playback on bad networks, no buffering.",
+    "CDN absorbs ~99% of bandwidth (egress dominates — millions × several Mbps); tier storage for the cold long tail.",
+    "Metadata in a DB (separate from bytes); view counts aggregated asynchronously via a queue."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Design",
+      "difficulty": "Hard",
+      "prompt": "A user uploads a 4 GB video. Walk me through what happens from upload to the moment a viewer can watch it smoothly on a phone with spotty 4G.",
+      "hint": "Resumable upload → async transcode into chunked renditions → CDN → adaptive bitrate.",
+      "answer": [
+        "**Upload:** the client requests a presigned URL and uploads the 4 GB original directly to blob storage in resumable chunks, so a dropped connection resumes rather than restarts. On completion the upload service writes a metadata row (status = processing) and publishes a transcode job to a queue, returning immediately — the user doesn't wait for processing.",
+        "**Processing:** transcoder workers pick up the job and run a DAG: transcode the original into multiple resolutions (240p–4K) and codecs, split each rendition into small (~2–10s) segments, generate thumbnails, and run content moderation. They then write an HLS/DASH manifest listing every bitrate's chunk URLs, push chunks to the CDN, and flip the metadata status to 'ready'.",
+        "**Playback on spotty 4G:** the phone fetches the manifest and pulls chunks from the nearest CDN edge. The player runs adaptive bitrate: it starts low to fill the buffer fast, monitors bandwidth and buffer health per chunk, and steps down to 480p/360p when 4G degrades and back up when it recovers. Because the bytes come from the edge and quality adapts per chunk, playback stays smooth without buffering — and the origin is barely involved."
+      ],
+      "keyPoints": ["Resumable presigned upload to blob storage; async via queue (don't block the request)", "Transcode into multiple chunked renditions/codecs (DAG of tasks)", "Manifest (HLS/DASH) + push chunks to CDN; mark ready", "Adaptive bitrate on the client adapts quality per chunk for smooth playback"],
+      "followUps": ["How would you handle a video that suddenly goes viral globally within minutes of upload?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Trade-off",
+      "difficulty": "Medium",
+      "prompt": "Bandwidth is your biggest cost. How does the CDN help, and would you push every video to every edge?",
+      "hint": "Popularity is extremely skewed; distinguish hot from cold content.",
+      "answer": [
+        "The CDN caches video chunks at edge locations close to users, so the vast majority of bytes are served from the edge rather than your origin. With millions of concurrent viewers each pulling several Mbps, egress reaches terabits per second — origin servers couldn't physically serve that, and even if they could, cross-region bandwidth would be ruinously expensive. The CDN offloads ~99% of it and cuts latency.",
+        "You would *not* push every video to every edge. Video popularity follows a heavy power law: a small fraction of videos drive most views. Popular content gets wide CDN distribution (or is proactively pushed for a predictable big launch); the long tail of rarely-watched videos is pulled into a regional cache only on first request, or served from cheaper origin/cold storage. Pushing everything everywhere would multiply storage cost for content nobody watches. So: hot content → wide edge distribution; cold content → pull-on-demand and tiered storage."
+      ],
+      "keyPoints": ["CDN serves bytes from the edge → offloads ~99% of egress + lower latency", "Egress (Tbps) is the dominant cost; origin can't serve it directly", "Don't push everything: popularity is power-law skewed", "Hot → wide distribution / push; cold tail → pull-on-demand + tiered storage"],
+      "followUps": ["How would you decide, automatically, when a video is 'hot enough' to warrant proactive edge distribution?"]
+    }
+  ]
+}

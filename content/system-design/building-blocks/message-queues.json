@@ -1,0 +1,149 @@
+{
+  "slug": "message-queues",
+  "sectionId": "building-blocks",
+  "order": 5,
+  "title": "Message Queues & Event Streaming",
+  "tagline": "Decouple services, absorb spikes, and process work asynchronously — plus Kafka vs RabbitMQ and delivery guarantees.",
+  "summary": "Async decoupling, Kafka vs RabbitMQ, delivery semantics.",
+  "difficulty": "Intermediate",
+  "estMinutes": 19,
+  "tags": ["infra", "async", "must-know"],
+  "prereqs": ["scaling-from-zero-to-millions"],
+  "sections": [
+    {
+      "id": "why",
+      "title": "Why put a queue between services",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A **message queue** lets a producer hand off work and move on, while consumers process it later at their own pace. Instead of service A calling service B synchronously and waiting, A drops a message on the queue and returns immediately; B pulls messages when it's ready. This single change buys several big properties."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Decoupling", "detail": "Producers and consumers don't need to know about each other, be online at the same time, or scale together. You can add new consumers without touching producers." },
+            { "term": "Load leveling / buffering", "detail": "A traffic spike fills the queue instead of overwhelming the backend; consumers drain it steadily. The queue absorbs bursts." },
+            { "term": "Resilience", "detail": "If a consumer crashes, messages wait safely in the queue and are processed on recovery — no work is lost." },
+            { "term": "Async responsiveness", "detail": "Slow work (sending email, encoding video, generating thumbnails) happens in the background, so the user's request returns fast." }
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "Producer fires and forgets; the queue buffers; workers consume at their own rate and scale independently.",
+          "groups": [
+            { "label": "Producer", "nodes": [{ "label": "API / Service A", "icon": "Send", "accent": "#d97706" }] },
+            { "label": "Queue", "nodes": [{ "label": "Message Queue", "sub": "buffers + persists", "icon": "Inbox", "accent": "#0ea5e9" }] },
+            { "label": "Consumers", "nodes": [{ "label": "Worker 1", "icon": "Cpu", "accent": "#10b981" }, { "label": "Worker 2", "icon": "Cpu", "accent": "#10b981" }, { "label": "Worker N", "icon": "Cpu", "accent": "#10b981" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "models",
+      "title": "Two messaging models",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Queue (point-to-point / work queue)", "detail": "Each message is delivered to exactly *one* consumer in a group. Used to distribute tasks across a worker pool. Adding workers increases throughput." },
+            { "term": "Pub/Sub (publish–subscribe / topics)", "detail": "Each message is delivered to *every* subscriber. Used for events that multiple services care about (e.g., 'order placed' → billing, inventory, email all react independently)." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kafka-rabbit",
+      "title": "Kafka vs RabbitMQ (log vs broker)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The two names you'll cite. They solve overlapping problems with different designs. **RabbitMQ** is a traditional message broker (smart broker, routes/deletes messages once consumed). **Kafka** is a distributed, append-only **log** — messages are retained and consumers track their own position (offset), so you can replay history and have many independent consumer groups read the same stream."
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["", "RabbitMQ (broker)", "Kafka (log/stream)"],
+          "rows": [
+            ["Model", "Messages routed then removed after ack", "Append-only log retained for a window; consumers track offsets"],
+            ["Replay", "No (once consumed, gone)", "Yes — rewind offset and reprocess"],
+            ["Throughput", "High, great for complex routing & per-message work", "Very high — built for massive event firehoses"],
+            ["Ordering", "Per-queue", "Per-partition (strong within a partition)"],
+            ["Best for", "Task/work queues, complex routing, RPC-style", "Event streaming, analytics pipelines, log aggregation, many consumers"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Quick decision rule: choose Kafka when you need a durable, replayable event stream consumed by many independent services or analytics (high throughput, ordering per partition). Choose RabbitMQ (or SQS) for straightforward task queues and flexible routing where you don't need replay."
+        }
+      ]
+    },
+    {
+      "id": "delivery",
+      "title": "Delivery guarantees & gotchas",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "At-most-once", "detail": "May lose messages, never duplicates. Rarely acceptable." },
+            { "term": "At-least-once", "detail": "Never loses messages, but may deliver duplicates (e.g., a consumer crashes after processing but before acking, so it's redelivered). The common default." },
+            { "term": "Exactly-once", "detail": "The holy grail — hard and expensive across systems. In practice you get at-least-once + **idempotent consumers** to dedupe, which is effectively exactly-once processing." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Make consumers idempotent",
+          "text": "Because at-least-once delivery means duplicates, design consumers so reprocessing the same message has no extra effect (e.g., key writes by a message/idempotency id, or check 'already processed'). This is the single most important reliability practice with queues."
+        },
+        {
+          "type": "bullets",
+          "title": "Other essentials",
+          "items": [
+            { "term": "Dead-letter queue (DLQ)", "detail": "Messages that fail repeatedly are moved to a DLQ for inspection instead of blocking the queue forever." },
+            { "term": "Backpressure", "detail": "If the queue grows unbounded, slow producers or scale consumers — an ever-growing queue is a warning sign." },
+            { "term": "Ordering", "detail": "Global ordering is hard; partition by a key (e.g., user_id) so all of one entity's messages stay ordered within a partition." }
+          ]
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Queues decouple producers/consumers, buffer spikes, add resilience, and enable async background work.",
+    "Two models: work queue (one consumer per message) and pub/sub (all subscribers get it).",
+    "Kafka = durable, replayable, partitioned log for event streaming at scale; RabbitMQ/SQS = broker for task queues + routing (no replay).",
+    "Delivery: at-least-once is the norm → duplicates happen → make consumers idempotent.",
+    "Use dead-letter queues for poison messages; partition by key for per-entity ordering; watch queue growth (backpressure)."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "When a user signs up you must send a welcome email, generate an avatar, and index them for search. Why route these through a queue instead of doing them in the signup request?",
+      "hint": "What does the user have to wait for, and what happens if email is down?",
+      "answer": [
+        "Doing them inline makes the user wait for slow, failure-prone side effects (the email provider could be slow or down, image generation takes seconds), and a failure in any of them could fail the whole signup. That's bad UX and bad reliability.",
+        "Instead, the signup request just writes the user and publishes an 'user.created' event/messages to a queue, then returns instantly. Independent workers handle email, avatar, and indexing asynchronously, retrying on failure without affecting signup. If the email service is down, those messages wait safely and process on recovery. This decouples a fast critical path from slow best-effort work — a classic, high-signal use of queues."
+      ],
+      "keyPoints": ["Keep the critical path (create user) fast", "Offload slow/failure-prone side effects to async workers", "Failures retry independently without failing signup", "Pub/sub event lets multiple consumers react"],
+      "followUps": ["Email send is at-least-once — how do you avoid sending two welcome emails?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "Your payment-processing consumer uses at-least-once delivery. How do you prevent charging a customer twice when a message is redelivered?",
+      "hint": "Make processing the same message twice have the same effect as once.",
+      "answer": [
+        "Make the consumer **idempotent**. Attach a unique idempotency key to each payment message (e.g., a payment_id). Before charging, the consumer checks whether that key has already been processed (in a dedup table / store); if so, it acknowledges and skips. The charge and the 'processed' record should be written atomically (same transaction) so a crash can't leave them inconsistent.",
+        "This way, even if the queue redelivers the message after a consumer crash, the second attempt is a no-op. At-least-once delivery + idempotent consumers gives you effectively exactly-once *processing* without needing true exactly-once delivery, which is impractical across systems."
+      ],
+      "keyPoints": ["Idempotency key per payment (payment_id)", "Check-then-act against a dedup store", "Atomic write of charge + processed-marker", "At-least-once + idempotent = effectively exactly-once"],
+      "followUps": ["Where would you store the dedup keys, and how long do you keep them?"]
+    }
+  ]
+}

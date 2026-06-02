@@ -1,0 +1,141 @@
+{
+  "slug": "the-framework",
+  "sectionId": "interview-playbook",
+  "order": 1,
+  "title": "The Framework: A Repeatable Structure So You Never Freeze",
+  "tagline": "Every strong candidate follows roughly the same script. Internalize it and the open-ended question stops being scary.",
+  "summary": "The 7-step structure that turns a vague prompt into a confident answer.",
+  "difficulty": "Beginner",
+  "estMinutes": 22,
+  "tags": ["interview", "framework", "must-know"],
+  "prereqs": ["how-system-design-interviews-work"],
+  "sections": [
+    {
+      "id": "why",
+      "title": "Why you need a framework",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A system design interview is deliberately open-ended: 'Design Twitter.' With no structure, candidates freeze, jump straight to databases, or ramble. With a structure, you always know what to do next — which keeps you calm and makes you look senior.",
+            "The framework below has many names (RESHADED, the 4-step, the 7-step) but they're all the same idea: **start broad and abstract, get agreement, then progressively go deeper into the parts that matter.** You drive; the interviewer steers."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "It's a conversation, not a monologue",
+          "text": "The framework gives you a default path, but the interviewer will interrupt to probe areas they care about. That's good — follow their lead. The structure is your safety net for when they go quiet, not a script to recite over their objections."
+        }
+      ]
+    },
+    {
+      "id": "steps",
+      "title": "The 7 steps",
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Requirements & scope (3–5 min)", "detail": "Clarify functional requirements (what it does), non-functional requirements (scale, latency, availability, consistency), and explicitly state what's out of scope. Never start designing until you've agreed on scope." },
+            { "title": "Back-of-the-envelope estimation (2–4 min)", "detail": "Estimate QPS, storage, and bandwidth. This justifies later choices (caching, sharding) with numbers instead of hand-waving. Skip it only if the interviewer says so." },
+            { "title": "API design (2–3 min)", "detail": "Define the core endpoints / method signatures. This pins down exactly what the system does and the client-server contract before you draw boxes." },
+            { "title": "Data model (3–5 min)", "detail": "What are the main entities, and what storage do they need? Make the SQL-vs-NoSQL call here, justified by the access patterns you just defined." },
+            { "title": "High-level design (5–10 min)", "detail": "Draw the boxes: clients → load balancer → services → databases/caches/queues. Walk the main flows end to end. Get the interviewer to agree this is reasonable before going deeper." },
+            { "title": "Deep dive (10–15 min)", "detail": "Zoom into 1–2 of the most interesting/critical components — the part that's actually hard (the fan-out, the hot shard, the consistency boundary). This is where senior signal lives." },
+            { "title": "Wrap up: bottlenecks & trade-offs (3–5 min)", "detail": "Identify single points of failure, scaling bottlenecks, and the trade-offs you made. Mention what you'd monitor and how you'd evolve it. Strong finishers revisit the original requirements." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Say the steps out loud at the start: 'I'll clarify requirements, do some quick estimates, sketch the APIs and data model, draw a high-level design, then deep-dive the tricky parts.' Announcing your plan instantly signals experience and buys you thinking room."
+        }
+      ]
+    },
+    {
+      "id": "time",
+      "title": "Time management (a ~45-minute interview)",
+      "blocks": [
+        {
+          "type": "metrics",
+          "title": "Rough budget",
+          "items": [
+            { "label": "Requirements + estimation", "value": "~8 min" },
+            { "label": "API + data model", "value": "~7 min" },
+            { "label": "High-level design", "value": "~10 min" },
+            { "label": "Deep dives", "value": "~15 min" },
+            { "label": "Wrap-up / trade-offs", "value": "~5 min" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "The #1 time mistake",
+          "text": "Spending 20 minutes perfecting the high-level boxes and never reaching a deep dive. The deep dive is where you differentiate yourself. Keep the high-level design deliberately fast and 'good enough', then go deep. If you're running long, say 'let me move to the interesting part' and jump."
+        }
+      ]
+    },
+    {
+      "id": "mental-model",
+      "title": "The mental model: breadth then depth",
+      "blocks": [
+        {
+          "type": "diagram",
+          "caption": "Always move from abstract agreement to concrete detail — never the reverse.",
+          "direction": "lr",
+          "groups": [
+            { "label": "Align", "nodes": [{ "label": "Requirements", "sub": "what + how much", "icon": "ClipboardList", "accent": "#d97706" }] },
+            { "label": "Sketch", "nodes": [{ "label": "High-level design", "sub": "boxes & flows", "icon": "Layout", "accent": "#0ea5e9" }] },
+            { "label": "Deepen", "nodes": [{ "label": "Deep dive", "sub": "the hard part", "icon": "Search", "accent": "#8b5cf6" }] },
+            { "label": "Reflect", "nodes": [{ "label": "Trade-offs", "sub": "bottlenecks & evolution", "icon": "Scale", "accent": "#10b981" }] }
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Top-down, not bottom-up", "detail": "Establish the big picture and get buy-in before adding detail. Diving into a specific database schema before agreeing on requirements is the classic junior mistake." },
+            { "term": "Justify with the requirements", "detail": "Every design decision should trace back to a requirement or an estimate. 'It's read-heavy (100:1), so I'll add a cache' is gold. 'I'll add Redis because everyone does' is not." },
+            { "term": "Make the trade-off explicit", "detail": "There's rarely one right answer. Saying 'I'll choose X over Y because we prioritized availability over consistency here' shows engineering maturity — the thing they're really grading." }
+          ]
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "7 steps: Requirements → Estimation → API → Data model → High-level design → Deep dive → Trade-offs.",
+    "Announce your plan up front — it signals experience and buys thinking time.",
+    "Always go breadth-first then depth: align on scope before drawing, draw before deep-diving.",
+    "Budget time: keep high-level design fast; the deep dive is where you earn senior signal.",
+    "Every decision must trace to a requirement or an estimate — never 'because everyone uses it'.",
+    "Finish by naming SPOFs, bottlenecks, trade-offs, and how you'd monitor/evolve the system.",
+    "It's a conversation: the interviewer steers, you drive — follow their probes."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "The interviewer says 'Design Instagram.' What are the first words out of your mouth, and why?",
+      "hint": "Don't start designing. Don't start with a database.",
+      "answer": [
+        "The first thing is to *not* start designing. I'd say something like: 'Before I design anything, let me clarify scope and requirements so we build the right thing.' Then I'd ask functional questions — are we focusing on posting photos and viewing a feed? Do we need stories, direct messages, search? — and non-functional questions — roughly how many users/DAU, is this read-heavy (it is), what's our latency target, do we prioritize availability or consistency for the feed?",
+        "I'd then narrow scope explicitly: 'Let's focus on uploading photos and the home feed, and treat DMs and stories as out of scope.' Only after we've agreed on that would I move to estimation and design. Opening this way matters because the question is intentionally vague; jumping straight to 'I'll use Postgres and S3' signals that I design before I understand the problem, which is the exact opposite of the senior behavior they're grading for."
+      ],
+      "keyPoints": ["Don't start designing — clarify first", "Ask functional + non-functional questions", "State scope and what's explicitly out of scope", "Get agreement before moving on"],
+      "followUps": ["The interviewer says 'assume 500M users.' What do you do with that number next?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "You're 25 minutes in and still polishing the high-level boxes. The interviewer seems restless. What do you do?",
+      "hint": "Recognize the time trap; the deep dive is what differentiates you.",
+      "answer": [
+        "I'd recognize I've fallen into the most common time trap — over-investing in the high-level diagram and starving the deep dive, which is where the real signal is. I'd proactively say: 'This high-level design is solid enough; let me move to the most interesting/challenging part.' Then I'd pick the component that's genuinely hard for this system — for Instagram that might be feed generation and the fan-out strategy, or handling a celebrity's millions of followers — and dive deep there.",
+        "Taking that initiative is itself a positive signal: it shows time-awareness and judgment about where complexity lives. Restlessness from the interviewer usually means 'I've seen enough of the obvious stuff; show me you can handle the hard part.' Reading that cue and steering toward depth — rather than continuing to refine boxes everyone already agrees on — is exactly what separates a strong candidate from one who runs out of time with nothing deep to show."
+      ],
+      "keyPoints": ["Recognize the over-polishing-the-diagram time trap", "Proactively pivot: 'let me move to the interesting part'", "Pick the genuinely hard component to deep-dive", "Reading the interviewer's cue and steering is positive signal"],
+      "followUps": ["Which component would you choose to deep dive for a chat app, and why that one?"]
+    }
+  ]
+}

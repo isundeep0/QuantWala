@@ -1,0 +1,128 @@
+{
+  "slug": "cdn",
+  "sectionId": "building-blocks",
+  "order": 3,
+  "title": "Content Delivery Networks (CDN)",
+  "tagline": "Push bytes to the edge so users download from a server down the street, not across the planet.",
+  "summary": "Edge caching, push vs pull, cache-control, and what to put on a CDN.",
+  "difficulty": "Beginner",
+  "estMinutes": 13,
+  "tags": ["infra", "performance"],
+  "prereqs": ["networking-basics", "caching"],
+  "sections": [
+    {
+      "id": "what",
+      "title": "What a CDN is",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A **CDN** is a globally distributed network of cache servers (edge/PoP locations) that store copies of your content physically close to users. When someone requests an asset, they're routed (via DNS/anycast) to the nearest edge, which serves it directly — avoiding a long round trip to your origin server.",
+            "The payoff is huge for two reasons: cross-region round trips are bounded by the speed of light (~150 ms US↔EU) no matter how fast your servers are, and static assets (images, video, JS/CSS) are often the *bulk of the bytes* a page loads. Serving them from the edge slashes latency and offloads enormous traffic from your origin."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "Users hit the nearest edge; only cache misses go back to the origin.",
+          "groups": [
+            { "label": "User (Sydney)", "nodes": [{ "label": "Browser", "icon": "Smartphone", "accent": "#0ea5e9" }] },
+            { "label": "Nearest edge", "nodes": [{ "label": "CDN Edge (Sydney)", "sub": "cache hit → instant", "icon": "Cloud", "accent": "#8b5cf6" }] },
+            { "label": "Origin (US)", "nodes": [{ "label": "Origin Server", "sub": "only on miss", "icon": "Server", "accent": "#d97706" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "push-pull",
+      "title": "Push vs pull CDNs",
+      "blocks": [
+        {
+          "type": "compare",
+          "columns": ["", "Pull CDN", "Push CDN"],
+          "rows": [
+            ["How content arrives", "Edge fetches from origin on first request (lazy), then caches", "You proactively upload/publish content to the CDN"],
+            ["Best for", "Large catalogs, frequently changing content", "Smaller, stable sets; large files you control"],
+            ["First request", "Slow (cache miss → origin fetch)", "Already warm"],
+            ["Effort", "Low — just set cache headers", "Higher — manage uploads/expiry yourself"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Most web traffic uses pull CDNs because they're low-effort and self-managing: set your cache-control headers and the CDN does the rest. Push is useful for big, infrequently-changing files where you want full control over what's stored where."
+        }
+      ]
+    },
+    {
+      "id": "control",
+      "title": "Controlling the cache & invalidation",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "TTL via Cache-Control / Expires", "detail": "Headers like `Cache-Control: max-age=86400` tell edges how long to keep an asset. Long TTLs maximise hit rate." },
+            { "term": "Cache busting with versioned URLs", "detail": "The trick for updates: name files with a content hash (`app.3f9a2.js`). A new version is a new URL, so it's a guaranteed cache miss — no invalidation needed. The old URL just ages out." },
+            { "term": "Explicit purge/invalidation", "detail": "CDNs let you purge a path on demand, but it's slower and rate-limited — versioned URLs are preferred." },
+            { "term": "What to cache", "detail": "Static assets (images, video, fonts, JS/CSS) always. Cacheable API responses (e.g., a public product listing) with short TTLs. Never cache per-user private/auth'd responses unless keyed carefully." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "The cleanest update story to state: 'I'd use immutable, content-hashed filenames with long TTLs, so deploying a new version changes the URL and is a cache miss — no purge needed.' This shows you know how real frontends ship."
+        }
+      ]
+    },
+    {
+      "id": "more",
+      "title": "Beyond static files",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "TLS termination & HTTP/3", "detail": "Edges terminate TLS close to users, cutting handshake round trips." },
+            { "term": "DDoS protection & WAF", "detail": "The CDN absorbs and filters malicious traffic before it reaches your origin." },
+            { "term": "Edge compute", "detail": "Run small functions at the edge (auth checks, A/B routing, personalization) for ultra-low latency." },
+            { "term": "Video streaming", "detail": "CDNs serve chunked adaptive-bitrate video segments — essential for YouTube/Netflix-scale delivery." }
+          ]
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "A CDN caches content at edge locations near users; only misses go to origin — cuts latency + offloads origin.",
+    "Wins because cross-region RTT is physics-bound and static assets are most of a page's bytes.",
+    "Pull CDN (lazy, low-effort, set headers) is the common default; push CDN for stable large files you control.",
+    "Control via Cache-Control TTLs; update via content-hashed/versioned URLs (cache busting) instead of purges.",
+    "Cache static assets always; cacheable public API responses with short TTL; never cache private per-user data carelessly.",
+    "CDNs also provide TLS termination, DDoS/WAF protection, edge compute, and video segment delivery."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "You deploy a new version of your JavaScript bundle, but users keep running the old one because it's cached at the CDN and in browsers. How do you fix this cleanly?",
+      "hint": "Make the new version a different URL.",
+      "answer": [
+        "Use **content-hashed (versioned) filenames**: name the bundle with a hash of its contents, like `app.7c2f9.js`. When the code changes, the hash changes, so the URL changes — which is automatically a cache miss everywhere (CDN edges and browsers), and the new file downloads. The old URL simply ages out of caches.",
+        "This lets you set very long TTLs (immutable caching) for maximum hit rate while still shipping instant updates, with no need to purge the CDN. The HTML that references the bundle is served with a short/no-cache TTL so it always points at the latest hashed URL."
+      ],
+      "keyPoints": ["Content-hashed/versioned filenames → new URL on change", "New URL = guaranteed cache miss, downloads new file", "Enables long/immutable TTLs without purging", "Reference HTML kept short-TTL to point at latest"],
+      "followUps": ["What TTL would you set on the HTML vs the hashed assets, and why?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Trade-off",
+      "difficulty": "Medium",
+      "prompt": "Would you put user-specific, authenticated API responses on a CDN? What's the risk and any middle ground?",
+      "hint": "Edge caches are shared across users.",
+      "answer": [
+        "By default, no — edge caches are shared, so caching a personalized/authenticated response risks serving one user's private data to another (a serious security bug) or showing stale personal data. Private, per-user dynamic content should normally bypass the CDN or be marked `Cache-Control: private, no-store`.",
+        "Middle grounds exist: cache *public* portions (e.g., a product page's shared parts) at the edge and fetch the personalized bits separately; cache per-user responses keyed by user/auth token with short TTLs where the platform supports it safely; or use edge compute to personalize at the edge without caching across users. The key is to never let a shared cache leak private data across users."
+      ],
+      "keyPoints": ["Edge caches are shared → risk leaking private data across users", "Mark private responses no-store / bypass CDN", "Cache public parts, fetch personalized parts separately", "Or key per-user with short TTL / edge personalization"],
+      "followUps": ["How does the Vary header help cache per-language or per-device variants safely?"]
+    }
+  ]
+}

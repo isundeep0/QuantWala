@@ -1,0 +1,197 @@
+{
+  "slug": "url-shortener",
+  "sectionId": "case-studies",
+  "order": 1,
+  "title": "Design a URL Shortener (TinyURL / bit.ly)",
+  "tagline": "The classic warm-up: short codes, base62, and a read-heavy system that must redirect in milliseconds.",
+  "summary": "Base62 short codes, the read-heavy redirect path, caching, scale.",
+  "difficulty": "Beginner",
+  "estMinutes": 24,
+  "tags": ["case-study", "must-know"],
+  "prereqs": ["back-of-the-envelope", "caching", "databases"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Clarify requirements",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Start by scoping. State functional and non-functional requirements before designing — this is the highest-signal habit."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Given a long URL, produce a short URL.",
+            "Visiting the short URL redirects to the original long URL.",
+            "(Optional) custom aliases, expiration, basic analytics (click counts)."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Highly available — a dead redirect breaks every link ever shared.",
+            "Very low latency on redirect (the read path is the product).",
+            "Short codes are unique and not easily guessable/enumerable.",
+            "Massively read-heavy (reads ≫ writes)."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Immediately flag the defining characteristic: this is an extremely read-heavy system (people create a link once, click it thousands of times). That single observation drives the whole design toward caching and read optimization."
+        }
+      ]
+    },
+    {
+      "id": "estimation",
+      "title": "2. Back-of-the-envelope",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Writes", "detail": "Assume 100M new URLs/day → 100M / 10^5 ≈ ~1,000 writes/sec (peak ~2–3k)." },
+            { "term": "Reads", "detail": "100:1 read:write → ~100,000 redirects/sec. This dominates — cache aggressively." },
+            { "term": "Storage", "detail": "~500 bytes/record × 100M/day ≈ 50 GB/day → ~18 TB over a year; keep for years → tens of TB. A sharded key-value store handles this easily." },
+            { "term": "Short code length", "detail": "Using base62 (a–z, A–Z, 0–9): 62^7 ≈ 3.5 trillion combinations. 7 characters comfortably covers many years of growth." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "title": "3. API design",
+      "blocks": [
+        {
+          "type": "code",
+          "title": "Core endpoints",
+          "codes": [
+            { "language": "text", "title": "api", "source": "POST /api/v1/urls\n  body: { longUrl: \"https://...\", customAlias?: \"...\", ttl?: 86400 }\n  → 201 { shortUrl: \"https://sho.rt/aQ9bXz2\" }\n\nGET /{shortCode}\n  → 301/302 redirect to the original long URL" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "note",
+          "title": "301 vs 302 redirect",
+          "text": "301 (permanent) lets browsers cache the redirect → fewer hits to your server (great for load) but you lose per-click analytics and can't change the target. 302 (temporary) routes every click through you → enables analytics and editable targets, at higher load. For an analytics-tracking shortener, use 302."
+        }
+      ]
+    },
+    {
+      "id": "core-problem",
+      "title": "4. The core problem: generating short codes",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The heart of the design is mapping a long URL to a unique short code. Three common approaches:"
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Hash the URL (e.g., MD5) and take first N chars", "detail": "Simple, but hashes collide when truncated — you must detect collisions and re-hash, and identical URLs map to the same code (maybe undesirable for analytics). Workable but fiddly." },
+            { "term": "Counter + base62 encode (recommended)", "detail": "Maintain a global incrementing counter; encode each new id in base62 to get the short code. Guarantees uniqueness (no collisions), short codes, and is simple. The only challenge is generating unique ids at scale — use a distributed ID generator (Snowflake) or hand out ID ranges to each server from a central allocator." },
+            { "term": "Pre-generate keys (Key Generation Service)", "detail": "A separate service pre-generates a large pool of unique random base62 codes into a 'available keys' store; app servers grab unused ones. Decouples key generation from the write path and avoids collisions and sequential/guessable codes." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Why not a plain auto-increment column?",
+          "text": "A single auto-increment DB column is a write bottleneck and SPOF, and pure sequential codes are guessable/enumerable (security & privacy issue). Use a distributed ID generator with base62 encoding, or a key-generation service handing out shuffled keys, so codes are unique without a single hot counter."
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "5. High-level design",
+      "blocks": [
+        {
+          "type": "diagram",
+          "caption": "Write path creates a code and stores the mapping; read path is cache-first for blazing redirects.",
+          "groups": [
+            { "label": "Client", "nodes": [{ "label": "Browser", "icon": "Smartphone", "accent": "#0ea5e9" }] },
+            { "label": "Edge", "nodes": [{ "label": "LB / API Gateway", "icon": "Scale", "accent": "#ef4444" }] },
+            { "label": "App", "nodes": [{ "label": "URL Service", "sub": "+ ID generator", "icon": "Server", "accent": "#d97706" }] },
+            { "label": "Cache", "nodes": [{ "label": "Redis", "sub": "code → longUrl", "icon": "Zap", "accent": "#f59e0b" }] },
+            { "label": "Store", "nodes": [{ "label": "Key-Value DB", "sub": "sharded by code", "icon": "Database", "accent": "#10b981" }] }
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Shorten (write)", "detail": "Client POSTs long URL → service gets a unique id (distributed ID gen), base62-encodes it to a code, stores `code → longUrl` in the KV store, returns the short URL." },
+            { "title": "Redirect (read)", "detail": "Client GETs /{code} → service checks Redis first; on hit, return 302 instantly. On miss, read the KV store, populate the cache, then redirect. Since reads dominate and the hot set is small, cache hit rate is very high." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Why a key-value store",
+          "text": "The access pattern is a pure key lookup (code → URL) with no joins or range queries, at huge scale. That's the textbook case for a sharded key-value/NoSQL store (DynamoDB/Cassandra), sharded by the short code via consistent hashing. SQL would work at small scale but the KV pattern + horizontal scale fits perfectly."
+        }
+      ]
+    },
+    {
+      "id": "scale-tradeoffs",
+      "title": "6. Scaling & trade-offs",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Read scaling", "detail": "Redis cache absorbs ~100k reads/sec; add read replicas of the KV store; put popular redirects behind a CDN/edge if appropriate." },
+            { "term": "Write scaling", "detail": "Stateless app servers behind an LB; distributed ID generation avoids a central counter bottleneck; shard the KV store by code." },
+            { "term": "Availability", "detail": "Replicate the KV store across AZs; redundant LBs; the cache is an optimization, not a SPOF (misses fall through to the DB)." },
+            { "term": "Analytics", "detail": "Don't write a DB row synchronously on every click (kills the read path). Emit a click event to a queue (Kafka) and aggregate counts asynchronously." },
+            { "term": "Expiration & cleanup", "detail": "Store a TTL; a background job (or DB TTL feature) purges expired entries lazily." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Tie each scaling move to the read-heavy nature: cache-first redirect, async analytics off the hot path, distributed IDs to avoid a write bottleneck. Finishing with 'the cache is the star here because it's 100:1 reads' shows you internalized the requirements."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "URL shortener is extremely read-heavy → design around caching and a fast key lookup.",
+    "Short code = base62-encode a unique id (7 chars → 62^7 ≈ 3.5T); avoid a single auto-increment (bottleneck + guessable).",
+    "Generate unique ids via a distributed ID generator (Snowflake) or a key-generation service; not one hot counter.",
+    "Store code→URL in a sharded key-value store (pure key access, no joins); cache hot codes in Redis (cache-first redirect).",
+    "302 redirect (route every click) for analytics/editable targets; 301 (cacheable) for max performance.",
+    "Do click analytics asynchronously via a queue — never write a DB row on the hot redirect path."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Design",
+      "difficulty": "Medium",
+      "prompt": "How do you generate unique 7-character short codes at 1,000+ writes/sec across many servers without collisions or a single bottleneck?",
+      "hint": "Avoid one central counter; think distributed IDs or pre-generated keys.",
+      "answer": [
+        "Two clean approaches. (1) **Distributed ID generation + base62**: use a Snowflake-style generator (or a central allocator that hands each app server a *range* of ids, e.g., 10,000 at a time) so each server mints unique numeric ids locally without contention; base62-encode the id to a 7-char code. Uniqueness is guaranteed because ids never repeat. (2) **Key Generation Service**: a separate service pre-generates a large pool of unique random base62 codes into an 'available' table; app servers atomically claim unused codes. This decouples generation from the write path and yields non-sequential (non-guessable) codes.",
+        "Both avoid a single hot counter (which would bottleneck and be a SPOF) and avoid hash collisions. I'd prefer ranges/Snowflake for simplicity, or the key-gen service if non-enumerable codes are a requirement."
+      ],
+      "keyPoints": ["No single auto-increment counter (bottleneck + guessable)", "Snowflake / ID-range allocation → local unique ids, base62 encode", "Or Key Generation Service: pre-generate + claim unused codes", "Guarantees uniqueness without collisions or contention"],
+      "followUps": ["How would you support custom aliases alongside generated codes without collisions?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "A link goes viral — one short code gets millions of redirects per minute. How does your design hold up, and what would you watch?",
+      "hint": "It's a single hot key on the read path.",
+      "answer": [
+        "This is a single hot *read* key, which the design handles well: the code→URL mapping for that link sits in Redis and is served from memory, so even millions of redirects/min are cheap memory lookups — the database barely sees them. You can also push that hot redirect to a CDN/edge or replicate the cache to multiple nodes/regions for geographic spread.",
+        "What to watch: (1) **cache stampede** if that hot key ever expires — pin/refresh hot keys or use serve-stale-while-revalidate; (2) the **analytics** path — don't synchronously write a DB row per click; emit click events to a queue and aggregate, or you'll create a write hot spot; (3) ensure the cache node holding it isn't itself a bottleneck (replicate/shard the cache). Because it's a read-only hot key, this is far easier than a hot *write* key."
+      ],
+      "keyPoints": ["Hot read key served from Redis/CDN — DB barely touched", "Replicate/edge-cache the hot mapping for spread", "Guard against stampede on expiry (pin/refresh/serve-stale)", "Async analytics so clicks don't create a write hot spot"],
+      "followUps": ["How would the answer differ if the hot key were a write (like a counter) instead of a read?"]
+    }
+  ]
+}

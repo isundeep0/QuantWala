@@ -11,7 +11,9 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useProgress } from "@/context/ProgressContext.jsx";
+import { useSdProgress } from "@/context/SdProgressContext.jsx";
 import { TOTAL_ALGORITHMS } from "@/data/registry.js";
+import { SD_TOTAL_LESSONS } from "@/data/systemDesign.js";
 import GlassCard from "@/components/liquid/GlassCard.jsx";
 import SwirlProgress from "@/components/liquid/SwirlProgress.jsx";
 
@@ -35,6 +37,7 @@ function StatPill({ icon: Icon, label }) {
 
 export default function Landing() {
   const { overallPercent, completedCount, problemStats } = useProgress();
+  const { overallPercent: sdPercent } = useSdProgress();
 
   const modules = [
     {
@@ -46,16 +49,18 @@ export default function Landing() {
       color: "#3b82f6",
       status: "Fully available",
       live: true,
+      percent: overallPercent,
     },
     {
       to: "/system-design",
       eyebrow: "Module 02",
       title: "System Design",
-      desc: "Fundamentals, core components, classic designs, and a repeatable interview framework — structured to crack any SD round at top companies.",
+      desc: `Fundamentals, building blocks, distributed systems, ${SD_TOTAL_LESSONS} in-depth lessons, real case studies, and a full interview playbook — structured to crack any SD round at top companies.`,
       icon: Network,
       color: "#f59e0b",
-      status: "UI preview",
-      live: false,
+      status: "Fully available",
+      live: true,
+      percent: sdPercent,
     },
     {
       to: "/hft",
@@ -66,6 +71,7 @@ export default function Landing() {
       color: "#10b981",
       status: "UI preview",
       live: false,
+      percent: 0,
     },
   ];
 
@@ -130,7 +136,7 @@ export default function Landing() {
             className="mt-10 flex flex-wrap gap-3"
           >
             <StatPill icon={Boxes} label={`${TOTAL_ALGORITHMS} algorithms`} />
-            <StatPill icon={RouteIcon} label="12 categories · guided roadmap" />
+            <StatPill icon={Network} label={`${SD_TOTAL_LESSONS} system design lessons`} />
             <StatPill icon={Gauge} label="Step-by-step simulators" />
             <StatPill icon={ListChecks} label="Curated problem sets" />
           </motion.div>
@@ -165,7 +171,7 @@ export default function Landing() {
                         <Icon className="h-6 w-6" style={{ filter: `drop-shadow(0 0 5px ${m.color})` }} />
                       </span>
                       {m.live ? (
-                        <SwirlProgress value={overallPercent} size={58} stroke={6} color={m.color} />
+                        <SwirlProgress value={m.percent} size={58} stroke={6} color={m.color} />
                       ) : (
                         <span
                           className="chip"

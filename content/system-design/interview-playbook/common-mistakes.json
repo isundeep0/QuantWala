@@ -1,0 +1,127 @@
+{
+  "slug": "common-mistakes",
+  "sectionId": "interview-playbook",
+  "order": 6,
+  "title": "Common Mistakes & Red Flags",
+  "tagline": "Most candidates lose points the same handful of ways. Knowing the traps is half of avoiding them.",
+  "summary": "The recurring pitfalls that sink interviews — and the fixes.",
+  "difficulty": "Beginner",
+  "estMinutes": 16,
+  "tags": ["interview", "pitfalls", "must-know"],
+  "prereqs": ["the-framework", "driving-the-conversation"],
+  "sections": [
+    {
+      "id": "process",
+      "title": "Process mistakes",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Designing before clarifying", "detail": "Jumping into boxes and databases before agreeing on requirements. Fix: always spend the first few minutes on scope and non-functional requirements." },
+            { "term": "Skipping estimation", "detail": "Asserting 'we need sharding/caching' with no numbers to back it. Fix: do quick back-of-the-envelope math so decisions are justified." },
+            { "term": "Diving too deep too early", "detail": "Designing a detailed DB schema before the high-level picture exists. Fix: breadth first (boxes & flows), then depth on the hard part." },
+            { "term": "Poor time management", "detail": "Spending 20+ minutes polishing the high-level diagram and never reaching a deep dive. Fix: keep high-level fast; budget the bulk of time for depth." },
+            { "term": "Going silent", "detail": "Designing in your head. Fix: narrate continuously — the interviewer grades and helps based on what you say." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "technical",
+      "title": "Technical red flags",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Single points of failure", "detail": "A lone database, a single load balancer, one queue — with no redundancy. Fix: replicate critical components and call out the failure domains." },
+            { "term": "Ignoring failure entirely", "detail": "Designing only the happy path. Fix: proactively ask 'what happens if this node/region/network fails?' and design for it (retries, idempotency, failover)." },
+            { "term": "Stateful servers behind a load balancer", "detail": "Storing session/user state in app-server memory, breaking horizontal scaling. Fix: keep app servers stateless; push state to a shared cache/DB." },
+            { "term": "Buzzword soup", "detail": "Name-dropping Kafka/Redis/Kubernetes without justifying them. Fix: introduce each component only when a requirement demands it, and say why." },
+            { "term": "Over-engineering", "detail": "Microservices, multi-region, and event sourcing for a system with 100 users. Fix: match complexity to the actual scale; start simple and scale when numbers demand it." },
+            { "term": "Synchronous everything", "detail": "Doing slow/non-critical work (sending emails, analytics, image processing) inline on the request path. Fix: push it to a queue and process asynchronously." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "The two that hurt most",
+          "text": "Ignoring failure modes and bluffing about something you don't understand are the fastest ways to lose a senior interview. Both signal you can't be trusted with real systems. Be paranoid about failure; be honest about the edges of your knowledge."
+        }
+      ]
+    },
+    {
+      "id": "communication",
+      "title": "Communication red flags",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Bluffing", "detail": "Confidently stating something incorrect. Fix: 'I'm not certain, but here's how I'd reason about it.'" },
+            { "term": "Stubbornness", "detail": "Refusing to consider the interviewer's valid pushback. Fix: defend with reasoning, but adapt when they raise a real issue." },
+            { "term": "Caving instantly", "detail": "Abandoning every choice at the first 'are you sure?'. Fix: a probe isn't always 'you're wrong' — sometimes it's testing conviction. Defend good decisions." },
+            { "term": "No trade-off language", "detail": "Presenting choices as the only option. Fix: 'I'll use X over Y because we're optimizing for Z' — always frame as a trade-off." },
+            { "term": "Ignoring hints", "detail": "Steamrolling past the interviewer's questions. Fix: treat every question as a signal about what to address next." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fix-checklist",
+      "title": "A self-check you can run mid-interview",
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Did I scope before designing?", "detail": "Are functional + non-functional requirements agreed and visible?" },
+            { "title": "Can I justify each component?", "detail": "For every box, can I point to the requirement/estimate that demands it?" },
+            { "title": "Where does this fail?", "detail": "Have I named the SPOFs and what happens on node/region/network failure?" },
+            { "title": "Am I being decisive about trade-offs?", "detail": "Did I make and justify choices, or am I hedging endlessly?" },
+            { "title": "Am I going deep enough?", "detail": "Have I reached the genuinely hard component, or just drawn obvious boxes?" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Running this checklist silently every few minutes keeps you out of every common trap at once. If any answer is 'no', you know exactly what to do next — which is itself the structured, in-control behavior interviewers reward."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Process traps: designing before clarifying, skipping estimation, diving too deep too early, bad time mgmt, going silent.",
+    "Technical red flags: SPOFs, ignoring failure, stateful app servers, buzzword soup, over-engineering, synchronous everything.",
+    "Worst two: ignoring failure modes and bluffing — both say 'can't be trusted with real systems'.",
+    "Communication traps: bluffing, stubbornness, caving instantly, no trade-off language, ignoring hints.",
+    "Keep app servers stateless; push non-critical work to async queues; match complexity to actual scale.",
+    "Introduce a component only when a requirement demands it — and say why.",
+    "Mid-interview self-check: scoped? justified? where does it fail? decisive on trade-offs? deep enough?"
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "A candidate proposes microservices, Kafka, a multi-region active-active database, and Kubernetes for a tool with ~1,000 internal users. What's the red flag, and what should they have done?",
+      "hint": "Match complexity to scale.",
+      "answer": [
+        "The red flag is over-engineering: throwing heavyweight, operationally complex infrastructure at a problem that doesn't need it. For ~1,000 internal users the load is trivial — likely a few requests per second — so multi-region active-active (which exists to solve global latency and regional failover at massive scale) and a microservices+Kafka architecture add enormous operational burden, cost, and failure surface for zero benefit. It signals the candidate reaches for buzzwords rather than reasoning about actual requirements, which is itself a trust issue: in real life they'd burn the team's time building and operating complexity nobody needs.",
+        "What they should have done: estimate the load first (1,000 users → negligible QPS), then start with the simplest design that meets it — a single well-provisioned service (a modest monolith is fine), one primary database with a replica for availability and backups, and a cache only if reads warrant it. Then explicitly say: 'this easily handles current scale; *if* we grew to millions of users or needed global low latency, here's how I'd evolve it — split out services, add regional replicas, introduce a queue for async work.' That demonstrates the senior instinct: match complexity to scale, keep it simple, and have a justified evolution path rather than premature, unjustified complexity."
+      ],
+      "keyPoints": ["Red flag: over-engineering / buzzword-driven design for trivial scale", "Estimate first — 1,000 users is negligible QPS", "Start simple: one service + primary/replica DB (+ cache if needed)", "Describe a justified evolution path for *if* scale grows"],
+      "followUps": ["At what signs would you actually decide it's time to split a monolith into services?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "Why is putting user session state in an app server's memory (behind a load balancer) a red flag?",
+      "hint": "Think about what horizontal scaling and failover require.",
+      "answer": [
+        "Because it makes the app servers stateful, which breaks the two things a load-balanced tier depends on: horizontal scaling and seamless failover. If a user's session lives in one server's memory, then their subsequent requests must always hit that same server (sticky sessions). That undermines load balancing — you can't freely distribute requests across the pool — and if that server crashes or is removed during a deploy, the user's session is gone and they're logged out or lose state. Adding more servers also doesn't cleanly share the load, because each holds state only it knows about.",
+        "The fix is to keep app servers stateless: store session/user state in a shared external store — a distributed cache like Redis, or the database — so any server can handle any request. Now you can scale out by simply adding identical, interchangeable servers, route requests to any of them, and lose a server with no user impact (the next request just goes elsewhere and reads the shared state). Statelessness is what makes a tier elastic and resilient, which is why state-in-server-memory is an immediate red flag in a scalable design."
+      ],
+      "keyPoints": ["State-in-memory forces sticky sessions → breaks free load distribution", "A server crash/deploy loses that user's session", "Fix: stateless servers + shared store (Redis/DB) for session state", "Statelessness enables elastic horizontal scaling and seamless failover"],
+      "followUps": ["Where would you store session state, and how does that choice interact with latency?"]
+    }
+  ]
+}

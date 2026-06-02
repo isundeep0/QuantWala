@@ -1,0 +1,172 @@
+{
+  "slug": "how-system-design-interviews-work",
+  "sectionId": "start-here",
+  "order": 1,
+  "title": "How System Design Interviews Work",
+  "tagline": "What this round actually tests, why it exists, and how to read the room.",
+  "summary": "What the round tests and how it's graded — read this first.",
+  "difficulty": "Beginner",
+  "estMinutes": 14,
+  "tags": ["start-here", "mindset"],
+  "sections": [
+    {
+      "id": "what-it-is",
+      "title": "What a system design interview actually is",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A system design interview is an open-ended, 35–60 minute conversation where the interviewer hands you a deliberately vague prompt — *\"Design Twitter\"*, *\"Design a URL shortener\"* — and asks you to architect a real, large-scale system on a whiteboard or shared doc. There is no single correct answer and no code to compile. You are being evaluated on how you **think**, **communicate**, and **make trade-offs** under ambiguity.",
+            "This is the complete opposite of a coding interview. In a coding round there is a hidden test suite and a right answer. Here, the interviewer is the test suite, and they care less about the final diagram than about the *reasoning* that produced it. Two candidates can draw nearly identical architectures and get opposite scores purely based on how they justified each decision.",
+            "The skill being measured is the everyday job of a senior engineer: take a fuzzy business need, turn it into concrete requirements, propose an architecture, and defend it against scale, failure, and cost. Companies use this round because it predicts on-the-job performance far better than puzzle-solving."
+          ]
+        },
+        {
+          "type": "analogy",
+          "text": "Think of it like an architect pitching a building. The client says \"I want an office.\" A weak architect immediately sketches walls. A strong one asks: how many people? what budget? will it grow? earthquake zone? *Then* they draw — and they explain every choice. The drawing is the easy part; the questions and trade-offs are the job."
+        }
+      ]
+    },
+    {
+      "id": "what-tested",
+      "title": "What interviewers are really grading",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Behind the friendly chat, the interviewer is scoring you on a rubric. Almost every company's rubric reduces to the same five signals."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Requirements & scoping", "detail": "Do you clarify before designing? Can you separate what the system *must* do (functional) from how *well* it must do it (non-functional)? Do you pick a sensible scope for the time available?" },
+            { "term": "Structured approach", "detail": "Do you follow a logical flow (requirements → estimation → API → data → high-level design → deep dive → bottlenecks) or do you jump around and forget pieces?" },
+            { "term": "Technical breadth & depth", "detail": "Do you know the building blocks (caches, queues, load balancers, databases) and can you go *deep* on at least one when pushed?" },
+            { "term": "Trade-off reasoning", "detail": "Every choice has a cost. Strong candidates say *\"I'll use X because Y, accepting the downside Z.\"* This is the single highest-signal behaviour in the room." },
+            { "term": "Communication", "detail": "Can the interviewer follow your thinking? Do you drive the conversation, manage time, and respond well to pushback?" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "The number one reason candidates fail",
+          "text": "Not lack of knowledge — it's jumping straight to drawing boxes without clarifying requirements or estimating scale. The interviewer deliberately gives you an incomplete prompt to see if you'll ask. Silence and guessing read as inexperience."
+        }
+      ]
+    },
+    {
+      "id": "junior-vs-senior",
+      "title": "Junior vs senior: what bar you're held to",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The *same question* is graded differently by level. Knowing your target bar tells you where to spend your study time. You are never penalised for exceeding the bar — but you must clear it."
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["Dimension", "Junior / New-grad (SDE-1)", "Senior (SDE-3 / Staff)"],
+          "rows": [
+            ["Primary signal", "Solid fundamentals; can build a correct, simple design with guidance", "Drives the whole problem independently; anticipates issues before being asked"],
+            ["Requirements", "Asks a few clarifying questions when prompted", "Frames scope, calls out what's out-of-scope, states explicit assumptions"],
+            ["Components", "Knows what a load balancer, cache, and DB are and where they go", "Knows *which* cache/DB and why, plus their failure modes and limits"],
+            ["Trade-offs", "Can compare two options when asked", "Volunteers trade-offs constantly; reasons about cost, consistency, ops burden"],
+            ["Scale & failure", "Handles the happy path", "Designs for 10x growth, partial failure, hot keys, and data loss"],
+            ["Depth", "One reasonable end-to-end design", "Goes deep on a bottleneck (e.g., the feed fan-out) with real numbers"]
+          ],
+          "caption": "You don't need to be 'senior' to pass a senior loop on every axis — but consistently clearing the junior bar and showing senior instincts on a couple of axes is what gets offers."
+        },
+        {
+          "type": "callout",
+          "variant": "junior",
+          "title": "If you're targeting new-grad / SDE-1",
+          "text": "Master the **Fundamentals** and **Building Blocks** sections cold, learn the **framework**, and be able to walk through 4–5 **case studies** cleanly. That clears the bar. Don't over-index on exotic distributed-systems theory yet."
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "title": "If you're targeting senior / staff",
+          "text": "Everything above, *plus* the **Distributed Systems** section (consensus, replication, partitioning, idempotency), real capacity numbers, and the ability to deep-dive any single component for 10 minutes while reasoning about cost and operations."
+        }
+      ]
+    },
+    {
+      "id": "how-to-use",
+      "title": "How to use this module",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "This module is a sequenced curriculum, not a reference dump. The sections build on each other — read them in order the first time through, then use them as a reference later. Every lesson ends with an **interview cheat sheet** (the lines to memorise) and **practice questions** (because theory without practice is wasted)."
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Start Here", "detail": "This section. Get the mindset and the roadmap so nothing feels random." },
+            { "title": "Fundamentals", "detail": "The vocabulary — scalability, availability, consistency, CAP, latency numbers. You can't discuss trade-offs without these words." },
+            { "title": "Building Blocks", "detail": "The components you'll place on every diagram: load balancers, caches, CDNs, databases, queues, gateways." },
+            { "title": "Distributed Systems", "detail": "The hard parts: replication, sharding, consensus, consistent hashing, idempotency. This is the senior differentiator." },
+            { "title": "Case Studies", "detail": "Full, structured walkthroughs of the classic questions. This is where everything clicks together." },
+            { "title": "Interview Playbook", "detail": "The repeatable framework, estimation cheats, and communication tactics. Read before any real interview." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "Language doesn't matter here",
+          "text": "System design is language-agnostic — you reason about boxes, data, and arrows, not syntax. Where this module shows code (data models, API shapes, a rate-limiter, an ID generator), snippets are short and the idea transfers directly to C++, Python, or Java."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "The interview grades reasoning and communication, not a 'correct' diagram.",
+    "Five signals: requirements/scoping, structured approach, breadth+depth, trade-offs, communication.",
+    "The #1 failure is drawing before clarifying — always gather requirements first.",
+    "Every decision should be stated as 'I choose X because Y, accepting trade-off Z.'",
+    "Junior bar = correct simple design + fundamentals; senior bar = drive it, go deep, design for 10x and failure."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "Your interviewer says only \"Design Instagram.\" What is the *first* thing you do, and why?",
+      "hint": "What separates a strong candidate from a weak one in the first two minutes?",
+      "answer": [
+        "Do **not** start drawing. Begin by clarifying requirements to scope the problem. Ask functional questions (do we need photo upload, feed, follows, likes, comments, stories, search?) and non-functional questions (how many daily active users, read-vs-write ratio, latency expectations, consistency needs?).",
+        "Then explicitly state scope and assumptions: e.g., *\"I'll focus on photo upload, generating a home feed, and the follow graph; I'll treat stories, DMs, and ads as out of scope for time.\"* This shows the interviewer you can turn ambiguity into a concrete, bounded problem — the core senior signal."
+      ],
+      "keyPoints": [
+        "Resist the urge to draw immediately",
+        "Separate functional vs non-functional requirements",
+        "State scope and assumptions out loud",
+        "Confirm scale (DAU, read/write ratio) before estimating"
+      ],
+      "followUps": [
+        "How would your design change if it were 1 million vs 1 billion users?",
+        "Which of those features is hardest at scale and why?"
+      ]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Easy",
+      "prompt": "You finish a clean design and the interviewer asks, \"Why did you choose a NoSQL database here instead of SQL?\" You didn't really think about it. How do you recover?",
+      "hint": "Honesty plus a trade-off beats a confident wrong answer.",
+      "answer": [
+        "Don't bluff. Reason out loud about the actual trade-off for *this* workload: if the access pattern is simple key lookups with massive write volume and you can tolerate eventual consistency, a NoSQL store scales horizontally more easily. If you need multi-row transactions, joins, or strong consistency, SQL is a better fit.",
+        "Then convert it into a decision: *\"Given our write-heavy, key-based access and relaxed consistency, I'll keep NoSQL — but if we needed transactional guarantees for, say, payments, I'd switch that part to a relational store.\"* Showing you can re-derive the choice from requirements is exactly what they want."
+      ],
+      "keyPoints": [
+        "Never bluff a confident wrong answer",
+        "Re-derive the choice from the workload's access pattern and consistency needs",
+        "End with a concrete decision and the condition that would change it"
+      ],
+      "followUps": ["When would you use both SQL and NoSQL in the same system?"]
+    }
+  ]
+}

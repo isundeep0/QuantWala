@@ -1,0 +1,141 @@
+{
+  "slug": "limit-order-book",
+  "sectionId": "microstructure",
+  "order": 2,
+  "title": "The Limit Order Book",
+  "tagline": "The central data structure of modern markets — and how price-time priority decides who trades.",
+  "level": "Core",
+  "track": ["dev", "research", "trader", "systems"],
+  "estMinutes": 20,
+  "visualizer": "order-book",
+  "concept": {
+    "analogy": "Picture two staircases meeting at a landing. On one side, buyers stand on steps labeled with the price they're willing to pay — the highest bidder closest to the landing. On the other, sellers stand on steps labeled with their asking price — the cheapest seller closest to the landing. The gap at the landing is the spread. A trade happens when someone is willing to step across the gap. The book is just an organized record of everyone waiting on the stairs.",
+    "paragraphs": [
+      "A Limit Order Book (LOB) is the consolidated list of all resting limit orders for an instrument, organized by price. The bid side holds buy orders (sorted highest price first); the ask side holds sell orders (sorted lowest price first). The highest bid and lowest ask are the 'top of book' or 'inside market'; the difference is the bid-ask spread.",
+      "Within a price level, orders are queued — typically by time (FIFO / price-time priority): the earliest order at a price is first in line to be filled. Your position in that queue ('queue position') is a first-class concept: at the same price, being earlier means you fill first.",
+      "The book is dynamic: every new order, cancel, and trade changes it, often thousands of times per second per name. An HFT system must reconstruct and maintain this book from a market-data feed with extreme speed and correctness, because every decision (quote, cancel, take) is made against the current book state.",
+      "Reading the book is itself a signal: the relative sizes on each side (imbalance), the shape of the depth, and how fast levels are added/pulled all carry predictive information about the next price move."
+    ],
+    "points": [
+      "Bids sorted high→low, asks sorted low→high; the inside is the best bid and best ask.",
+      "Within a level, orders queue by time (price-time / FIFO priority at most venues).",
+      "Spread = best ask − best bid; mid = their average; depth = size resting at each level.",
+      "The book updates constantly; maintaining it fast and correctly is a core engineering task.",
+      "Book shape and imbalance are predictive signals, not just bookkeeping."
+    ],
+    "keyIdea": "The LOB pairs buyers and sellers by price-then-time priority. Mastering it — its state, its priority rules, and the information in its shape — underpins every microstructure strategy and every order-book engine."
+  },
+  "deepDive": {
+    "intro": "Use the interactive book in the Visualize tab as you read — send market and limit orders and watch priority play out.",
+    "steps": [
+      {
+        "title": "Anatomy: levels, orders, and the touch",
+        "detail": "The book is a set of price levels per side; each level holds a FIFO queue of orders with sizes. The 'touch' (best bid / best ask) is what most participants react to. Total size at a level is the displayed depth there."
+      },
+      {
+        "title": "Price-time priority",
+        "detail": "When an incoming order matches a level, it fills the orders there in time order: order that arrived first fills first. New orders join the back of their price level's queue. This is why posting early (better queue position) raises your fill probability at the same price."
+      },
+      {
+        "title": "What an incoming order does",
+        "detail": "A marketable order (market, or a limit that crosses) sweeps the opposite side best-price-first, filling FIFO within each level, until it's done or stops crossing. A non-crossing limit order rests, creating or joining a level. A cancel removes an order and may empty a level."
+      },
+      {
+        "title": "Reconstructing the book from a feed",
+        "detail": "Exchanges send either snapshots (full book at a point in time) or incremental updates (add/modify/delete/trade messages, usually keyed by order ID with a sequence number). A feed handler applies increments in sequence order to a local book copy. Out-of-order or dropped messages must be detected (via sequence numbers) and recovered (re-snapshot)."
+      },
+      {
+        "title": "Engineering the book for speed",
+        "detail": "Naive maps (std::map<price, level>) are simple but cache-unfriendly. Fast books use arrays indexed by price-ticks for dense price ranges, intrusive linked lists for the FIFO queue at each level (so cancel-by-ID is O(1) via a pointer), and object pools to avoid allocation. We build one in the Architecture section."
+      }
+    ],
+    "notes": [
+      {
+        "title": "L1 / L2 / L3 data",
+        "detail": "Market data comes in depths: L1 (top of book only — best bid/ask and sizes), L2 (aggregated depth per price level), L3 (every individual order with IDs — full order-by-order detail). L3 lets you track queue position; it's the richest and most demanding to process."
+      }
+    ],
+    "pitfalls": [
+      "Treating the book as L1 when your strategy needs queue position (you need L3 to know where you are in line).",
+      "Applying incremental updates out of sequence — always gate on the sequence number and recover on gaps.",
+      "Using a price→level map keyed by floating-point price; use integer 'ticks' (price/tick size) to avoid float comparison bugs.",
+      "Forgetting that a cancel can empty a level — your data structure must handle level creation/deletion cleanly."
+    ]
+  },
+  "benchmark": {
+    "intro": "Common ways to represent the book, and their trade-offs. 'Best' depends on price density and access pattern, but flat tick-indexed arrays dominate for liquid instruments.",
+    "columns": ["Representation", "Best/cancel", "Memory", "Notes"],
+    "rows": [
+      { "cells": ["std::map<tick, Level>", "O(log n)", "Pointer-chasing", "Simple, correct, but cache-hostile; fine for prototypes / sparse books."], "best": false },
+      { "cells": ["Flat array indexed by tick", "O(1)", "Contiguous", "Cache-friendly, O(1) access; wastes memory if price range is huge/sparse. Common for liquid names."], "best": true },
+      { "cells": ["Hash map<tick, Level>", "O(1) avg", "Scattered", "O(1) average but cache misses and rehash jitter; ok for sparse, wide ranges."], "best": false },
+      { "cells": ["Array + intrusive FIFO per level", "O(1) cancel by ID", "Contiguous + pooled", "The HFT-grade approach: O(1) cancel via node pointer, no allocation with an object pool."], "best": true }
+    ],
+    "takeaway": "For liquid instruments with dense prices, a flat array indexed by integer ticks, with intrusive linked-list FIFO queues and an object pool, gives O(1) updates and great cache behavior — the standard production pattern."
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-priority",
+        "q": "Explain price-time priority. Why is 'queue position' a first-class concern for a passive strategy?",
+        "tag": "Microstructure",
+        "a": [
+          "Price-time priority means orders are matched best price first, and within a price level, earliest-submitted first (FIFO). So a resting order's fill depends on both its price and how far back it is in that price level's queue.",
+          "For a passive strategy that earns the spread/rebate, you only profit if you actually fill. At a crowded best level, being at the back of a long queue may mean you almost never reach the front before the level trades through or gets pulled. So you race to post when a level forms, avoid modifications that reset priority, and may choose price levels or venues where your queue position is favorable."
+        ]
+      },
+      {
+        "id": "q-reconstruct",
+        "q": "An exchange sends incremental order-book updates with sequence numbers. How do you maintain a correct local book, and what do you do on a gap?",
+        "tag": "Systems",
+        "a": [
+          "Maintain a local book and apply each incremental message (add/modify/delete/trade) in strict sequence-number order. Track the last applied sequence number; the next message must be exactly +1.",
+          "On a gap (you receive seq N+2 after N), you've missed N+1. You can't trust the book anymore for affected state. Recovery options: request/await a fresh snapshot and a re-base point, or switch to a redundant feed (many feeds are sent on two multicast channels — 'A/B arbitration' — so you can fill the gap from the other line). Until recovered, you typically stop quoting in that instrument rather than act on a stale/incorrect book."
+        ],
+        "followups": ["What is A/B line arbitration?", "How do you bound memory if you buffer out-of-order messages?"]
+      },
+      {
+        "id": "q-datastruct",
+        "q": "You're designing the in-memory order book for a liquid instrument. Why might you avoid std::map, and what would you use instead?",
+        "tag": "Systems",
+        "a": [
+          "std::map is a balanced BST: O(log n) operations and, crucially, node-per-element pointer-chasing that causes cache misses on the hot path. For a liquid instrument with dense prices and millions of updates/sec, that's too slow and too jittery.",
+          "Use a flat array indexed by integer price-tick (price/tick size), giving O(1) access with contiguous, cache-friendly memory. Each slot holds a price level; the level's resting orders are an intrusive FIFO linked list whose nodes come from a preallocated object pool, so cancel-by-order-ID is O(1) (follow the node pointer) and there's no allocation on the hot path. Handle the (rare) out-of-range price by a fallback map."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-imbalance",
+        "title": "Top-of-book imbalance signal",
+        "difficulty": "Core",
+        "statement": "Given best bid size Qb and best ask size Qa, compute the order-book imbalance I = Qb / (Qb + Qa). Return a signal: +1 (predict up) if I > 0.66, −1 (predict down) if I < 0.34, else 0. Handle Qb = Qa = 0 as signal 0.",
+        "hint": "Imbalance toward the bid (large Qb) suggests upward pressure; guard the zero-denominator case.",
+        "tests": "Reading the book as a signal — order-flow/queue imbalance.",
+        "solution": {
+          "approach": [
+            "Imbalance measures which side has more resting size. A heavy bid relative to a thin ask means buyers are queued and the ask is more likely to be lifted, predicting an up-tick (and vice versa).",
+            "Compute I = Qb/(Qb+Qa), guarding the empty-book case, then threshold it into {−1, 0, +1}."
+          ],
+          "complexity": { "time": "O(1)", "space": "O(1)" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "imbalance.cpp",
+              "source": "int imbalanceSignal(long long Qb, long long Qa){\n    long long tot = Qb + Qa;\n    if (tot == 0) return 0;\n    double I = (double)Qb / tot;\n    if (I > 0.66) return +1;\n    if (I < 0.34) return -1;\n    return 0;\n}"
+            },
+            {
+              "language": "python",
+              "title": "imbalance.py",
+              "source": "def imbalance_signal(qb, qa):\n    tot = qb + qa\n    if tot == 0:\n        return 0\n    I = qb / tot\n    if I > 0.66:\n        return 1\n    if I < 0.34:\n        return -1\n    return 0"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Trading and Exchanges", "by": "Larry Harris", "note": "Definitive treatment of order-driven markets and priority rules." },
+    { "title": "'How to Build a Fast Limit Order Book'", "note": "Classic write-ups (e.g., the WK Selph article) on the array+intrusive-list design." }
+  ]
+}

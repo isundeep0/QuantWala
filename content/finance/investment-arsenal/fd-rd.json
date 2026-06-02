@@ -1,0 +1,136 @@
+{
+  "slug": "fd-rd",
+  "sectionId": "investment-arsenal",
+  "order": 1,
+  "title": "Fixed & Recurring Deposits (FDs and RDs)",
+  "tagline": "The safest, most familiar Indian instruments. Guaranteed returns, fully predictable — and quietly eroded by tax and inflation. When they're the right tool, and when they're a trap for long-term money.",
+  "summary": "How FDs and RDs work, their guaranteed-but-modest returns, taxation, and their real role.",
+  "difficulty": "Beginner",
+  "estMinutes": 12,
+  "tags": ["fd", "rd", "debt", "module-4"],
+  "prereqs": ["checkpoint-before-investing"],
+  "sections": [
+    {
+      "id": "how",
+      "title": "How they work",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Fixed Deposit (FD)", "detail": "You lock a lump sum with a bank for a chosen term (7 days to 10 years) at a fixed interest rate agreed up front. You get the principal plus interest at maturity. Breaking early usually costs a small penalty." },
+            { "term": "Recurring Deposit (RD)", "detail": "Same idea, but you deposit a fixed amount every month for a fixed term — ideal when you don't have a lump sum but can save monthly. It's the 'SIP' of the safe-deposit world." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "note",
+          "title": "The safety net",
+          "text": "Bank deposits (FD + RD + savings) are insured by DICGC up to ₹5 lakh per bank per depositor. The returns are also contractually guaranteed — you know the exact maturity value on day one. This certainty is their entire appeal."
+        },
+        {
+          "type": "metrics",
+          "title": "Typical numbers (illustrative, 2026)",
+          "items": [
+            { "label": "FD interest rate", "value": "~6.5–7.5%", "note": "varies by bank & tenure" },
+            { "label": "RD interest rate", "value": "~6.5–7.25%" },
+            { "label": "Senior citizen bonus", "value": "+0.5% approx" },
+            { "label": "Capital risk", "value": "Effectively nil" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "catch",
+      "title": "The catch: tax and inflation",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "FD/RD interest is **fully taxable at your income-tax slab rate** and added to your income each year (banks deduct TDS once interest crosses a threshold). For someone in the 30% slab, a 7% FD becomes about **4.9% after tax**.",
+            "Now subtract inflation (~6%). A post-tax 4.9% return against 6% inflation is a **negative real return** — the money grows on paper but loses buying power. This is the core reason FDs are wrong for long-term wealth: they're safe in rupees but unsafe in *purchasing power*."
+          ]
+        },
+        {
+          "type": "formula",
+          "title": "Real return, worked",
+          "expression": "Real return ≈ Post-tax return − Inflation",
+          "where": [
+            { "symbol": "FD rate", "meaning": "7%" },
+            { "symbol": "Tax (30% slab)", "meaning": "−2.1% → 4.9% post-tax" },
+            { "symbol": "Inflation", "meaning": "~6%" }
+          ],
+          "result": "≈ 4.9% − 6% = **about −1.1% real**. For Aarav, who currently pays no tax (income below the limit), the post-tax return is the full ~7%, so his real return is roughly flat — still not wealth-building, but not losing either."
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Note how the same FD is worse for a high earner (30% slab) than for Aarav (no tax). Taxation changes which asset is 'best' depending on your slab — a theme we'll return to in Module 6."
+        }
+      ]
+    },
+    {
+      "id": "role",
+      "title": "When FDs/RDs are the right tool",
+      "blocks": [
+        {
+          "type": "tradeoffs",
+          "title": "FD / RD honestly",
+          "prosLabel": "Use them for",
+          "consLabel": "Avoid them for",
+          "pros": [
+            "Money you'll need within 1–3 years (capital protection matters more than growth)",
+            "Part of an emergency fund (sweep-in FDs especially)",
+            "The 'safe' portion of a goal as its deadline approaches",
+            "Anyone who truly cannot tolerate any volatility"
+          ],
+          "cons": [
+            "Long-term wealth building (15–30 years) — inflation and tax win",
+            "High-tax-slab earners chasing real returns",
+            "Goals where you have time to ride out equity volatility",
+            "Beating inflation meaningfully — they're not designed to"
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "rule",
+          "title": "Rule of thumb",
+          "text": "FDs/RDs are a capital-PROTECTION tool, not a wealth-CREATION tool. Use them for short-horizon, can't-lose-it money. For long-term goals, their guaranteed safety is exactly what makes them lose to inflation."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "FD = lock a lump sum at a fixed rate; RD = deposit a fixed amount monthly. Returns are guaranteed.",
+    "Bank deposits insured by DICGC up to ₹5 lakh per bank per depositor.",
+    "Interest is fully taxable at your slab; a 7% FD ≈ 4.9% post-tax in the 30% slab.",
+    "Post-tax FD often trails ~6% inflation → negative real return for high earners.",
+    "Right for short-term (1–3 yr) or can't-lose money; wrong for long-term wealth.",
+    "Capital-protection tool, not a wealth-creation tool."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Concept",
+      "difficulty": "Medium",
+      "prompt": "Aarav's uncle (30% tax slab) says 'FDs at 7% are great, totally safe, I'll never touch equity.' What's the hidden problem with this for his long-term retirement money?",
+      "hint": "Compute the return after tax, then after inflation.",
+      "answer": [
+        "A 7% FD in the 30% slab returns only ~4.9% after tax. Against ~6% inflation, that's roughly **−1.1% in real terms** — his retirement money is slowly *losing* buying power every year despite the balance rising. 'Totally safe' in rupees is quietly unsafe in purchasing power.",
+        "For multi-decade money, the uncle needs assets that beat inflation after tax (e.g. equity/index funds). FDs are perfect for short-term and emergency money, but using them for long-term wealth guarantees he falls behind."
+      ],
+      "keyPoints": ["7% → ~4.9% post-tax (30% slab)", "Below ~6% inflation → negative real return", "Safe in rupees, unsafe in buying power", "Long-term money needs inflation-beating assets"]
+    },
+    {
+      "id": "q2",
+      "kind": "Application",
+      "difficulty": "Easy",
+      "prompt": "Aarav wants to save for a laptop he'll buy in 14 months. Should he use an RD or an equity SIP? Why?",
+      "hint": "How much time is there to recover from a market dip?",
+      "answer": [
+        "An **RD** (or short FD). With only ~14 months, there isn't enough time to ride out an equity downturn — if the market falls 20% right before he buys, his goal is wrecked. An RD gives a guaranteed maturity value he can plan around, which is exactly what a short, fixed-deadline goal needs.",
+        "This is goal-and-timeline matching (Module 5): short horizon → capital protection → debt-style instruments; long horizon → growth → equity. The RD's modest return is a fair price for certainty over 14 months."
+      ],
+      "keyPoints": ["Short horizon → RD/FD", "No time to recover from an equity dip", "Guaranteed maturity value enables planning", "Match instrument to timeline"]
+    }
+  ]
+}

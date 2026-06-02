@@ -1,0 +1,131 @@
+{
+  "slug": "junior-vs-senior",
+  "sectionId": "interview-playbook",
+  "order": 5,
+  "title": "How You're Graded: Junior vs Senior Expectations",
+  "tagline": "The same question, two very different bars. Know which one you're being held to — and what moves you up.",
+  "summary": "The rubric: what junior, mid, and senior candidates must show.",
+  "difficulty": "Beginner",
+  "estMinutes": 18,
+  "tags": ["interview", "leveling", "must-know"],
+  "prereqs": ["the-framework"],
+  "sections": [
+    {
+      "id": "premise",
+      "title": "Same question, different bar",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Two candidates can get 'Design a URL shortener' and be graded completely differently based on the level they're interviewing for. The question tests the same topic; the *depth, breadth, and ownership* expected scale with seniority. Understanding the rubric tells you where to invest your effort.",
+            "Broadly: juniors are expected to know the building blocks and assemble a reasonable design with guidance. Seniors are expected to drive ambiguity to clarity, justify every trade-off, anticipate failure, and reason about operating the system at scale."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Leveling isn't about knowing more acronyms — it's about depth of reasoning and ownership. A senior doesn't just name a cache; they discuss invalidation, stampede, eviction, and what happens when it fails."
+        }
+      ]
+    },
+    {
+      "id": "rubric",
+      "title": "The leveling rubric",
+      "blocks": [
+        {
+          "type": "compare",
+          "title": "What each level is expected to demonstrate",
+          "columns": ["Dimension", "Junior (SDE I / new grad)", "Senior (SDE III / staff)"],
+          "rows": [
+            ["Requirements", "Answers the prompt; may need prompting to scope", "Independently drives scope, surfaces hidden requirements & edge cases"],
+            ["Building blocks", "Knows what LB/cache/DB/queue do and wires them correctly", "Chooses the right one with justified trade-offs; knows their failure modes"],
+            ["Depth", "Solid high-level design; deep dives with guidance", "Goes deep unprompted into the hardest component; quantifies decisions"],
+            ["Failure handling", "Mentions replication / redundancy", "Systematically reasons about SPOFs, partial failures, retries, idempotency"],
+            ["Trade-offs", "Recognizes there are options", "Articulates and defends choices; ties them to requirements"],
+            ["Scale", "Designs for the stated load", "Anticipates 10×/100× growth, hot spots, rebalancing, cost"],
+            ["Operations", "Usually not expected", "Discusses monitoring, deployment, on-call, graceful degradation"],
+            ["Ownership", "Responds to the interviewer's lead", "Drives the whole conversation; the interviewer mostly observes"]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "junior",
+      "title": "If you're targeting junior / new-grad roles",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Master the fundamentals & building blocks", "detail": "Be fluent in what each component does and when to use it: load balancers, caching, SQL vs NoSQL, queues, replication, the CAP theorem. This is the bulk of what's tested." },
+            { "term": "Follow the framework", "detail": "Demonstrating a clear, structured approach (requirements → estimate → API → design) already puts you ahead of most junior candidates who flail." },
+            { "term": "It's okay to be guided", "detail": "Juniors are expected to take hints. Engaging well with guidance ('good point, so I'd add a replica here') is a positive signal at this level." },
+            { "term": "Don't fake senior depth", "detail": "You don't need to invent consensus protocols. A clean, correct, well-explained design beats a shaky attempt at advanced topics you don't understand." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "junior",
+          "text": "The junior bar: build a correct, reasonable system from the standard components, explain it clearly, and respond well to hints. Breadth of fundamentals matters more than deep distributed-systems theory."
+        }
+      ]
+    },
+    {
+      "id": "senior",
+      "title": "If you're targeting senior / staff roles",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Drive ambiguity to clarity yourself", "detail": "Don't wait to be scoped — proactively define requirements, call out ambiguities, and make reasonable assumptions explicit." },
+            { "term": "Go deep without prompting", "detail": "Identify the genuinely hard part (the fan-out, the hot shard, the consistency boundary) and dive in unasked. Quantify with estimates." },
+            { "term": "Be paranoid about failure", "detail": "Systematically ask 'what breaks?' — SPOFs, partial failures, network partitions, retries causing duplicates (idempotency), thundering herds, cascading failures and how to contain them (circuit breakers, bulkheads)." },
+            { "term": "Think about operating it", "detail": "Mention what you'd monitor (the right SLIs), how you'd deploy safely, how it degrades gracefully under overload, and how it evolves at 10×–100× scale and cost." },
+            { "term": "Own every trade-off", "detail": "Decide, justify against requirements, and acknowledge the cost. Show you've made these calls in real systems." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "text": "The senior bar: take a vague prompt, drive it to a clear, justified, failure-aware, operable design — and lead the whole conversation. The interviewer should feel like they're watching an experienced engineer work, not quizzing a student."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Same question, different bar — depth, breadth, failure-thinking, and ownership scale with level.",
+    "Junior bar: fluent in fundamentals/building blocks, follows the framework, responds well to hints.",
+    "Junior tip: a correct, clearly-explained standard design beats a shaky attempt at advanced theory.",
+    "Senior bar: drives ambiguity to clarity, deep-dives the hard part unprompted, quantifies decisions.",
+    "Senior must be paranoid about failure (SPOFs, partial failures, idempotency, cascading failures).",
+    "Senior discusses operations: monitoring/SLIs, safe deploys, graceful degradation, 10×–100× scale & cost.",
+    "Across levels: own your trade-offs — decide, justify against requirements, acknowledge the cost."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "Two candidates design a cache into their system. What would make one answer 'junior' and the other 'senior'?",
+      "hint": "Naming a component vs reasoning about its full lifecycle and failures.",
+      "answer": [
+        "The junior-level answer correctly *places* a cache: 'this is read-heavy, so I'll put Redis in front of the database to serve hot data and reduce load.' That's a valid, useful decision and it shows they know what a cache is for. At the junior bar, that's a positive signal — especially if they justify it with the read-heavy requirement.",
+        "The senior-level answer reasons about the cache's entire lifecycle and failure behavior, unprompted: which caching pattern (cache-aside vs read-through vs write-through) and why; the eviction policy (LRU/LFU) and TTLs; the invalidation strategy and the staleness it implies; what happens on a cache miss or when the cache node dies (fall through to the DB — is the DB sized to survive that?); cache stampede / thundering herd on a hot key expiring, and mitigations (request coalescing, jittered TTLs, serve-stale-while-revalidate); and how cache consistency interacts with the chosen consistency model. They also quantify it ('80% of reads hit ~20% of data, so I'll size the cache for the hot set'). Same component — but the depth of reasoning about lifecycle, failure, and trade-offs is what separates the levels."
+      ],
+      "keyPoints": ["Junior: correctly place + justify the cache (read-heavy)", "Senior: pattern, eviction, TTL, invalidation, staleness trade-off", "Senior: failure behavior — miss/node death falling through, stampede mitigation", "Senior: quantify (hot-set sizing) and tie to consistency model"],
+      "followUps": ["What's your mitigation when a hot cache key expires and thousands of requests hit the DB at once?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Easy",
+      "prompt": "You're a new grad and the interviewer asks about a topic you've only read about briefly (say, consensus). How should you handle it to score well at your level?",
+      "hint": "Honesty + structured reasoning beats bluffing; the junior bar is forgiving.",
+      "answer": [
+        "I'd be honest and reason structurally rather than bluff. Something like: 'I haven't worked with consensus protocols in depth, but here's how I understand the problem — we need multiple nodes to agree on a value or a leader despite failures. I know systems like ZooKeeper/etcd provide this, and the high-level idea is a majority quorum so the cluster stays consistent as long as most nodes are up. I'd reach for an existing coordination service rather than implement Raft myself.' That demonstrates the *shape* of understanding and good engineering judgment (don't roll your own consensus) without pretending to expertise I don't have.",
+        "At the junior bar this scores well: interviewers don't expect new grads to derive Paxos. What they're checking is whether I panic or bluff (bad) versus reason calmly from fundamentals and know where to find the answer (good). Confidently stating something wrong about consensus would be far more damaging than admitting the edge of my knowledge — one follow-up would expose the bluff and erode trust. Honest, structured reasoning under uncertainty is exactly the behavior they want to see, and it's a skill that scales as I grow into more senior rounds."
+      ],
+      "keyPoints": ["Be honest — don't bluff; bluffing collapses under one follow-up", "Reason from fundamentals: state the problem + high-level idea", "Show judgment: use an existing service, don't roll your own", "Junior bar doesn't expect deep theory — calm reasoning > false confidence"],
+      "followUps": ["How would you decide whether a problem actually needs consensus versus simpler replication?"]
+    }
+  ]
+}

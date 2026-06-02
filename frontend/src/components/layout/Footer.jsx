@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
-    <footer className="mt-24 border-t" style={{ borderColor: "rgb(var(--border))" }}>
+    <footer className="mt-24 border-t" style={{ borderColor: "rgb(var(--glass-stroke) / 0.1)" }}>
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="flex flex-col items-start justify-between gap-6 sm:flex-row">
           <div className="max-w-sm">
@@ -26,7 +26,7 @@ export default function Footer() {
             </Link>
           </div>
         </div>
-        <div className="mt-8 border-t pt-6 text-xs text-faint" style={{ borderColor: "rgb(var(--border))" }}>
+        <div className="mt-8 border-t pt-6 text-xs text-faint" style={{ borderColor: "rgb(var(--glass-stroke) / 0.1)" }}>
           Built for competitive programmers, OA prep, and quant/SWE interview candidates.
           Progress is stored locally in your browser.
         </div>

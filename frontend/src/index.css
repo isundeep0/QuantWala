@@ -19,15 +19,21 @@
   }
 
   .dark {
-    --bg: 10 12 16;
-    --bg-elev: 18 21 28;
-    --bg-sunken: 14 17 23;
-    --border: 33 39 50;
-    --border-strong: 48 56 70;
+    --bg: 6 8 16;
+    --bg-elev: 18 21 32;
+    --bg-sunken: 12 15 24;
+    --border: 38 44 60;
+    --border-strong: 60 70 92;
     --text: 233 237 243;
-    --text-muted: 154 163 178;
-    --text-faint: 110 120 135;
+    --text-muted: 160 170 190;
+    --text-faint: 120 132 154;
     --ring: 96 165 250;
+    /* Liquid-glass tuning */
+    --glass-elev: 0.56;
+    --glass-sunken: 0.46;
+    --glass-stroke: 255 255 255;
+    --glass-stroke-alpha: 0.14;
+    --glass-spec: 0.16;
   }
 
   * {
@@ -38,12 +44,33 @@
     scroll-behavior: smooth;
   }
 
+  :root {
+    --glass-elev: 0.66;
+    --glass-sunken: 0.5;
+    --glass-stroke: 255 255 255;
+    --glass-stroke-alpha: 0.6;
+    --glass-spec: 0.7;
+  }
+
   body {
-    background-color: rgb(var(--bg));
     color: rgb(var(--text));
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    background-color: rgb(var(--bg));
+    /* Deep "interstellar" base so the fixed nebula never flashes white. */
+    background-image:
+      radial-gradient(120% 90% at 12% -10%, rgb(37 99 235 / 0.16), transparent 60%),
+      radial-gradient(120% 90% at 95% 0%, rgb(139 92 246 / 0.14), transparent 55%),
+      radial-gradient(130% 100% at 50% 120%, rgb(16 185 129 / 0.10), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(120% 90% at 10% -10%, rgb(37 99 235 / 0.22), transparent 55%),
+      radial-gradient(120% 90% at 98% 5%, rgb(124 58 237 / 0.20), transparent 50%),
+      radial-gradient(140% 110% at 50% 125%, rgb(13 148 136 / 0.16), transparent 60%);
   }
 
   ::selection {
@@ -73,10 +100,14 @@
 ---------------------------------------------------------------------------- */
 @layer components {
   .surface {
-    background-color: rgb(var(--bg-elev));
+    background-color: rgb(var(--bg-elev) / var(--glass-elev));
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
   }
   .surface-sunken {
-    background-color: rgb(var(--bg-sunken));
+    background-color: rgb(var(--bg-sunken) / var(--glass-sunken));
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
   }
 
   .text-muted {
@@ -87,16 +118,17 @@
   }
 
   .card {
-    @apply surface rounded-2xl border shadow-soft;
-    border-color: rgb(var(--border));
+    @apply glass rounded-2xl;
   }
 
   .card-hover {
     @apply transition-all duration-300;
   }
   .card-hover:hover {
-    @apply shadow-card -translate-y-0.5;
-    border-color: rgb(var(--border-strong));
+    @apply -translate-y-0.5;
+    box-shadow:
+      0 1px 0 0 rgb(var(--glass-stroke) / calc(var(--glass-spec) * 0.5)) inset,
+      0 18px 50px -18px rgb(0 0 0 / 0.55);
   }
 
   .btn {
@@ -166,6 +198,147 @@
     );
     transform: translateX(-100%);
   }
+
+  /* ==========================================================================
+     LIQUID GLASS — "Project QuantWala Liquid Prism"
+     Layered translucency + iridescent rim light + specular sheen + caustics.
+     ========================================================================== */
+
+  /* Core glass surface. Compose with rounded-* and any size. The rim light and
+     top specular streak are drawn with pseudo-elements so content stays crisp. */
+  .glass {
+    position: relative;
+    isolation: isolate;
+    background:
+      linear-gradient(
+        160deg,
+        rgb(var(--bg-elev) / calc(var(--glass-elev) + 0.06)),
+        rgb(var(--bg-elev) / calc(var(--glass-elev) - 0.06))
+      );
+    backdrop-filter: blur(18px) saturate(165%);
+    -webkit-backdrop-filter: blur(18px) saturate(165%);
+    border: 1px solid rgb(var(--glass-stroke) / calc(var(--glass-stroke-alpha) * 0.5));
+    box-shadow:
+      0 1px 0 0 rgb(var(--glass-stroke) / var(--glass-spec)) inset,
+      0 -1px 1px 0 rgb(0 0 0 / 0.15) inset,
+      0 16px 44px -20px rgb(0 0 0 / 0.5);
+  }
+  /* Iridescent refracting rim */
+  .glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(
+      from var(--iris, 0deg),
+      rgb(59 130 246 / 0.55),
+      rgb(168 85 247 / 0.5),
+      rgb(45 212 191 / 0.5),
+      rgb(59 130 246 / 0.55)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.55;
+    z-index: -1;
+    pointer-events: none;
+  }
+  /* Pointer-reactive specular caustic — driven by --mx/--my (%) from JS */
+  .glass::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      220px circle at var(--mx, 30%) var(--my, 0%),
+      rgb(var(--glass-stroke) / calc(var(--glass-spec) * 0.55)),
+      transparent 60%
+    );
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .glass-interactive {
+    transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease;
+  }
+  .glass-interactive:hover {
+    transform: translateY(-3px);
+  }
+  .glass-interactive:hover::after {
+    opacity: 1;
+  }
+  .glass-interactive:hover::before {
+    opacity: 0.9;
+  }
+
+  /* Frosted spherical element (progress orbs, toggle, markers) */
+  .glass-orb {
+    position: relative;
+    isolation: isolate;
+    border-radius: 9999px;
+    background:
+      radial-gradient(120% 120% at 30% 22%, rgb(var(--glass-stroke) / calc(var(--glass-spec) * 0.7)), transparent 45%),
+      linear-gradient(160deg, rgb(var(--bg-elev) / 0.6), rgb(var(--bg-sunken) / 0.5));
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border: 1px solid rgb(var(--glass-stroke) / calc(var(--glass-stroke-alpha) * 0.7));
+    box-shadow:
+      0 2px 0 0 rgb(var(--glass-stroke) / var(--glass-spec)) inset,
+      0 -2px 6px 0 rgb(0 0 0 / 0.25) inset,
+      0 10px 26px -12px rgb(0 0 0 / 0.5);
+  }
+
+  /* Etched / engraved text — looks pressed into the glass surface */
+  .etched {
+    color: rgb(var(--text-muted));
+    text-shadow:
+      0 1px 0 rgb(var(--glass-stroke) / 0.18),
+      0 -1px 1px rgb(0 0 0 / 0.45);
+  }
+  .etched-glow {
+    color: rgb(var(--text));
+    text-shadow:
+      0 0 8px var(--glow, rgb(59 130 246 / 0.65)),
+      0 1px 0 rgb(var(--glass-stroke) / 0.16);
+  }
+
+  /* Text that appears lit from within the glass */
+  .lit-text {
+    background: linear-gradient(180deg, rgb(var(--text)), rgb(var(--text-muted)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 10px rgb(var(--glass-stroke) / 0.25));
+  }
+
+  /* Flowing sheen streak that drifts across a band (top nav) */
+  .glass-sheen {
+    position: relative;
+    overflow: hidden;
+  }
+  .glass-sheen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 1;
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      rgb(var(--glass-stroke) / calc(var(--glass-spec) * 0.5)) 48%,
+      rgb(96 165 250 / 0.18) 52%,
+      transparent 70%
+    );
+    background-size: 280% 100%;
+    animation: glass-drift 9s linear infinite;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    z-index: -1;
+  }
 }
 
 @layer utilities {
@@ -179,4 +352,64 @@
   .text-balance {
     text-wrap: balance;
   }
+  .animate-iris {
+    animation: iris-spin 14s linear infinite;
+  }
+  .animate-swirl {
+    animation: swirl-spin 7s linear infinite;
+  }
+  .animate-float {
+    animation: float-bob 7s ease-in-out infinite;
+  }
+  .animate-pulse-ring {
+    animation: pulse-ring 3.2s ease-in-out infinite;
+  }
+  .animate-caustic {
+    animation: caustic-drift 24s ease-in-out infinite alternate;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Liquid-glass keyframes
+--------------------------------------------------------------------------- */
+@property --iris {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes glass-drift {
+  0% { background-position: 200% 0; }
+  100% { background-position: -80% 0; }
+}
+@keyframes iris-spin {
+  to { --iris: 360deg; }
+}
+@keyframes swirl-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes float-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes pulse-ring {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+@keyframes caustic-drift {
+  0% { transform: translate3d(-4%, -2%, 0) scale(1.05) rotate(0deg); }
+  50% { transform: translate3d(4%, 3%, 0) scale(1.15) rotate(6deg); }
+  100% { transform: translate3d(-2%, 4%, 0) scale(1.08) rotate(-4deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-sheen::after,
+  .animate-iris,
+  .animate-swirl,
+  .animate-float,
+  .animate-pulse-ring,
+  .animate-caustic {
+    animation: none !important;
+  }
+  html { scroll-behavior: auto; }
 }

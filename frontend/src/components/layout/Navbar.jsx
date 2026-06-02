@@ -7,28 +7,32 @@ import { useProgress } from "@/context/ProgressContext.jsx";
 import { cn } from "@/lib/cn.js";
 
 const LINKS = [
-  { to: "/algorithms", label: "Algorithms", icon: Boxes, color: "#2563eb" },
-  { to: "/system-design", label: "System Design", icon: Network, color: "#d97706" },
-  { to: "/hft", label: "HFT / Low Latency", icon: Cpu, color: "#059669" },
+  { to: "/algorithms", label: "Algorithms", icon: Boxes, color: "#3b82f6" },
+  { to: "/system-design", label: "System Design", icon: Network, color: "#f59e0b" },
+  { to: "/hft", label: "HFT / Low Latency", icon: Cpu, color: "#10b981" },
 ];
 
 function Logo() {
   return (
-    <Link to="/" className="flex items-center gap-2.5 group">
-      <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-600 shadow-glow transition-transform group-hover:scale-105">
+    <Link to="/" className="group flex items-center gap-2.5">
+      <span className="glass-orb grid h-9 w-9 place-items-center transition-transform group-hover:scale-105">
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
           <path
             d="M6 15 L10 8 L13.5 13 L18 6"
-            stroke="#fff"
+            stroke="#60a5fa"
             strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"
+            style={{ filter: "drop-shadow(0 0 4px rgba(96,165,250,0.8))" }}
           />
           <circle cx="18" cy="6" r="1.9" fill="#34d399" stroke="#fff" strokeWidth="1.1" />
         </svg>
       </span>
       <span className="text-[17px] font-extrabold tracking-tight">
-        Quant<span className="text-brand-600 dark:text-brand-400">Wala</span>
+        <span className="lit-text">Quant</span>
+        <span className="text-brand-500" style={{ filter: "drop-shadow(0 0 8px rgba(59,130,246,0.55))" }}>
+          Wala
+        </span>
       </span>
     </Link>
   );
@@ -36,16 +40,16 @@ function Logo() {
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-  const { overallPercent } = useProgress();
+  const { overallPercent, completedCount } = useProgress();
   const location = useLocation();
 
   return (
-    <header className="sticky top-0 z-50 border-b backdrop-blur-xl"
-      style={{ backgroundColor: "rgb(var(--bg-elev) / 0.78)", borderColor: "rgb(var(--border))" }}>
-      <nav className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 px-3 pt-3 sm:px-4">
+      {/* Serpentine glass band */}
+      <nav className="glass glass-sheen animate-iris mx-auto flex h-14 max-w-7xl items-center gap-3 rounded-2xl px-3 sm:px-5">
         <Logo />
 
-        <div className="ml-4 hidden items-center gap-1 md:flex">
+        <div className="ml-3 hidden items-center gap-1 md:flex">
           {LINKS.map((l) => {
             const Icon = l.icon;
             const active =
@@ -56,17 +60,35 @@ export default function Navbar() {
                 to={l.to}
                 className={cn(
                   "relative flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-                  active ? "text-[var(--c)]" : "text-muted hover:text-[color:rgb(var(--text))]",
+                  active ? "text-[color:rgb(var(--text))]" : "text-muted hover:text-[color:rgb(var(--text))]",
                 )}
                 style={{ "--c": l.color }}
               >
-                <Icon className="h-4 w-4" style={{ color: active ? l.color : undefined }} />
-                {l.label}
                 {active && (
                   <motion.span
-                    layoutId="nav-underline"
-                    className="absolute inset-x-2 -bottom-[1px] h-0.5 rounded-full"
-                    style={{ backgroundColor: l.color }}
+                    layoutId="nav-glass-active"
+                    className="absolute inset-0 -z-10 rounded-xl"
+                    style={{
+                      background: `radial-gradient(120% 140% at 50% 120%, ${l.color}38, transparent 70%)`,
+                      boxShadow: `inset 0 0 0 1px ${l.color}55, 0 0 18px ${l.color}33`,
+                    }}
+                    transition={{ type: "spring", stiffness: 320, damping: 30 }}
+                  />
+                )}
+                <Icon
+                  className="h-4 w-4"
+                  style={{
+                    color: active ? l.color : undefined,
+                    filter: active ? `drop-shadow(0 0 5px ${l.color})` : undefined,
+                  }}
+                />
+                <span style={active ? { textShadow: `0 0 10px ${l.color}66` } : undefined}>{l.label}</span>
+                {active && (
+                  <motion.span
+                    className="absolute -bottom-px left-1/2 h-1 w-1 -translate-x-1/2 rounded-full"
+                    style={{ backgroundColor: l.color, boxShadow: `0 0 8px ${l.color}` }}
+                    animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.6, 1] }}
+                    transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
                   />
                 )}
               </NavLink>
@@ -75,27 +97,43 @@ export default function Navbar() {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
+          {/* Progress orb */}
           <Link
             to="/algorithms"
-            className="hidden items-center gap-2 rounded-xl border px-3 py-1.5 sm:flex"
-            style={{ borderColor: "rgb(var(--border-strong))" }}
-            title="Algorithms progress"
+            className="glass-orb hidden h-9 items-center gap-2 rounded-full pl-1.5 pr-3 sm:flex"
+            title={`${completedCount} algorithms complete`}
           >
-            <div className="h-1.5 w-16 overflow-hidden rounded-full surface-sunken">
-              <div
-                className="h-full rounded-full bg-brand-600"
-                style={{ width: `${overallPercent}%` }}
+            <span className="relative grid h-6 w-6 place-items-center">
+              <svg viewBox="0 0 36 36" className="h-6 w-6 -rotate-90">
+                <circle cx="18" cy="18" r="15" fill="none" stroke="rgb(var(--glass-stroke) / 0.15)" strokeWidth="4" />
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="15"
+                  fill="none"
+                  stroke="#3b82f6"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 15}
+                  strokeDashoffset={2 * Math.PI * 15 * (1 - overallPercent / 100)}
+                  style={{ filter: "drop-shadow(0 0 4px #3b82f6)" }}
+                />
+              </svg>
+              <span
+                className="animate-swirl absolute inset-1 rounded-full opacity-60"
+                style={{ background: "conic-gradient(from 0deg, transparent, #3b82f6aa, transparent)", filter: "blur(2px)" }}
               />
-            </div>
-            <span className="font-mono text-xs font-semibold text-muted">{overallPercent}%</span>
+            </span>
+            <span className="etched-glow font-mono text-xs font-semibold" style={{ "--glow": "#3b82f6aa" }}>
+              {overallPercent}%
+            </span>
           </Link>
 
           <ThemeToggle />
 
           <button
             type="button"
-            className="grid h-9 w-9 place-items-center rounded-xl border md:hidden"
-            style={{ borderColor: "rgb(var(--border-strong))" }}
+            className="glass-orb grid h-9 w-9 place-items-center md:hidden"
             onClick={() => setOpen((o) => !o)}
             aria-label="Toggle menu"
           >
@@ -110,10 +148,9 @@ export default function Navbar() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t md:hidden"
-            style={{ borderColor: "rgb(var(--border))" }}
+            className="glass mx-auto mt-2 max-w-7xl overflow-hidden rounded-2xl md:hidden"
           >
-            <div className="space-y-1 px-4 py-3">
+            <div className="space-y-1 p-3">
               {LINKS.map((l) => {
                 const Icon = l.icon;
                 return (

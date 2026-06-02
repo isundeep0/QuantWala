@@ -1,0 +1,113 @@
+{
+  "slug": "execution-algos",
+  "sectionId": "strategies",
+  "order": 4,
+  "title": "Execution Algorithms (TWAP, VWAP, IS)",
+  "tagline": "How to trade a large order without moving the price against yourself — the science of getting filled cheaply.",
+  "level": "Intermediate",
+  "track": ["research", "dev", "trader"],
+  "estMinutes": 16,
+  "concept": {
+    "analogy": "Imagine selling 10,000 concert tickets. Dump them all at once and the price crashes — supply overwhelms demand. Instead you trickle them out: maybe evenly through the day (TWAP), or matched to when crowds are biggest so each batch barely moves the price (VWAP). Sell too slowly, though, and the artist might cancel the tour before you're done (timing risk). Execution algorithms manage exactly this tension between impact and timing risk.",
+    "paragraphs": [
+      "When you need to trade a large quantity, executing it all at once 'walks the book' and signals your intent, causing market impact that worsens your average price. Execution algorithms slice a 'parent' order into many small 'child' orders spread over time and venues to minimize total cost.",
+      "The classic schedules: TWAP (Time-Weighted Average Price) spreads the order evenly over a time window — simple and predictable. VWAP (Volume-Weighted Average Price) trades more when the market trades more (following the historical volume profile), so each slice is a smaller fraction of contemporaneous volume and has less impact; the benchmark is the day's volume-weighted average price. POV (Percentage of Volume) trades a fixed fraction of whatever volume is occurring in real time.",
+      "The deeper framework is Implementation Shortfall (IS): minimize the total cost relative to the price when you decided to trade (the 'arrival price'), trading off market impact (trade fast → more impact) against timing/volatility risk (trade slow → more exposure to adverse price moves). The Almgren-Chriss model solves for an optimal trading trajectory given your risk aversion, expected impact, and volatility.",
+      "Execution is where HFT meets the buy side: HFT firms both run execution algos and provide the liquidity those algos consume. Understanding impact and the maker/taker decision (post passively and wait, or cross and pay) is central."
+    ],
+    "points": [
+      "Large orders cause market impact and signal intent — slice them into child orders over time/venues.",
+      "TWAP: even over time. VWAP: follow the volume profile (benchmark = volume-weighted avg price).",
+      "POV: trade a fixed % of live volume. IS: minimize cost vs. arrival price.",
+      "Core trade-off: trade fast (more impact) vs. trade slow (more timing/volatility risk).",
+      "Almgren-Chriss: optimal trajectory balancing impact and risk via risk aversion."
+    ],
+    "keyIdea": "Execution algorithms minimize the total cost of a large trade by balancing market impact (favoring slow) against timing risk (favoring fast), slicing the parent order across time and venues around a benchmark like VWAP or the arrival price."
+  },
+  "deepDive": {
+    "intro": "The benchmarks, the trade-off, and the model you'll be asked about.",
+    "steps": [
+      {
+        "title": "Why impact happens",
+        "detail": "Each child order consumes liquidity (temporary impact, which partly recovers) and reveals information that shifts others' beliefs (permanent impact). Bigger, faster trading consumes more depth and leaks more intent, so average price drifts against you. Impact is often modeled as growing with the square root of size traded relative to volume."
+      },
+      {
+        "title": "TWAP and VWAP",
+        "detail": "TWAP: split evenly across time slices — robust, simple, but ignores when liquidity is actually available. VWAP: weight slices by the expected volume profile (markets trade U-shaped — heavy at open/close), so you trade more when others do and each slice is a smaller share of volume, reducing impact and tracking the VWAP benchmark institutions are measured against."
+      },
+      {
+        "title": "POV and adaptiveness",
+        "detail": "POV (a.k.a. participation) trades a set fraction (say 10%) of real-time volume, automatically speeding up when the market is active and slowing when it's quiet. More adaptive than a fixed VWAP schedule but its completion time is uncertain."
+      },
+      {
+        "title": "Implementation Shortfall & Almgren-Chriss",
+        "detail": "IS = (cost of the executed trade) − (value at the arrival price). Almgren-Chriss frames execution as minimizing E[cost] + λ·Var[cost]: trading faster cuts variance (timing risk) but raises expected impact cost; λ encodes risk aversion. Solving yields an optimal, typically front-loaded trajectory. Higher urgency/volatility ⇒ trade faster; lower ⇒ stretch out."
+      },
+      {
+        "title": "Passive vs aggressive child orders",
+        "detail": "Each child can post passively (limit order, earn the spread/rebate, risk not filling and falling behind schedule) or take aggressively (cross, pay the spread/fee, guarantee the fill). Smart routers and 'liquidity-seeking' algos dynamically choose based on urgency, queue position, signals, and how far behind schedule they are."
+      }
+    ],
+    "pitfalls": [
+      "Trading too aggressively and paying large impact; or too passively and accumulating timing risk if the price runs.",
+      "Ignoring the volume profile (using TWAP where VWAP fits) and trading heavily into thin periods.",
+      "Leaking intent via predictable, evenly-spaced child orders that others detect and front-run — randomize sizing/timing.",
+      "Measuring against the wrong benchmark (e.g., judging an urgent order by VWAP when arrival-price IS is what matters)."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-twap-vwap",
+        "q": "When would you choose VWAP over TWAP for executing a large order, and what's the core risk in trading too slowly?",
+        "tag": "Execution",
+        "a": [
+          "Choose VWAP when intraday volume is uneven (the usual U-shape) and you want each slice to be a small, impact-minimizing fraction of contemporaneous volume — and when you're benchmarked against the day's VWAP, as many institutional desks are. TWAP is fine when volume is roughly flat or you want maximum simplicity/predictability and to avoid concentrating in the open/close.",
+          "Trading too slowly increases timing (opportunity) risk: the longer you take, the more the price can move adversely before you finish, and the more your remaining unexecuted size is exposed to volatility. So the choice of speed is really a trade-off — slow reduces impact but raises exposure to adverse moves; that's exactly what Implementation Shortfall / Almgren-Chriss formalizes."
+        ]
+      },
+      {
+        "id": "q-is",
+        "q": "Explain Implementation Shortfall and the central trade-off it captures.",
+        "tag": "Execution",
+        "a": [
+          "Implementation Shortfall measures total execution cost relative to the 'arrival price' — the market price at the instant you decided to trade. It captures everything: spread paid, market impact, fees, and the price drift while you were working the order (plus the opportunity cost of any unfilled portion).",
+          "The central trade-off is impact vs. timing risk. Execute quickly and you minimize exposure to adverse price moves (low timing risk) but pay high market impact. Execute slowly and you reduce impact per slice but bear more risk that the price runs away from you. Minimizing IS means choosing a trading speed/trajectory that optimally balances expected impact cost against the variance from timing risk — your risk aversion sets where on that frontier you sit."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-vwap",
+        "title": "VWAP schedule from a volume profile",
+        "difficulty": "Core",
+        "statement": "Given a total quantity Q to execute and a historical volume profile as a list of nonnegative weights (one per time bucket), produce the per-bucket child quantities that follow the profile, i.e., allocate Q proportionally to the weights. The allocations should sum to Q (use integer rounding, putting any remainder in the last nonzero bucket). If all weights are 0, spread Q evenly.",
+        "hint": "Normalize the weights to fractions of total volume, multiply by Q, round, and fix the rounding remainder so the total equals Q.",
+        "tests": "Translating a volume profile into a VWAP child-order schedule.",
+        "solution": {
+          "approach": [
+            "Sum the weights. If the sum is 0, fall back to an even split. Otherwise each bucket's target is Q × weight_i / totalWeight.",
+            "Round each target to an integer; because rounding can lose/gain a few shares, compute the discrepancy (Q − sum of rounded) and add it to the last nonzero-weight bucket so the schedule sums exactly to Q. This makes each slice proportional to expected volume — the essence of a VWAP schedule."
+          ],
+          "complexity": { "time": "O(n)", "space": "O(n)" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "vwap_schedule.cpp",
+              "source": "#include <vector>\n#include <cmath>\nstd::vector<long long> vwapSchedule(long long Q, const std::vector<double>& w){\n    int n = w.size();\n    std::vector<long long> out(n, 0);\n    double tot = 0; for (double x : w) tot += x;\n    if (tot <= 0){ for (int i=0;i<n;i++) out[i] = Q / n; out[n-1] += Q - (Q/n)*n; return out; }\n    long long assigned = 0; int lastNZ = 0;\n    for (int i = 0; i < n; i++){\n        out[i] = (long long)std::llround(Q * (w[i] / tot));\n        assigned += out[i];\n        if (w[i] > 0) lastNZ = i;\n    }\n    out[lastNZ] += Q - assigned;   // absorb rounding remainder\n    return out;\n}"
+            },
+            {
+              "language": "python",
+              "title": "vwap_schedule.py",
+              "source": "def vwap_schedule(Q, weights):\n    n = len(weights)\n    tot = sum(weights)\n    if tot <= 0:\n        base = Q // n\n        out = [base] * n\n        out[-1] += Q - base * n\n        return out\n    out = [round(Q * (w / tot)) for w in weights]\n    last_nz = max(i for i in range(n) if weights[i] > 0)\n    out[last_nz] += Q - sum(out)   # absorb rounding remainder\n    return out"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "'Optimal Execution of Portfolio Transactions'", "by": "Almgren & Chriss (2000)", "note": "The optimal-trajectory / impact-vs-risk framework." },
+    { "title": "The Science of Algorithmic Trading and Portfolio Management", "by": "Robert Kissell", "note": "Practical reference on execution algos and transaction-cost analysis." }
+  ]
+}

@@ -1,0 +1,130 @@
+{
+  "slug": "market-making",
+  "sectionId": "strategies",
+  "order": 1,
+  "title": "Market Making & Inventory Risk",
+  "tagline": "Quote both sides, earn the spread, and survive adverse selection and inventory — the canonical HFT strategy.",
+  "level": "Intermediate",
+  "track": ["trader", "research", "dev"],
+  "estMinutes": 20,
+  "visualizer": "market-making",
+  "concept": {
+    "analogy": "A used-car dealer offers to buy your car for $9,500 and sell you a similar one for $10,500. He profits from the $1,000 spread — but only if cars flow through fairly evenly. If everyone suddenly sells him cars (and no one buys), his lot fills with depreciating inventory he must offload at a loss. So he constantly nudges his prices: pile up too much inventory and he lowers both his buy and sell prices to encourage selling and discourage buying. That nudging is inventory management, and it's the heart of market making.",
+    "paragraphs": [
+      "A market maker continuously posts a bid and an ask, aiming to buy at the bid and sell at the ask repeatedly, capturing the spread. In principle, every round-trip (buy low, sell high) banks the spread. The challenge is that the two sides don't fill evenly, and the people trading against you sometimes know more than you do.",
+      "Two risks dominate. Inventory risk: as you fill on one side, you accumulate a position (long or short) that's exposed to price moves until you can offset it. Adverse selection: the counterparties who hit your quotes are disproportionately informed — they buy from you right before the price rises and sell to you right before it falls — so your realized edge is less than the quoted spread.",
+      "The maker's levers are spread width and quote skew. A wider spread earns more per fill but trades less and may lose queue priority; a tighter spread trades more but suffers more adverse selection. Skewing — shifting both quotes in one direction based on your inventory — pushes you back toward a flat position (lower your prices when long to encourage selling to others and discourage buying more).",
+      "The Avellaneda-Stoikov framework formalizes this: it derives optimal bid/ask quotes around a 'reservation price' that is shifted away from the mid based on your inventory and risk aversion, with a spread that depends on volatility and order-arrival intensity. You don't need the full math to interview well, but you must understand the inventory-vs-spread trade-off cold."
+    ],
+    "points": [
+      "Goal: repeatedly buy at bid, sell at ask, capturing the spread (+ rebates).",
+      "Inventory risk: accumulated position is exposed to price moves until offset.",
+      "Adverse selection: informed counterparties pick you off; realized edge < quoted spread.",
+      "Levers: spread width (edge vs. fill rate) and skew (push inventory back to flat).",
+      "Avellaneda-Stoikov: optimal quotes around an inventory-adjusted reservation price."
+    ],
+    "keyIdea": "Market making harvests the spread but must constantly trade off edge-per-fill against fill rate, and skew quotes to keep inventory near zero — because uncontrolled inventory plus adverse selection is what turns a winning spread into a loss."
+  },
+  "deepDive": {
+    "intro": "Play the market-making game in the Visualize tab while you read — set a tight then a wide spread, toggle skew, and watch inventory and PnL. Here's the model behind it.",
+    "steps": [
+      {
+        "title": "The spread trade-off",
+        "detail": "Quote tighter → you're nearer the touch, fill more often, but capture less per fill and get adversely selected more (you're filled right before moves). Quote wider → fewer fills, more edge each, less adverse selection, but you may miss most of the flow and lose queue priority. The optimal spread balances expected edge against fill rate and risk."
+      },
+      {
+        "title": "Inventory and the reservation price",
+        "detail": "Instead of quoting around the mid, quote around a 'reservation price' shifted by inventory: if you're long q, lower your reference so both your bid and ask drop — you're more eager to sell, less to buy, pulling inventory toward zero. Avellaneda-Stoikov: reservation r = mid − q·γ·σ²·(T−t), where γ is risk aversion, σ volatility, (T−t) time remaining."
+      },
+      {
+        "title": "Adverse selection and markouts",
+        "detail": "Measure it via markouts: track the mid a short time after each fill. If, after you buy, the mid tends to fall, your buy fills are toxic. Persistent negative markouts mean you're being picked off — respond by widening, skewing away from the toxic side, or pulling quotes when signals warn."
+      },
+      {
+        "title": "Volatility scaling",
+        "detail": "Wider spreads in higher volatility: when σ rises, the cost of holding inventory and the risk of adverse moves rise, so the optimal spread widens. Makers shrink size and widen quotes in fast markets and tighten in calm ones."
+      },
+      {
+        "title": "Hedging and offsetting",
+        "detail": "If you can't offset inventory by quoting the other side fast enough, you hedge — trade a correlated instrument (an index future, an ETF, the underlying) to neutralize directional risk while you work out of the position. Cross-instrument hedging is core to options and ETF market making."
+      }
+    ],
+    "notes": [
+      {
+        "title": "Rebates change the math",
+        "detail": "On maker-rebate venues, the rebate is part of your edge — you can profit on a fill even at zero captured spread. This is why queue position (fill probability) and venue selection are first-class concerns for passive makers."
+      }
+    ],
+    "pitfalls": [
+      "Quoting symmetrically around the mid while carrying inventory — you keep adding to a position instead of unwinding it.",
+      "Ignoring adverse selection: a positive quoted spread can be a negative realized edge once you account for toxic fills.",
+      "Holding quotes static in rising volatility — widen and shrink size as σ grows.",
+      "Forgetting that you only earn the spread if both sides actually fill — fill rate and queue position matter as much as the spread."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-tradeoff",
+        "q": "You're making a market and can choose a 2-cent or a 10-cent spread. Walk through the trade-offs. What would push you toward each?",
+        "tag": "Strategy",
+        "a": [
+          "A 2-cent (tight) spread sits near the touch: you fill frequently and capture lots of flow, but earn little per fill and suffer more adverse selection (you're filled right before moves) — and in calm, liquid markets the volume can make it worthwhile, especially with a rebate. A 10-cent (wide) spread earns more per fill and filters out some toxic flow, but trades rarely and may cede the touch (and queue priority) to competitors.",
+          "Push toward tight: low volatility, deep liquid name, meaningful rebate, benign (uninformed) flow, and confidence in fast cancels so you can pull stale quotes. Push toward wide: high/rising volatility, thin or news-driven name, toxic flow, large inventory you don't want to grow, or limited ability to cancel quickly. The right answer is regime-dependent, and good makers adjust the spread continuously."
+        ],
+        "followups": ["How would inventory change your choice?", "How does rebate capture shift the optimal spread?"]
+      },
+      {
+        "id": "q-skew",
+        "q": "You're carrying a large long inventory. How and why do you adjust your quotes?",
+        "tag": "Strategy",
+        "a": [
+          "You skew both quotes down (lower your bid and your ask), i.e., shift your reservation price below the mid. Lowering the ask makes you more likely to sell (offload the long); lowering the bid makes you less likely to buy more. The net effect pushes inventory back toward zero.",
+          "Why: a large long position is exposed to a price drop, and the more inventory you hold, the more a move hurts. Skewing trades a little expected spread capture for reduced inventory risk. In Avellaneda-Stoikov terms, the reservation price moves away from the mid in proportion to inventory × risk aversion × volimage² × time-left — formalizing exactly this intuition."
+        ]
+      },
+      {
+        "id": "q-adverse",
+        "q": "Define adverse selection in market making and describe how you'd measure it from your own fills.",
+        "tag": "Strategy",
+        "a": [
+          "Adverse selection is the tendency for the counterparties who trade against your quotes to be informed, so that on average the price moves against you right after you fill — your realized edge is below the quoted spread even though each fill 'looked' profitable at the touch.",
+          "Measure it with markouts: for each fill, record the mid-price at the fill and again at horizons (e.g., +100ms, +1s, +10s). Compute the signed price change relative to your trade direction (for a buy, did the mid rise or fall afterward?). Average markouts that are negative (price moves against you) quantify toxicity; you can bucket by venue, time of day, or signal state to find where you're being picked off and then widen/skew/pull accordingly."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-skew",
+        "title": "Inventory-skewed quotes",
+        "difficulty": "Intermediate",
+        "statement": "Implement a quoting function: given mid price, base half-spread (in price units), current inventory q (signed shares), and a skew coefficient k (price per share), return (bid, ask) where the quotes are centered on a reservation price r = mid − k*q. (Long inventory ⇒ r below mid ⇒ both quotes lower, encouraging sells.) bid = r − halfSpread, ask = r + halfSpread.",
+        "hint": "Shift the center by −k*q, then place symmetric quotes around that shifted center.",
+        "tests": "The core inventory-management mechanic of market making.",
+        "solution": {
+          "approach": [
+            "Compute the reservation (center) price r = mid − k*q. With q > 0 (long), r < mid, so both quotes move down — you lean toward selling. With q < 0 (short), r > mid, leaning toward buying.",
+            "Place symmetric quotes around r: bid = r − halfSpread, ask = r + halfSpread. (A fuller model would also widen halfSpread with volatility; here we isolate the skew mechanic.)"
+          ],
+          "complexity": { "time": "O(1)", "space": "O(1)" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "skew_quotes.cpp",
+              "source": "#include <utility>\nstd::pair<double,double> quotes(double mid, double halfSpread,\n                               long long q, double k){\n    double r = mid - k * (double)q;   // reservation price, skewed by inventory\n    return { r - halfSpread, r + halfSpread }; // {bid, ask}\n}"
+            },
+            {
+              "language": "python",
+              "title": "skew_quotes.py",
+              "source": "def quotes(mid, half_spread, q, k):\n    r = mid - k * q          # reservation price, skewed by inventory\n    return (r - half_spread, r + half_spread)  # (bid, ask)"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "'High-frequency trading in a limit order book'", "by": "Avellaneda & Stoikov (2008)", "note": "The foundational optimal market-making paper." },
+    { "title": "Algorithmic and High-Frequency Trading", "by": "Cartea, Jaimungal & Penalva", "note": "Rigorous treatment of market making and inventory control." }
+  ]
+}

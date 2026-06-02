@@ -1,0 +1,94 @@
+{
+  "slug": "market-making-games",
+  "sectionId": "quant-math",
+  "order": 4,
+  "title": "Market-Making Games",
+  "tagline": "The trader interview's centerpiece — price a market, manage risk, and update as information arrives.",
+  "level": "Intermediate",
+  "track": ["trader", "research"],
+  "estMinutes": 16,
+  "visualizer": "market-making",
+  "concept": {
+    "analogy": "It's like being asked to run a betting booth on a number nobody knows yet — say, 'how many windows are in this building?' You quote 'I'll buy your bet at 80, sell at 100.' People who think it's higher buy from you; people who think it's lower sell to you. Each trade leaks information about what others believe, and you must keep adjusting your booth's prices so you don't end up holding a hugely wrong position. That live tightrope is the market-making game.",
+    "paragraphs": [
+      "Market-making games are the signature trading-interview exercise (especially at Jane Street, Optiver, SIG, IMC). The interviewer asks you to make a two-sided market — a bid and an ask — on some uncertain quantity: the sum of two dice, the number of countries in Africa, a fictional commodity, the price of a card. You quote, they trade against you, new information arrives, and you re-quote. They're grading your reasoning process, not whether you guess the number.",
+      "Four skills are tested. Calibration: is your market centered near a sensible expected value, and is your spread appropriately wide given your uncertainty? Bayesian updating: when the interviewer 'buys' or 'sells' (or reveals a hint), do you revise your market in the right direction and amount? Risk management: do you control the inventory you accumulate and avoid getting run over? Aggression: when you have a genuine edge, do you actually trade, rather than quoting so wide you never transact?",
+      "The core mechanic mirrors real market making (see the strategies lesson): your bid/ask straddle your fair-value estimate; the spread reflects your uncertainty and risk; and the fact that someone wants to trade against you is itself information (adverse selection / Bayesian updating) — if a smart counterparty keeps lifting your offer, your offer is probably too low.",
+      "These are learnable. Practice with a partner, narrate your EV and uncertainty out loud, update visibly when 'traded' against, and manage your running position. The Visualize tab's market-making game lets you feel the spread/inventory/adverse-selection trade-offs hands-on."
+    ],
+    "points": [
+      "Make a two-sided market on an uncertain quantity; the interviewer trades against you and feeds info.",
+      "Graded on: calibration (center + spread), Bayesian updating, risk/inventory control, and aggression.",
+      "A counterparty's willingness to trade is information — update your market (adverse selection).",
+      "Center near EV; widen the spread when uncertain; tighten as you learn.",
+      "Narrate your reasoning out loud — the process is the score."
+    ],
+    "keyIdea": "A market-making game tests whether you can quote a calibrated two-sided market, update it Bayesially as you're traded against, and manage inventory — while being willing to trade on real edge. It's real market making, compressed into a conversation."
+  },
+  "deepDive": {
+    "intro": "A concrete playbook for the game, and how each move maps to real trading.",
+    "steps": [
+      {
+        "title": "Anchor on expected value",
+        "detail": "First estimate the fair value (EV) of the quantity. For 'sum of two dice', EV = 7. For an unknown like 'flights in the air right now', do a quick Fermi estimate. Your market should be centered roughly here — quoting 5 @ 9 around a fair value of 7 (so bid 5, ask 9)."
+      },
+      {
+        "title": "Set spread by uncertainty and risk",
+        "detail": "The width reflects how unsure you are and how much you fear being picked off. Very unsure → wide market (protect yourself); confident → tighter (you'll trade more, capture more). Too wide and you never trade (failing 'aggression'); too tight and a knowledgeable interviewer picks you off (failing risk control). Start moderately wide, then tighten as you learn."
+      },
+      {
+        "title": "Update when traded against",
+        "detail": "If the interviewer BUYS at your ask, that's evidence the true value is at least that high — shift your whole market UP (raise bid and ask). If they SELL at your bid, shift DOWN. The direction and size of your update should reflect how informed you think they are. Failing to update after being hit repeatedly is the classic mistake."
+      },
+      {
+        "title": "Manage inventory",
+        "detail": "Track your position. If you keep getting lifted (selling, going short), you're accumulating risk in one direction — skew your market (lower both quotes) to encourage the offsetting trade and discourage more of the same, exactly like inventory skew in real market making. Don't let a runaway position build."
+      },
+      {
+        "title": "Trade when you have edge",
+        "detail": "If you become confident the fair value is, say, 12 and someone offers to sell you at 9, take it — that's free EV. Interviewers want to see you act on edge, not just defend. Calibrated aggression (size up when confident, down when not) is a strong signal."
+      }
+    ],
+    "notes": [
+      {
+        "title": "Saying the right things",
+        "detail": "Narrate: 'My EV is about 7; I'm fairly uncertain so I'll make it 5 at 9. … You bought at 9 — that updates me upward, I'll move to 7 at 11. … I'm now short two lots, so I'll skew down to manage inventory.' This running commentary is exactly what's scored."
+      }
+    ],
+    "pitfalls": [
+      "Not updating after being traded against — ignoring the information in the trade.",
+      "Quoting so wide you never transact (fails the 'will you trade on edge?' test).",
+      "Quoting too tight on a quantity you're very unsure about — easy to pick off.",
+      "Losing track of inventory and getting run over in one direction.",
+      "Going silent — failing to narrate your EV, uncertainty, and updates."
+    ]
+  },
+  "practice": {
+    "intro": "Practice these out loud as if a partner is trading against you. Use the Visualize tab to feel spread/inventory/adverse-selection live.",
+    "interviewQuestions": [
+      {
+        "id": "q-dice-market",
+        "q": "Make a market on the sum of two fair dice. The interviewer immediately buys from you at your ask. What do you do next?",
+        "tag": "Game",
+        "a": [
+          "Fair value (EV) of the sum is 7. I'm not very uncertain (the distribution is known and bounded 2–12, peaked at 7), so I can make a reasonably tight market — say 6 at 8 (bid 6, ask 8).",
+          "The interviewer buying at my ask of 8 is mild information that they think the value is ≥ 8 — but here the distribution is fully known, so I shouldn't over-update on their action alone (they may just be testing me). I'd note the information, perhaps nudge up slightly to 6.5 at 8.5 to manage the short inventory I just took on (I sold, so I'm short), and stay near EV 7. The key signals: I anchored on EV, sized my spread to my (low) uncertainty, acknowledged the trade as information, and managed inventory — without panicking on one trade in a known distribution."
+        ],
+        "followups": ["What if instead it's the sum of two dice but the interviewer secretly looked at one die? How does that change your spread?", "How wide if it were the sum of 100 dice?"]
+      },
+      {
+        "id": "q-unknown",
+        "q": "Make a market on a quantity you don't know — say, the number of piano tuners in Chicago. How do you approach it?",
+        "tag": "Game",
+        "a": [
+          "First Fermi-estimate the fair value: ~3M people in Chicago, maybe 1 in 20 households (avg ~2.5 people) has a piano that's tuned ~once/year → ~3M/2.5 = 1.2M households × (say) 5% with a piano ≈ 60,000 pianos/year of tunings; a tuner does maybe ~3/day × ~200 days ≈ 600/year, so ~60,000/600 ≈ ~100 tuners. (The classic estimate lands around 50–125.)",
+          "Because I'm genuinely uncertain, I quote a WIDE market around ~100 — say 60 at 160. Then I update on any information: if the interviewer aggressively buys at 160, the true value is probably higher and I shift up and maybe widen; if they sell at 60, I shift down. I narrate the estimate, keep the spread honest to my uncertainty, update on their trades, and watch my inventory. Wide-but-centered with disciplined updating beats a falsely precise tight quote."
+        ]
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Jane Street / Optiver interview write-ups", "note": "Community accounts of market-making games describe the exact dynamics and what's scored." },
+    { "title": "Practice with a partner", "note": "The single best prep — take turns making markets and trading, and narrate aloud." }
+  ]
+}

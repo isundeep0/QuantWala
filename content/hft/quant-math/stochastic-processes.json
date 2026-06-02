@@ -1,0 +1,100 @@
+{
+  "slug": "stochastic-processes",
+  "sectionId": "quant-math",
+  "order": 5,
+  "title": "Random Walks, Brownian Motion & Martingales",
+  "tagline": "The math of how prices move randomly through time — the language of quant research.",
+  "level": "Advanced",
+  "track": ["research", "trader"],
+  "estMinutes": 18,
+  "concept": {
+    "analogy": "Picture a drunk walking home from a bar, taking each step left or right at random. Where will they be after 100 steps? You can't predict the exact spot, but you can describe the distribution — centered where they started, spreading out over time. Asset prices, over short horizons, behave a lot like this random walk; the math of the drunkard's walk is the math of price uncertainty.",
+    "paragraphs": [
+      "A stochastic process is a sequence of random variables indexed by time — a model of something evolving randomly. The simplest is the random walk: at each step, add a random increment (e.g., +1 or −1 with equal probability). Its key properties: the expected position stays at the start (zero drift), but the variance grows linearly with the number of steps, so the typical distance from the start grows like √t. That √t scaling is everywhere in finance.",
+      "Brownian motion (the Wiener process) is the continuous-time limit of a random walk: increments are independent, normally distributed with variance proportional to the time elapsed, and paths are continuous. It's the building block of continuous-time finance. Geometric Brownian Motion (GBM) models prices as always positive with log-returns following Brownian motion with drift — the basis of the Black-Scholes model.",
+      "A martingale is a process whose expected future value, given everything known now, equals its current value: E[X_{t+1} | history] = X_t. It formalizes a 'fair game' — no predictable drift. The efficient-market idea that you can't predict the next move from the past is a martingale statement, and many fair-value constructs (like a well-built microprice) are designed to be martingales.",
+      "You don't need to derive Itô's lemma to do well in most HFT interviews (it matters more for derivatives/pricing roles), but you must be fluent in: random walks, the √t scaling of volatility, expectation/variance of sums, what 'martingale' means, and why returns (not prices) are usually modeled as roughly independent."
+    ],
+    "points": [
+      "Random walk: independent increments; zero drift but variance grows ∝ t (typical distance ∝ √t).",
+      "Brownian motion: continuous-time limit; independent Gaussian increments, variance ∝ time.",
+      "GBM: prices stay positive, log-returns are Brownian with drift — basis of Black-Scholes.",
+      "Martingale: E[future | now] = now — a 'fair game' with no predictable drift.",
+      "Volatility scales with √t — a cornerstone fact for risk and option intuition."
+    ],
+    "keyIdea": "Prices over short horizons resemble a random walk: unpredictable in direction but with uncertainty (volatility) growing as √t. Brownian motion is its continuous-time version, and 'martingale' is the precise statement that the next move isn't predictable from the past."
+  },
+  "deepDive": {
+    "intro": "The facts and intuitions you must have at your fingertips.",
+    "steps": [
+      {
+        "title": "Random walk: mean and variance",
+        "detail": "Let S_n = X_1 + … + X_n with each X_i = ±1 equally likely (mean 0, variance 1). Then E[S_n] = 0 and Var(S_n) = n (variances of independent variables add). So the standard deviation is √n — after 100 steps you're typically ~10 away, not 100. This √t growth of spread is the single most important takeaway."
+      },
+      {
+        "title": "Why √t (volatility scaling)",
+        "detail": "Because variances add for independent increments, variance ∝ time, and standard deviation (volatility) ∝ √time. To convert daily vol to annual: multiply by √252 (trading days). This is why a 1%-daily-vol asset has ~16% annual vol (√252 ≈ 16), not 252%."
+      },
+      {
+        "title": "Brownian motion and GBM",
+        "detail": "Brownian motion W_t: W_0 = 0, independent increments, W_t − W_s ~ Normal(0, t−s), continuous paths. GBM models price as dS = μS dt + σS dW, i.e., percentage returns (not absolute) are Brownian — keeping prices positive and returns scale-free. Black-Scholes assumes GBM."
+      },
+      {
+        "title": "Martingales and fair games",
+        "detail": "X is a martingale if E[X_{t+1} | F_t] = X_t (F_t = info up to t). A symmetric random walk is a martingale; a betting game with zero edge is a martingale. 'You can't beat a martingale with a clever stopping rule' (optional stopping) underlies why naive timing strategies don't add EV. Markets being (near-)martingales after costs is why edges are so hard-won."
+      },
+      {
+        "title": "What this buys you in practice",
+        "detail": "Risk: position risk over horizon t scales with σ√t — used for limits and sizing. Signals: a good fair-value estimate should be ~martingale (no leftover predictability), so any predictability is your alpha. Options intuition: time-value and the √t spreading of outcomes explain why longer-dated and higher-vol options cost more."
+      }
+    ],
+    "notes": [
+      {
+        "title": "Real prices aren't pure random walks",
+        "detail": "Empirically, returns have fat tails, volatility clusters (GARCH-like), and there are tiny short-horizon predictabilities (the HFT edge). The random walk / Brownian model is a baseline you deviate from deliberately — interviewers like when you know both the model and its limitations."
+      }
+    ],
+    "pitfalls": [
+      "Scaling volatility linearly with time instead of with √t.",
+      "Confusing modeling prices vs. returns — returns (often log-returns) are what's modeled as ~independent.",
+      "Assuming a random walk implies prices are 'mean-reverting to the start' — a driftless walk has no pull back; spread just grows.",
+      "Overstating realism — real returns have fat tails and volatility clustering."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-walk",
+        "q": "A symmetric random walk starts at 0, taking ±1 steps. After 100 steps, what's the expected position and the standard deviation of the position?",
+        "tag": "Stochastic",
+        "a": [
+          "Each step has mean 0 and variance 1, and steps are independent. Expected position E[S_100] = 100 × 0 = 0 — there's no drift.",
+          "Variance adds: Var(S_100) = 100 × 1 = 100, so standard deviation = √100 = 10. So after 100 steps you're centered at 0 but typically about ±10 away — the hallmark √n spreading."
+        ],
+        "followups": ["What's the probability the walk is positive after 100 steps?", "How does this connect to converting daily to annual volatility?"]
+      },
+      {
+        "id": "q-vol-scale",
+        "q": "A stock has 1% daily volatility. Approximately what's its annualized volatility, and why?",
+        "tag": "Stochastic",
+        "a": [
+          "Volatility scales with the square root of time (variance adds over independent periods, so std grows as √t). There are about 252 trading days in a year.",
+          "So annual vol ≈ daily vol × √252 ≈ 1% × 15.87 ≈ 16%. The key is √252 ≈ 16, NOT ×252. This √t scaling is one of the most-tested facts in quant interviews."
+        ]
+      },
+      {
+        "id": "q-martingale",
+        "q": "What is a martingale, and why is it relevant to building a fair-value estimate like the microprice?",
+        "tag": "Stochastic",
+        "a": [
+          "A martingale is a process where the best forecast of the future value, given all current information, is just the current value: E[X_{t+1} | info now] = X_t. It's the formal notion of a 'fair game' with no predictable drift.",
+          "A good fair-value estimate should be (close to) a martingale: once you've incorporated all available information into your estimate, there should be no remaining predictable drift in it — if there were, you'd just fold that prediction into the estimate. So you build fair value (e.g., the Stoikov microprice) to be martingale-like, and then any genuine, exploitable predictability you find beyond it is, by definition, your alpha. It also explains why naive timing rules add no EV against a martingale (optional stopping)."
+        ]
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Stochastic Calculus for Finance I & II", "by": "Steven Shreve", "note": "The standard rigorous treatment (more than most HFT roles need, essential for pricing roles)." },
+    { "title": "A Random Walk Down Wall Street", "by": "Burton Malkiel", "note": "Accessible intuition for the random-walk view of prices." }
+  ]
+}

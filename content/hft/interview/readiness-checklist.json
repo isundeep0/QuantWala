@@ -1,0 +1,116 @@
+{
+  "slug": "readiness-checklist",
+  "sectionId": "interview",
+  "order": 5,
+  "title": "The HFT-Ready Checklist",
+  "tagline": "The capstone: a self-assessment across every domain. If you can do all of this, you're ready to interview with confidence.",
+  "level": "Core",
+  "track": ["dev", "research", "systems", "trader"],
+  "estMinutes": 16,
+  "concept": {
+    "analogy": "Before a pilot flies solo, they don't just 'feel ready' — they run a checklist, item by item, and only fly when every box is genuinely ticked. This lesson is that pre-flight checklist for quant interviews. Be honest: a box you can't tick is a gift, because it tells you exactly what to drill next. The goal isn't to have read about these things — it's to be able to do them, out loud, under pressure.",
+    "paragraphs": [
+      "You've now covered the whole landscape: the business of HFT, market microstructure, strategies and quant research, probability and mental math, modern C++, low-latency systems engineering, trading-system architecture, and the interview process. This capstone turns all of it into an honest, actionable self-assessment. For each item, ask not 'have I heard of this?' but 'could I explain and apply it, with examples and numbers, to a sharp interviewer right now?'",
+      "Use it as a gating tool. Go domain by domain and rate yourself: green (could teach it), yellow (shaky), red (can't do it). Your job before interviewing is to turn reds and yellows green along your primary track — and the linked module sections are where you do that. Re-run the checklist periodically; readiness is the state where the items on your track are consistently green and you can demonstrate them in a mock interview, not just on paper.",
+      "Remember the two universal meta-skills that sit on top of all the domain knowledge. First, communication: interviewers grade how you reason — narrate assumptions, estimate, sanity-check, and update. Second, judgment: knowing when to optimize and when not to, when the stdlib is fine, when a backtest result is too good to be true. These are what separate someone who memorized facts from someone a firm wants to hire. Practice them in every mock.",
+      "Finally, ground yourself in the right mindset. You will not know everything, and that's fine — top firms probe edges precisely to see how you think when you don't know. 'I'm not certain, but here's how I'd reason about it / estimate it / test it' is a strong answer. Combine deep, track-targeted preparation with honest, structured reasoning and authentic motivation, and you will walk in ready. Tick the boxes, do the mocks, and back yourself."
+    ],
+    "points": [
+      "Convert the whole module into an honest self-assessment: 'can I do this under pressure?', not 'have I heard of it?'",
+      "Rate each item green/yellow/red and drive reds/yellows to green along your primary track (links to the sections).",
+      "Two meta-skills on top of knowledge: communicate your reasoning, and show judgment about when/whether to optimize.",
+      "You won't know everything — reason from first principles when you don't; that's what's graded.",
+      "Readiness = track items consistently green AND demonstrable in mock interviews."
+    ],
+    "callouts": [
+      { "type": "tip", "title": "Do it out loud", "body": "For each checklist item, actually say the answer aloud or whiteboard it as if to an interviewer. The gap between 'I know this' and 'I can explain this clearly under time pressure' is exactly what mock interviews close." },
+      { "type": "info", "title": "Track-weight the checklist", "body": "All items make you well-rounded, but prioritize your primary track: dev/systems must be green on C++/systems/architecture; trader/researcher must be green on probability/mental-math/games (and research on modeling/backtesting)." }
+    ],
+    "keyIdea": "Readiness is a checklist, not a feeling. Honestly rate every domain green/yellow/red, drive your primary track to all-green using the linked sections, and prove it in mock interviews — all while practicing the two meta-skills (clear reasoning and good judgment) and the mindset of reasoning from first principles when you don't know."
+  },
+  "deepDive": {
+    "intro": "The full checklist by domain. For each item, target: 'I can explain it clearly and apply it with examples/numbers, out loud.'",
+    "steps": [
+      {
+        "title": "Foundations & Microstructure",
+        "detail": "☐ Explain how HFT makes money and the maker/taker ecosystem. ☐ Describe order types (limit/market/IOC/FOK/post-only) and their trade-offs. ☐ Explain a limit order book, price-time priority, and queue position. ☐ Describe how a matching engine works. ☐ Explain market-data feeds (UDP multicast, ITCH/OUCH/FIX) and sequencing. ☐ Define spread, mid, microprice, and order-flow imbalance — and compute a microprice. (Review: Foundations, Microstructure.)"
+      },
+      {
+        "title": "Strategies & Quant Research",
+        "detail": "☐ Explain market making, inventory risk, adverse selection, and quote skewing (Avellaneda–Stoikov idea). ☐ Describe statistical arbitrage / pairs trading and mean reversion. ☐ Explain how alpha signals are built from order flow and how to avoid lookahead bias. ☐ Describe execution algos (TWAP/VWAP/IS) and market impact vs timing risk. ☐ Run an honest backtest and name its biases (lookahead, survivorship, overfitting, costs). (Review: Strategies.)"
+      },
+      {
+        "title": "Probability, Stats & Mental Math",
+        "detail": "☐ Compute expected value and use linearity of expectation. ☐ Apply conditional probability and Bayes' theorem (and avoid base-rate neglect). ☐ Do fast mental arithmetic under time pressure (Zetamac-level). ☐ Play a market-making game: set a fair value, quote a spread, update on order flow, manage inventory. ☐ Reason about random walks, martingales, and volatility scaling (√t). (Review: Probability, Stats & Mental Math.)"
+      },
+      {
+        "title": "Modern C++ (dev/systems)",
+        "detail": "☐ Explain the C++ cost model: value semantics, hidden copies/allocations, RAII. ☐ Use move semantics and explain RVO and noexcept. ☐ Replace virtual dispatch with templates/CRTP and explain why (zero-cost abstraction). ☐ Avoid heap on the hot path with pools/arenas/placement new. ☐ Explain the memory model: relaxed vs acquire/release vs seq_cst, happens-before, data races. ☐ Name the hot-path pitfalls (std::function/shared_ptr/string/map). (Review: Modern C++.)"
+      },
+      {
+        "title": "Low-Latency Systems (dev/systems)",
+        "detail": "☐ Explain the cache hierarchy and why a miss costs ~80 ns; apply SoA and locality. ☐ Define and fix false sharing (alignas/padding). ☐ Explain branch prediction and write branchless/predictable code. ☐ Implement a correct, fast SPSC ring buffer (ordering + padding). ☐ Explain the Disruptor. ☐ Describe SIMD + data-oriented design, NUMA/core pinning/isolation, kernel bypass (DPDK/Onload), FPGAs, and how to measure p50/p99/p99.9 with rdtsc/histograms. (Review: Low-Latency Systems.)"
+      },
+      {
+        "title": "Architecture & Interview craft",
+        "detail": "☐ Walk the tick-to-trade path and assign a per-stage latency budget. ☐ Design a feed handler (zero-copy parse, sequencing, A/B, recovery). ☐ Design an O(1) order book. ☐ Explain an event-driven strategy engine and backtest=live. ☐ Explain the OMS lifecycle, idempotency, and smart order routing. ☐ Design pre-trade risk + a kill switch. ☐ Explain PTP time sync and why colocation/microwave matter. ☐ Run the systems-design framework and the low-latency coding checklist out loud, and have your track plan + 'why this firm' ready. (Review: Architecture, Interview Mastery.)"
+      }
+    ],
+    "notes": [
+      { "title": "Mock interviews are the real test", "detail": "Schedule regular mocks (with a peer or platform) covering your track's items. Performing under time pressure, with someone probing follow-ups, is the only honest measure of green." },
+      { "title": "Keep a weakness log", "detail": "Every time you stumble — a probability you fumbled, a C++ pitfall you missed, an order-book edge case — write it down and drill it. The log shrinking over time is your readiness curve." },
+      { "title": "Don't neglect the basics under stress", "detail": "Most failures aren't exotic; they're a fumbled EV calculation, an off-by-one in a clean coding problem, or forgetting to handle a gap. Keep the fundamentals sharp." }
+    ],
+    "complexity": {
+      "time": "Re-run until your track is green",
+      "timeReason": "This is an iterative gating tool: assess, drill the reds/yellows along your track via the linked sections, re-assess in mocks, repeat until consistently green.",
+      "space": "n/a",
+      "spaceReason": "A self-assessment capstone, not an algorithm."
+    },
+    "pitfalls": [
+      "Confusing 'I've read about it' with 'I can explain and apply it under pressure' — only the latter counts.",
+      "Skipping mock interviews, so you never test reasoning and speed under real conditions.",
+      "Spreading thin across all tracks instead of driving your primary track fully green.",
+      "Neglecting the meta-skills (communication, judgment) that interviewers weight heavily.",
+      "Treating not-knowing as failure instead of practicing first-principles reasoning when you're unsure."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-selfassess",
+        "q": "How do you know you're actually ready to interview at a top quant firm?",
+        "tag": "Career",
+        "a": [
+          "Readiness is demonstrable, not a feeling. Concretely: along my primary track, every checklist item is green — I can explain and apply it out loud, with examples and numbers, to a sharp interviewer. For a low-latency dev/systems track that means fluent DS&A, C++ cost model/memory model, the systems topics (caches, false sharing, branch prediction, lock-free, measurement), and the ability to design a feed handler/order book/order path with a latency budget. For a trading track it means Zetamac-level mental math, EV/conditional probability/Bayes, and confident market-making games.",
+          "And I've proven it under realistic conditions: regular mock interviews where someone probes follow-ups and I perform under time pressure, a shrinking weakness log, and the two meta-skills in place — I narrate my reasoning clearly and show judgment about when to optimize and when not to. I also accept I won't know everything and can reason from first principles when I don't. When the track items are consistently green in mocks and my motivation/'why this firm' is specific and authentic, I'm ready."
+        ],
+        "followups": ["What's your weakest area right now and your plan for it?", "How do you handle a question you don't know?"]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-final",
+        "title": "Run your full readiness self-assessment",
+        "difficulty": "Core",
+        "statement": "Go through every domain in the checklist above for your primary track. Rate each item green/yellow/red honestly. Then produce: your top five reds/yellows, the specific module sections you'll drill for each, a concrete mock-interview plan to validate them, and a one-line statement of your target track and 'why this firm' for a firm you'd apply to. This is your personal readiness plan.",
+        "hint": "Be honest — do each item out loud; map weaknesses to sections; schedule mocks; keep a weakness log.",
+        "tests": "Honest self-assessment and an actionable closing plan.",
+        "solution": {
+          "approach": [
+            "Method: for each checklist item, actually explain it aloud or whiteboard it as if to an interviewer, then rate green (could teach it), yellow (shaky), or red (can't do it). Reds and yellows are your roadmap — they're more valuable than the greens because they tell you exactly where to work.",
+            "Map each weakness to its section and drill deliberately: e.g., shaky on memory ordering → Modern C++ (memory model) + implement an SPSC ring and test it on ARM/TSan; weak on microprice/imbalance → Microstructure (price formation) + the microprice simulator; slow mental math → Quant-Math (mental math) + daily Zetamac for weeks; can't design an order book → Architecture (order book) + actually code an O(1) version; fumble EV/Bayes → Quant-Math + worked problems. Re-do the item out loud after drilling to confirm it turned green.",
+            "Validate in mocks: schedule regular mock interviews on your track (coding + C++/systems-design for dev/systems; probability + mental math + market-making games for trading/research), have a peer or platform probe follow-ups under time pressure, and keep a weakness log that you watch shrink. Track-weight your effort (~70% core bar, ~30% adjacent).",
+            "Close with intent: write one line stating your target track and a specific, authentic 'why this firm' (citing a real product, tech, paper, or team) for a firm you'd apply to. When your track items are consistently green in mocks, your weakness log is short, you communicate reasoning clearly, and your motivation is specific — you are HFT-ready. Back yourself."
+          ],
+          "complexity": { "time": "Iterative until track is green in mocks", "space": "Weakness log + mock schedule" }
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Every prior section of this module", "note": "The checklist links straight back to them — use them to turn reds and yellows green." },
+    { "title": "Pramp / interviewing.io / peers for mock interviews", "note": "Practice reasoning and speed under realistic, probed conditions." },
+    { "title": "A Practical Guide to Quantitative Finance Interviews; Cracking the Coding Interview", "note": "Targeted practice banks for the quant and coding rounds respectively." }
+  ]
+}

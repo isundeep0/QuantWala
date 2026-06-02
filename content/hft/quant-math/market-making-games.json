@@ -5,7 +5,10 @@
   "title": "Market-Making Games",
   "tagline": "The trader interview's centerpiece — price a market, manage risk, and update as information arrives.",
   "level": "Intermediate",
-  "track": ["trader", "research"],
+  "track": [
+    "trader",
+    "research"
+  ],
   "estMinutes": 16,
   "visualizer": "market-making",
   "concept": {
@@ -74,7 +77,10 @@
           "Fair value (EV) of the sum is 7. I'm not very uncertain (the distribution is known and bounded 2–12, peaked at 7), so I can make a reasonably tight market — say 6 at 8 (bid 6, ask 8).",
           "The interviewer buying at my ask of 8 is mild information that they think the value is ≥ 8 — but here the distribution is fully known, so I shouldn't over-update on their action alone (they may just be testing me). I'd note the information, perhaps nudge up slightly to 6.5 at 8.5 to manage the short inventory I just took on (I sold, so I'm short), and stay near EV 7. The key signals: I anchored on EV, sized my spread to my (low) uncertainty, acknowledged the trade as information, and managed inventory — without panicking on one trade in a known distribution."
         ],
-        "followups": ["What if instead it's the sum of two dice but the interviewer secretly looked at one die? How does that change your spread?", "How wide if it were the sum of 100 dice?"]
+        "followups": [
+          "What if instead it's the sum of two dice but the interviewer secretly looked at one die? How does that change your spread?",
+          "How wide if it were the sum of 100 dice?"
+        ]
       },
       {
         "id": "q-unknown",
@@ -84,11 +90,70 @@
           "First Fermi-estimate the fair value: ~3M people in Chicago, maybe 1 in 20 households (avg ~2.5 people) has a piano that's tuned ~once/year → ~3M/2.5 = 1.2M households × (say) 5% with a piano ≈ 60,000 pianos/year of tunings; a tuner does maybe ~3/day × ~200 days ≈ 600/year, so ~60,000/600 ≈ ~100 tuners. (The classic estimate lands around 50–125.)",
           "Because I'm genuinely uncertain, I quote a WIDE market around ~100 — say 60 at 160. Then I update on any information: if the interviewer aggressively buys at 160, the true value is probably higher and I shift up and maybe widen; if they sell at 60, I shift down. I narrate the estimate, keep the spread honest to my uncertainty, update on their trades, and watch my inventory. Wide-but-centered with disciplined updating beats a falsely precise tight quote."
         ]
+      },
+      {
+        "id": "q-make-market",
+        "q": "The interviewer says 'make me a market on X' (e.g., the sum of two dice). What does that mean and how do you respond well?",
+        "tag": "Trading",
+        "a": [
+          "'Make a market' means quote a two-sided price: a bid (where you'll buy) and an ask (where you'll sell), around your estimate of fair value, with a spread that reflects your uncertainty. The interviewer can then 'trade' against you (buy at your ask or sell at your bid), and may keep trading or reveal information, watching how you update. They're testing your estimation, your sizing of uncertainty (spread width), and your discipline when traded against (adverse selection).",
+          "Respond well by: (1) estimating fair value out loud (for two dice, E[sum] = 7); (2) quoting a spread around it that's wide enough to protect against being picked off but tight enough to be competitive (e.g., '6 at 8' — bid 6, ask 8); (3) updating after each trade — if they keep buying at your ask, your fair value is probably too low, so raise your market; (4) managing 'inventory' and not getting repeatedly run over. The cardinal rule: when someone trades against you, assume they might know something and adjust — don't stubbornly hold a market that keeps getting hit on one side."
+        ],
+        "followups": [
+          "If I keep lifting your offer, what do you do?",
+          "How wide should your spread be and why?"
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-dice-market",
+        "title": "Make and manage a market on two dice",
+        "difficulty": "Intermediate",
+        "statement": "Interviewer: 'I'll roll two fair dice; make me a market on their sum.' (a) State fair value and a reasonable quote. (b) The interviewer BUYS from you at your ask, then buys again. How should you update your market and why? (c) Suppose instead they reveal one die already shows a 6 — re-quote. Walk through your reasoning as you would out loud.",
+        "hint": "E[sum]=7. Spread reflects uncertainty/risk. Repeated one-sided trading is information. Conditioning on a die=6 shifts fair value.",
+        "tests": "Market-making intuition: fair value, spread, updating, conditioning.",
+        "solution": {
+          "approach": [
+            "(a) Fair value: E[sum of two dice] = 7. Quote a spread around it, e.g., '6 at 8' (I buy at 6, sell at 8). Width reflects that the sum ranges 2–12 with stdev ≈ 2.4, and that the interviewer may be informed; tighter (e.g., 6.5 at 7.5) is more competitive but riskier if they know something.",
+            "(b) They buy at my ask (8), then buy again: persistent one-sided buying is information that my market is too low (they think fair value > 8, or they have an edge). I should raise my whole market — e.g., move to '8 at 10' — and consider widening the spread to protect against adverse selection. I also now hold short 'inventory' (I sold twice), so I lean my quotes up to discourage selling more and encourage buying back. The mistake to avoid is leaving my offer at 8 and getting repeatedly picked off.",
+            "(c) If one die is revealed as 6, the sum = 6 + (other die), and E[other die] = 3.5, so fair value updates to 6 + 3.5 = 9.5, with the sum now ranging 7–12 (tighter, lower variance). I'd re-quote around 9.5, e.g., '9 at 10', narrower than before because conditioning on the 6 reduced my uncertainty. This shows the two core skills: compute the conditional expected value when information arrives, and adjust both the center (fair value) and the width (spread) of your market accordingly — exactly what a real market maker does as the book and flow reveal information."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          }
+        }
+      },
+      {
+        "id": "p-spread-width",
+        "title": "How wide should your market be?",
+        "difficulty": "Advanced",
+        "statement": "You're asked to make a market on a quantity you estimate at fair value 50, but you're quite uncertain (your own estimate could be off by ±10), and the interviewer is clearly better-informed than you. Discuss how you choose your spread width, how being traded against changes your estimate, and the failure mode of quoting too tight against an informed counterparty.",
+        "hint": "Spread should scale with your uncertainty AND the counterparty's information advantage; adverse selection punishes tight quotes.",
+        "tests": "Spread-setting under uncertainty and adverse selection.",
+        "solution": {
+          "approach": [
+            "Spread width should scale with two things: your own uncertainty about fair value (±10 here is large, so a wider spread), and the information asymmetry — if the counterparty is better-informed, every trade they do is likely adverse to you, so you must widen further to be compensated for getting picked off. A reasonable quote might be something like '44 at 56' (a 12-wide market around 50), not '49 at 51'.",
+            "Updating: because the counterparty is informed, treat any trade as a signal. If they buy from you, fair value is probably higher than you thought — raise your market; if they sell, lower it. You're essentially doing Bayesian updating on their actions, and you should move quickly when traded against rather than stubbornly defending a level.",
+            "Failure mode of quoting too tight: against an informed trader, a narrow spread means they only trade when they have an edge over you, so you systematically lose the spread to adverse selection — you get bought from right before the value rises and sold to right before it falls ('picked off'). The classic beginner mistake in these games is quoting a tight, confident market to look smart, then getting run over on one side. The disciplined play is to size your spread to your uncertainty and the toxicity of the flow, widen and skew when repeatedly traded on one side, and accept that a wider market that survives beats a tight one that bleeds."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Jane Street / Optiver interview write-ups", "note": "Community accounts of market-making games describe the exact dynamics and what's scored." },
-    { "title": "Practice with a partner", "note": "The single best prep — take turns making markets and trading, and narrate aloud." }
+    {
+      "title": "Jane Street / Optiver interview write-ups",
+      "note": "Community accounts of market-making games describe the exact dynamics and what's scored."
+    },
+    {
+      "title": "Practice with a partner",
+      "note": "The single best prep — take turns making markets and trading, and narrate aloud."
+    }
   ]
 }

@@ -5,7 +5,11 @@
   "title": "Expected Value & Conditional Probability",
   "tagline": "The single most important math for any quant interview — think in expected value, fast and correctly.",
   "level": "Core",
-  "track": ["trader", "research", "dev"],
+  "track": [
+    "trader",
+    "research",
+    "dev"
+  ],
   "estMinutes": 18,
   "concept": {
     "analogy": "Expected value is the 'fair price' of a gamble. If a game pays $10 on heads and costs you $4 on tails, a fair coin makes it worth (½·$10) + (½·−$4) = $3 per play on average. A trader's whole job is finding bets whose price is below their expected value and taking them repeatedly — exactly what a casino does, just with the edge on your side.",
@@ -72,7 +76,10 @@
           "If allowed to reroll after seeing the first roll: you should reroll whenever the first roll is below the expected value of a fresh roll (3.5), i.e., reroll on 1, 2, or 3; keep 4, 5, 6.",
           "EV = P(first ≥ 4)·E[first | ≥4] + P(first ≤ 3)·E[fresh roll]. P(first ≥ 4) = 1/2 with mean 5; P(first ≤ 3) = 1/2, then you reroll for mean 3.5. EV = ½·5 + ½·3.5 = 2.5 + 1.75 = 4.25. (Contrast: no reroll option = 3.5.)"
         ],
-        "followups": ["What if you get two rerolls?", "What's the value of the option to reroll?"]
+        "followups": [
+          "What if you get two rerolls?",
+          "What's the value of the option to reroll?"
+        ]
       },
       {
         "id": "q-two-children",
@@ -100,11 +107,91 @@
           "Use indicator variables: let X_i = 1 if card i is in its original position. The expected count is E[Σ X_i] = Σ P(card i in original position) by linearity of expectation (which holds despite the positions being dependent).",
           "Each card is equally likely to be in any of the 52 positions, so P(card i in its original spot) = 1/52. Summing over 52 cards: E = 52 × (1/52) = 1. Remarkably, the answer is 1 regardless of deck size n."
         ]
+      },
+      {
+        "id": "q-linearity-power",
+        "q": "Why is linearity of expectation so powerful, and what's a common misconception about it?",
+        "tag": "Probability",
+        "a": [
+          "Linearity of expectation says E[X+Y] = E[X] + E[Y] for ANY random variables, full stop. Its power is that it holds *even when the variables are dependent* — so you can decompose a complicated quantity (often via indicator variables, one per event) into a sum of simple expectations and add them up, completely sidestepping the joint distribution and any messy dependence.",
+          "The common misconception is that you need independence to add expectations — you don't (that's required for things like Var(X+Y) = Var(X)+Var(Y) or E[XY]=E[X]E[Y], not for E[X+Y]). This trips up candidates on problems like expected fixed points of a permutation, expected number of records, or coupon-collector stages, where the events are clearly dependent yet linearity still gives the answer in one line. Recognizing 'sum of indicators + linearity' is one of the highest-leverage tools in quant interviews."
+        ],
+        "followups": [
+          "Give an example where dependence matters (variance) but not for expectation.",
+          "How do indicator variables formalize this?"
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-coupon",
+        "title": "Expected rolls to see all six faces",
+        "difficulty": "Intermediate",
+        "statement": "You roll a fair six-sided die repeatedly. What is the expected number of rolls until you've seen all six faces at least once? Solve it and explain the method (a classic 'coupon collector' linearity-of-expectation problem).",
+        "hint": "Break into stages: time to get the k-th new face once you have k-1. Each stage is geometric.",
+        "tests": "Linearity of expectation + geometric waiting times.",
+        "solution": {
+          "approach": [
+            "Use linearity of expectation by splitting into stages. Let T_k be the number of rolls to get the k-th distinct face after you already have k−1 distinct faces. When you have k−1 faces, the probability a roll gives a new face is (6−(k−1))/6, so T_k is geometric with that success probability and E[T_k] = 6/(6−(k−1)).",
+            "Total expected rolls E[T] = Σ_{k=1..6} E[T_k] = 6/6 + 6/5 + 6/4 + 6/3 + 6/2 + 6/1 = 6·(1/1 + 1/2 + 1/3 + 1/4 + 1/5 + 1/6) = 6·H_6, where H_6 = 1 + 0.5 + 0.333… + 0.25 + 0.2 + 0.1667 ≈ 2.45.",
+            "So E[T] = 6 × 2.45 = 14.7 rolls. The method generalizes: for n coupons it's n·H_n ≈ n·ln n, which interviewers love because it shows linearity of expectation turning a scary 'until all collected' question into a sum of easy geometric stages."
+          ],
+          "complexity": {
+            "time": "O(n) terms",
+            "space": "O(1)"
+          }
+        }
+      },
+      {
+        "id": "p-linearity",
+        "title": "Expected number of fixed points",
+        "difficulty": "Intermediate",
+        "statement": "n people throw their hats into a pile and each picks one back at random (a uniformly random permutation). What is the expected number of people who get their own hat back? Solve with indicator variables and explain why the answer is surprisingly simple.",
+        "hint": "Define an indicator for each person getting their own hat; use linearity (no independence needed).",
+        "tests": "Indicator variables + linearity of expectation.",
+        "solution": {
+          "approach": [
+            "Let X_i = 1 if person i gets their own hat, else 0. The number of fixed points is X = Σ X_i. By linearity of expectation, E[X] = Σ E[X_i] — and linearity holds even though the X_i are NOT independent (knowing one person got their hat changes the others' probabilities), which is the key insight.",
+            "For a uniformly random permutation, person i is equally likely to receive any of the n hats, so P(X_i=1) = 1/n, hence E[X_i] = 1/n. Therefore E[X] = n × (1/n) = 1.",
+            "The expected number of fixed points is exactly 1, regardless of n. It's a classic demonstration that linearity of expectation lets you avoid the messy dependence structure of permutations entirely — a tool interviewers test constantly because candidates wrongly think they need independence."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          }
+        }
+      },
+      {
+        "id": "p-ev-game",
+        "title": "Should you play this dice game?",
+        "difficulty": "Core",
+        "statement": "A game: roll one fair die; you're paid the number shown in dollars, but it costs $4 to play. Compute the expected profit per play and decide whether to play. Then: you may instead pay $1 to re-roll once and keep the second roll if you wish (you choose optimally). What's the optimal re-roll policy and the new expected value?",
+        "hint": "EV of one die = 3.5. For the re-roll, only re-roll when the first roll is below the EV of a fresh roll.",
+        "tests": "Expected value and optimal stopping.",
+        "solution": {
+          "approach": [
+            "Base game: E[payout] = (1+2+3+4+5+6)/6 = 3.5. Cost $4, so expected profit = 3.5 − 4 = −$0.50 per play. Don't play the base game — it's a negative-EV bet.",
+            "With the optional $1 re-roll: you should re-roll only when your first roll is worse than the expected value of a fresh roll (3.5), i.e., re-roll on a 1, 2, or 3; keep a 4, 5, or 6. Expected payout = P(keep)·E[kept] + P(reroll)·E[fresh]. Keep happens for {4,5,6} (prob 1/2) with average 5; re-roll for {1,2,3} (prob 1/2) giving a fresh die worth 3.5 on average. So E[payout] = ½·5 + ½·3.5 = 2.5 + 1.75 = 4.25.",
+            "Net with re-roll cost: you pay $4 to play and, when you re-roll (half the time), an extra $1, so expected re-roll cost = ½·$1 = $0.50. Expected profit = 4.25 − 4 − 0.50 = −$0.25. Still negative — the re-roll improved EV (from −0.50 to −0.25) but not enough to make the game worth playing. The lesson: compute EV, use the 'only re-roll below the mean' optimal-stopping rule, and don't take negative-EV bets even when an option improves them."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "A Practical Guide to Quantitative Finance Interviews ('Green Book')", "by": "Xinfeng Zhou", "note": "The standard source for these probability/brain-teaser problems." },
-    { "title": "Fifty Challenging Problems in Probability", "by": "Frederick Mosteller", "note": "Classic problems that recur in interviews." }
+    {
+      "title": "A Practical Guide to Quantitative Finance Interviews ('Green Book')",
+      "by": "Xinfeng Zhou",
+      "note": "The standard source for these probability/brain-teaser problems."
+    },
+    {
+      "title": "Fifty Challenging Problems in Probability",
+      "by": "Frederick Mosteller",
+      "note": "Classic problems that recur in interviews."
+    }
   ]
 }

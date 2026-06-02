@@ -5,7 +5,10 @@
   "title": "Mental Math: The Speed Filter",
   "tagline": "Fast, accurate arithmetic under pressure — a hard filter at firms like Optiver, SIG, and IMC.",
   "level": "Core",
-  "track": ["trader", "research"],
+  "track": [
+    "trader",
+    "research"
+  ],
   "estMinutes": 14,
   "concept": {
     "analogy": "A trader doing mental math is like a chef who can eyeball portions instantly. They don't reach for a scale mid-service — they've drilled it so thoroughly that '37 × 43' or '8/0.32' surfaces in a second. On a fast desk, the price might be gone by the time you reach for a calculator, so the arithmetic has to live in your head.",
@@ -100,10 +103,61 @@
           "If ~30 million trades / 23,000 s ≈ ~1,300 trades/sec on average, with peaks several times higher near the open/close — so order ~thousands of trades/sec at peak. The exact number isn't the point; the interviewer wants a structured decomposition, explicit assumptions, and a sane order of magnitude. (Message rates, including quotes/cancels, are far higher — millions/sec — which is a useful distinction to mention.)"
         ]
       }
+    ],
+    "problems": [
+      {
+        "id": "p-arith-drills",
+        "title": "Fast arithmetic drills (with techniques)",
+        "difficulty": "Core",
+        "statement": "Without a calculator, compute and—more importantly—state the technique you'd use under time pressure: (a) 17 × 24; (b) 36 × 35; (c) 7.5% of 880; (d) 1/16 as a decimal; (e) 23 × 23. These are the kind of rapid products/percentages tested in arithmetic screens (e.g., Zetamac).",
+        "hint": "Use round-number decomposition, (a)(b) 'multiply by halves/doubles', percentage-as-fraction, and the (a±b)² identities.",
+        "tests": "Mental arithmetic techniques used in trading screens.",
+        "solution": {
+          "approach": [
+            "(a) 17×24: decompose 24 = 25−1 → 17×25 − 17 = 425 − 17 = 408. (Or 17×24 = 17×(20+4) = 340+68 = 408.)",
+            "(b) 36×35: 35 = 70/2, so 36×70 = 2520, halve → 1260. (Or note 36×35 = 6²×35… simplest is 36×35 = (35×35)+35 = 1225+35 = 1260.)",
+            "(c) 7.5% of 880: 10% of 880 = 88; 5% = 44; 2.5% = 22; 7.5% = 5%+2.5% = 44+22 = 66. (Or 7.5% = 3/40, and 880/40 = 22, ×3 = 66.)",
+            "(d) 1/16: halve repeatedly — 1/2=0.5, 1/4=0.25, 1/8=0.125, 1/16=0.0625. Memorizing the powers-of-two reciprocals is a huge time-saver.",
+            "(e) 23²: use (a)² with a=23 → (20+3)² = 400 + 2·20·3 + 9 = 400+120+9 = 529. (Or the 'numbers near 25' trick.)",
+            "The meta-skill: decompose to round numbers (×25 = ×100/4, ×5 = ×10/2), turn percentages into simple fractions, memorize fraction/decimal and square tables up to ~25, and use (a±b)² and a²−b²=(a−b)(a+b). Speed comes from pattern recognition and daily timed practice (e.g., Zetamac for 2 minutes), not raw calculation."
+          ],
+          "complexity": {
+            "time": "seconds each",
+            "space": "O(1)"
+          }
+        }
+      },
+      {
+        "id": "p-fermi",
+        "title": "Fermi estimation under pressure",
+        "difficulty": "Intermediate",
+        "statement": "Estimate, out loud and with stated assumptions: how many golf balls fit inside a typical car? Interviewers use such 'Fermi' questions to test structured estimation, not a 'right' answer. Show the method and arrive at an order-of-magnitude estimate.",
+        "hint": "Estimate the car's interior volume and a golf ball's volume, divide, then apply a packing-efficiency haircut.",
+        "tests": "Structured order-of-magnitude estimation.",
+        "solution": {
+          "approach": [
+            "Decompose into volumes. Car interior usable volume: roughly 1.5 m × 1.5 m × 1 m ≈ 2.25 m³; call it ~2 m³ = 2,000,000 cm³ (state the assumption that we fill the cabin, not the engine).",
+            "Golf ball: diameter ≈ 4.3 cm, radius ≈ 2.15 cm. Volume ≈ (4/3)π r³ ≈ 4.19 × 9.9 ≈ 42 cm³. But spheres don't pack perfectly — use the bounding cube ~ (4.3)³ ≈ 80 cm³ per ball, or apply ~65% packing efficiency to the sphere volume → effective ~42/0.65 ≈ 65 cm³ per ball. Either way ~65–80 cm³ of space per ball.",
+            "Divide: 2,000,000 cm³ / ~70 cm³ ≈ ~28,000 balls. So order-of-magnitude ~10⁴ (tens of thousands). The exact number doesn't matter; what's graded is the structure: state assumptions, break the problem into estimable pieces (interior volume ÷ effective ball volume), apply a packing-efficiency adjustment, and sanity-check the magnitude. Narrate each step and your assumptions — that reasoning is the point of the exercise."
+          ],
+          "complexity": {
+            "time": "~1 min",
+            "space": "O(1)"
+          }
+        }
+      }
     ]
   },
   "resources": [
-    { "title": "Zetamac arithmetic game", "link": "https://arithmetic.zetamac.com/", "note": "The standard practice tool — set a daily target and track it." },
-    { "title": "Secrets of Mental Math", "by": "Arthur Benjamin", "note": "Techniques for fast multiplication, division, and squaring." }
+    {
+      "title": "Zetamac arithmetic game",
+      "link": "https://arithmetic.zetamac.com/",
+      "note": "The standard practice tool — set a daily target and track it."
+    },
+    {
+      "title": "Secrets of Mental Math",
+      "by": "Arthur Benjamin",
+      "note": "Techniques for fast multiplication, division, and squaring."
+    }
   ]
 }

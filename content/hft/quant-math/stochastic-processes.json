@@ -5,7 +5,10 @@
   "title": "Random Walks, Brownian Motion & Martingales",
   "tagline": "The math of how prices move randomly through time — the language of quant research.",
   "level": "Advanced",
-  "track": ["research", "trader"],
+  "track": [
+    "research",
+    "trader"
+  ],
   "estMinutes": 18,
   "concept": {
     "analogy": "Picture a drunk walking home from a bar, taking each step left or right at random. Where will they be after 100 steps? You can't predict the exact spot, but you can describe the distribution — centered where they started, spreading out over time. Asset prices, over short horizons, behave a lot like this random walk; the math of the drunkard's walk is the math of price uncertainty.",
@@ -71,7 +74,10 @@
           "Each step has mean 0 and variance 1, and steps are independent. Expected position E[S_100] = 100 × 0 = 0 — there's no drift.",
           "Variance adds: Var(S_100) = 100 × 1 = 100, so standard deviation = √100 = 10. So after 100 steps you're centered at 0 but typically about ±10 away — the hallmark √n spreading."
         ],
-        "followups": ["What's the probability the walk is positive after 100 steps?", "How does this connect to converting daily to annual volatility?"]
+        "followups": [
+          "What's the probability the walk is positive after 100 steps?",
+          "How does this connect to converting daily to annual volatility?"
+        ]
       },
       {
         "id": "q-vol-scale",
@@ -90,11 +96,72 @@
           "A martingale is a process where the best forecast of the future value, given all current information, is just the current value: E[X_{t+1} | info now] = X_t. It's the formal notion of a 'fair game' with no predictable drift.",
           "A good fair-value estimate should be (close to) a martingale: once you've incorporated all available information into your estimate, there should be no remaining predictable drift in it — if there were, you'd just fold that prediction into the estimate. So you build fair value (e.g., the Stoikov microprice) to be martingale-like, and then any genuine, exploitable predictability you find beyond it is, by definition, your alpha. It also explains why naive timing rules add no EV against a martingale (optional stopping)."
         ]
+      },
+      {
+        "id": "q-martingale",
+        "q": "What is a martingale, and why is the concept useful in trading and interviews?",
+        "tag": "Probability",
+        "a": [
+          "A martingale is a process whose expected next value, given everything you know so far, equals its current value: E[X_{t+1} | history] = X_t. Informally, it's a 'fair game' — no drift up or down in expectation. A symmetric random walk and a fair-coin gambling bankroll are martingales; so, under risk-neutral pricing, are discounted asset prices.",
+          "It's useful because martingale properties let you compute expectations and prove 'you can't beat a fair game' results elegantly. The Optional Stopping Theorem says that for a martingale, under suitable conditions, the expected value at a stopping time equals the start value — which immediately solves many gambler's-ruin and hitting-time problems without messy summation. In trading, the martingale/efficient-market idea underlies why you can't predict a fair-game price's direction (only its variance grows with time), why a pure martingale strategy has zero expected profit, and the risk-neutral pricing of derivatives. Interviewers use it to test whether you recognize a fair game and avoid fallacies like 'it's due to go up.'"
+        ],
+        "followups": [
+          "State the Optional Stopping Theorem informally.",
+          "Why does a martingale betting system not beat the house?"
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-randomwalk-var",
+        "title": "Volatility scaling with time (√t)",
+        "difficulty": "Intermediate",
+        "statement": "A stock's log-returns are i.i.d. with daily volatility (standard deviation) of 1%. Assuming returns are independent across days, what is the volatility over 4 days? Over a 256-trading-day year? Explain the √t scaling and why it's so fundamental, and one assumption that can break it.",
+        "hint": "Variances of independent increments add; standard deviation scales with the square root of the number of periods.",
+        "tests": "Variance additivity and the square-root-of-time rule.",
+        "solution": {
+          "approach": [
+            "For independent increments, variances add: Var over n periods = n × (per-period variance). Standard deviation (volatility) therefore scales with √n. With daily vol σ_d = 1% = 0.01: over 4 days, vol = σ_d × √4 = 0.01 × 2 = 2%. Over 256 days, vol = 0.01 × √256 = 0.01 × 16 = 16% annualized.",
+            "This √t scaling is fundamental: it's why annualized vol = daily vol × √(trading days), why a random walk's spread widens like √t (not linearly), and why diffusion/Brownian motion has standard deviation proportional to √t. It directly informs position sizing, option pricing (vol scales with √(time-to-expiry)), and risk limits over different horizons.",
+            "Assumption that breaks it: independence (and identical distribution) of returns. If returns are autocorrelated — e.g., momentum (positive autocorrelation) makes multi-period variance grow faster than n, while mean-reversion (negative autocorrelation) makes it grow slower — the simple √t rule fails. Volatility clustering (today's vol predicts tomorrow's) also violates the i.i.d. assumption. So √t is the baseline under random-walk assumptions; real markets deviate, which is itself a source of signals."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          }
+        }
+      },
+      {
+        "id": "p-gamblers-ruin",
+        "title": "Gambler's ruin / hitting probability",
+        "difficulty": "Advanced",
+        "statement": "You start with $k and repeatedly bet $1 on a fair coin (win or lose $1 each flip, p=0.5). You stop when you reach $0 (ruin) or $N (target). What is the probability you reach $N before $0? Solve it (a symmetric random walk on {0,…,N}) and state how the answer changes if the game is slightly unfavorable.",
+        "hint": "For a fair walk, the hitting probability is linear in the start position. Use the martingale / optional-stopping argument.",
+        "tests": "Random walk hitting probabilities via martingale reasoning.",
+        "solution": {
+          "approach": [
+            "For a fair game, your bankroll is a martingale (expected change per bet = 0). By the Optional Stopping Theorem, the expected bankroll at the stopping time equals the start: E[final] = k. The final value is either 0 (with prob 1−P) or N (with prob P), so N·P + 0·(1−P) = k ⇒ P = k/N. The probability of reaching the target $N before ruin is simply k/N — linear in your starting wealth. (E.g., start with $30, target $100: P = 30/100 = 30%.)",
+            "Intuition/derivation alternative: let f(k) = P(reach N before 0 | start k). The fair-walk recurrence f(k) = ½f(k−1) + ½f(k+1) with f(0)=0, f(N)=1 has the linear solution f(k)=k/N.",
+            "If the game is slightly unfavorable (win prob p<0.5, lose prob q=1−p), the answer becomes exponential rather than linear: P = (1−(q/p)^k)/(1−(q/p)^N), which is much smaller than k/N even for a tiny edge against you — and as the number of bets grows, ruin becomes nearly certain. This is the mathematical reason a small house edge (or paying the spread/fees every trade) compounds against you, and why bet sizing and a real positive edge matter: with no edge you have a fair k/N shot, but with a persistent negative edge the exponential term crushes you. It's the flip side of why HFT wants a small *positive* edge repeated many times rather than a fair game."
+          ],
+          "complexity": {
+            "time": "O(1) closed form",
+            "space": "O(1)"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Stochastic Calculus for Finance I & II", "by": "Steven Shreve", "note": "The standard rigorous treatment (more than most HFT roles need, essential for pricing roles)." },
-    { "title": "A Random Walk Down Wall Street", "by": "Burton Malkiel", "note": "Accessible intuition for the random-walk view of prices." }
+    {
+      "title": "Stochastic Calculus for Finance I & II",
+      "by": "Steven Shreve",
+      "note": "The standard rigorous treatment (more than most HFT roles need, essential for pricing roles)."
+    },
+    {
+      "title": "A Random Walk Down Wall Street",
+      "by": "Burton Malkiel",
+      "note": "Accessible intuition for the random-walk view of prices."
+    }
   ]
 }

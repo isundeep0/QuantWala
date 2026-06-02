@@ -5,7 +5,10 @@
   "title": "Bayesian Updating",
   "tagline": "Start with a belief, see evidence, update rationally — the mental engine of both trading and good answers.",
   "level": "Core",
-  "track": ["trader", "research"],
+  "track": [
+    "trader",
+    "research"
+  ],
   "estMinutes": 16,
   "concept": {
     "analogy": "A good doctor doesn't diagnose from a single test. They start with how common a disease is (the base rate), then adjust based on the test result and how reliable that test is. A scary positive on a rare disease with an imperfect test often still means you're probably fine — because the base rate dominates. Bayesian updating is just doing that adjustment with arithmetic instead of gut feel, and it's exactly how a trader updates a price when news arrives.",
@@ -66,7 +69,10 @@
           "Prior P(disease) = 0.001. P(+|disease) = 1 (detects all cases). P(+|healthy) = 0.01. By Bayes: P(disease|+) = (1·0.001)/(1·0.001 + 0.01·0.999) = 0.001/(0.001 + 0.00999) = 0.001/0.01099 ≈ 0.091.",
           "So about 9% — despite a '99% accurate' test, a positive result more likely than not is a false alarm, because the disease is so rare. Odds check: prior odds 1:999, likelihood ratio 1/0.01 = 100, posterior odds ≈ 100:999 ≈ 1:10 ≈ 9%. Always respect the base rate."
         ],
-        "followups": ["What if you test positive twice with independent tests?", "How accurate must the test be for a positive to mean >50%?"]
+        "followups": [
+          "What if you test positive twice with independent tests?",
+          "How accurate must the test be for a positive to mean >50%?"
+        ]
       },
       {
         "id": "q-coin",
@@ -86,10 +92,77 @@
           "So you update your posterior toward 'price rising' and shift your fair value up. Acting on it, you raise/skew your quotes (lift your ask, maybe pull your bid) to avoid selling cheaply right before the rise — that's adverse-selection avoidance driven by a Bayesian update. The discipline is moving proportionally to the evidence's strength: a small flicker shouldn't move you much; a strong, sustained signal should."
         ]
       }
+    ],
+    "problems": [
+      {
+        "id": "p-disease",
+        "title": "The classic base-rate (disease test) problem",
+        "difficulty": "Intermediate",
+        "statement": "A disease affects 1 in 1,000 people. A test is 99% accurate: it correctly flags 99% of sick people (sensitivity) and correctly clears 99% of healthy people (specificity, so 1% false-positive rate). You test positive. What is the probability you actually have the disease? Compute it and explain why the answer is so counterintuitive.",
+        "hint": "Bayes: P(sick|+) = P(+|sick)P(sick) / P(+). Compute P(+) from both sick and healthy contributions.",
+        "tests": "Bayes' theorem and base-rate neglect.",
+        "solution": {
+          "approach": [
+            "Bayes: P(sick|+) = P(+|sick)·P(sick) / [P(+|sick)·P(sick) + P(+|healthy)·P(healthy)]. Plug in: P(sick)=0.001, P(+|sick)=0.99, P(healthy)=0.999, P(+|healthy)=0.01.",
+            "Numerator = 0.99 × 0.001 = 0.00099. Denominator = 0.00099 + 0.01 × 0.999 = 0.00099 + 0.00999 = 0.01098. So P(sick|+) = 0.00099 / 0.01098 ≈ 0.090 ≈ 9%.",
+            "Despite a '99% accurate' test, a positive result means only ~9% chance of being sick. Why: the disease is rare (base rate 0.1%), so among any large group the *false positives from the huge healthy population* (≈1% of 999 ≈ 10 people per 1000) vastly outnumber the *true positives from the tiny sick population* (≈1 person per 1000). The base rate dominates. This is base-rate neglect — people anchor on the 99% accuracy and ignore the prior. The same reasoning applies in trading: a signal that 'fires correctly 99% of the time' is nearly worthless if the event it predicts is rare and false alarms are common; you must weight by the base rate."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          }
+        }
+      },
+      {
+        "id": "p-coin-posterior",
+        "title": "Updating belief about a coin's bias",
+        "difficulty": "Advanced",
+        "statement": "A box has two coins: a fair coin (P(heads)=0.5) and a biased coin (P(heads)=0.8). You pick one at random (50/50) and flip it 3 times, getting H, H, H. What's the posterior probability you're holding the biased coin? Then: if the next flip is also heads, update again. Show the sequential Bayesian updating.",
+        "hint": "Likelihood of HHH under each coin; combine with the 50/50 prior. Then use the new posterior as the prior for the 4th flip.",
+        "tests": "Sequential Bayesian updating with likelihoods.",
+        "solution": {
+          "approach": [
+            "Prior: P(biased)=P(fair)=0.5. Likelihood of HHH: under fair = 0.5³ = 0.125; under biased = 0.8³ = 0.512. Posterior after HHH: P(biased|HHH) = (0.512×0.5)/(0.512×0.5 + 0.125×0.5) = 0.256/(0.256+0.0625) = 0.256/0.3185 ≈ 0.804. So three heads pushes belief from 50% to ~80% biased.",
+            "Sequential update on a 4th heads: use the posterior 0.804 as the new prior. P(biased|4th H) = (0.8×0.804)/(0.8×0.804 + 0.5×0.196) = 0.6432/(0.6432+0.098) = 0.6432/0.7412 ≈ 0.868. Belief rises to ~87%.",
+            "Equivalently you could compute it in one shot from HHHH likelihoods (0.8⁴ vs 0.5⁴ with the 0.5 prior) and get the same ~86.8% — sequential updating (posterior becomes the next prior) is mathematically identical to batch updating. This is exactly how a trader updates a market-making fair value or a 'is this flow informed?' belief tick by tick: start with a prior, multiply by the likelihood of each new observation, renormalize, repeat."
+          ],
+          "complexity": {
+            "time": "O(flips)",
+            "space": "O(1)"
+          }
+        }
+      },
+      {
+        "id": "p-monty",
+        "title": "The Monty Hall update",
+        "difficulty": "Intermediate",
+        "statement": "Three doors; a prize is behind one. You pick door 1. The host (who knows where the prize is and always opens a losing door you didn't pick) opens door 3, revealing no prize. Should you switch to door 2? Justify with Bayesian reasoning and state the win probabilities for staying vs switching.",
+        "hint": "Condition on the host's behavior. Your original pick was right with prob 1/3; the host's action transfers the rest.",
+        "tests": "Conditional probability and updating on an informative action.",
+        "solution": {
+          "approach": [
+            "Switch. Initially P(prize behind your door 1) = 1/3, and P(prize behind doors 2 or 3 combined) = 2/3. The host's action is informative because he *always* opens a losing door among the ones you didn't pick. When he opens door 3 (empty), he's effectively concentrated that 2/3 probability onto the remaining unopened door 2.",
+            "Formally: P(win by staying) = P(your initial pick was correct) = 1/3 (the host's action gives no new info about your own door). P(win by switching) = 1 − 1/3 = 2/3. So switching doubles your win probability from 1/3 to 2/3.",
+            "The intuition that trips people up: the host isn't opening a door at random — he knowingly avoids the prize, so his choice carries information that updates your posterior. Treating his action as a conditioning event (not a random reveal) is the crux. This 'update on an informed party's action' is directly analogous to inferring information from an informed counterparty's trades in markets."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          }
+        }
+      }
     ]
   },
   "resources": [
-    { "title": "A Practical Guide to Quantitative Finance Interviews", "by": "Xinfeng Zhou", "note": "Has the canonical Bayes/medical-test style problems." },
-    { "title": "Thinking in Bets", "by": "Annie Duke", "note": "Intuition for probabilistic, calibrated decision-making under uncertainty." }
+    {
+      "title": "A Practical Guide to Quantitative Finance Interviews",
+      "by": "Xinfeng Zhou",
+      "note": "Has the canonical Bayes/medical-test style problems."
+    },
+    {
+      "title": "Thinking in Bets",
+      "by": "Annie Duke",
+      "note": "Intuition for probabilistic, calibrated decision-making under uncertainty."
+    }
   ]
 }

@@ -4,7 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { ProgressProvider } from "./context/ProgressContext.jsx";
-import { SdProgressProvider } from "./context/SdProgressContext.jsx";
+import { HftProgressProvider } from "./context/HftProgressContext.jsx";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -12,9 +12,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <BrowserRouter>
       <ThemeProvider>
         <ProgressProvider>
-          <SdProgressProvider>
+          <HftProgressProvider>
             <App />
-          </SdProgressProvider>
+          </HftProgressProvider>
         </ProgressProvider>
       </ThemeProvider>
     </BrowserRouter>

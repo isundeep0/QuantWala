@@ -1,0 +1,109 @@
+{
+  "slug": "mental-math",
+  "sectionId": "quant-math",
+  "order": 3,
+  "title": "Mental Math: The Speed Filter",
+  "tagline": "Fast, accurate arithmetic under pressure — a hard filter at firms like Optiver, SIG, and IMC.",
+  "level": "Core",
+  "track": ["trader", "research"],
+  "estMinutes": 14,
+  "concept": {
+    "analogy": "A trader doing mental math is like a chef who can eyeball portions instantly. They don't reach for a scale mid-service — they've drilled it so thoroughly that '37 × 43' or '8/0.32' surfaces in a second. On a fast desk, the price might be gone by the time you reach for a calculator, so the arithmetic has to live in your head.",
+    "paragraphs": [
+      "Many trading firms use timed mental-arithmetic tests as an early, unforgiving filter. The most famous is Optiver's '80 questions in 8 minutes' style test with negative marking (e.g., +1 correct, −1 wrong, −2 for some schemes), and the community-standard practice tool is Zetamac (configurable add/subtract/multiply/divide, 2-minute rounds). A common informal bar is roughly 40+ correct in a 2-minute Zetamac round, but targets vary by firm.",
+      "Why test this? On a fast desk you constantly estimate prices, sizes, and risk in your head while a market moves. Speed and accuracy under pressure correlate with being able to function in that environment. It's not about genius arithmetic — it's about drilled fluency and not freezing.",
+      "The good news: it's almost entirely trainable. Daily practice (15–30 minutes) plus a handful of techniques (rounding-and-adjusting, factoring, percentage tricks, fraction-to-decimal fluency) raise scores substantially in a few weeks. The bad news: it really does require the daily reps — you can't cram it the night before.",
+      "Beyond raw arithmetic, develop estimation/Fermi skills (order-of-magnitude reasoning) — interviewers also ask 'how many golf balls fit in a 747?' style questions to see structured estimation, and traders estimate constantly."
+    ],
+    "points": [
+      "Timed arithmetic is an early filter at several trading firms (Optiver, SIG, IMC, Flow…).",
+      "Practice with Zetamac (2-min rounds); a common informal target is ~40+ correct.",
+      "It tests functioning under pressure, not genius — it's highly trainable with daily reps.",
+      "Learn techniques: round-and-adjust, factoring, percentage/fraction fluency.",
+      "Also build Fermi/estimation skill for order-of-magnitude questions."
+    ],
+    "keyIdea": "Fast mental arithmetic is a trainable, daily-reps skill that gates entry to several trading firms. Drill Zetamac, learn a few multiplication/division/percentage tricks, and practice estimation — fluency, not genius, is the goal."
+  },
+  "deepDive": {
+    "intro": "A compact toolkit of techniques. Pick the ones that click and drill them daily.",
+    "steps": [
+      {
+        "title": "Round and adjust (multiplication)",
+        "detail": "37 × 43 → (40 × 43) − (3 × 43) = 1720 − 129 = 1591. Or 37 × 43 = (40−3)(40+3) = 40²−3² = 1600−9 = 1591 (difference of squares when numbers straddle a round number). Rounding to a friendly number and correcting is the workhorse."
+      },
+      {
+        "title": "Factoring and regrouping",
+        "detail": "Break numbers into easy factors: 16 × 25 = 16 × 100/4 = 400. 24 × 35 = 24 × 5 × 7 = 120 × 7 = 840. ×5 is ×10/2; ×25 is ×100/4; ×50 is ×100/2. These appear constantly."
+      },
+      {
+        "title": "Division as multiplication by a reciprocal / fraction sense",
+        "detail": "Know fraction→decimal by heart: 1/8=.125, 3/8=.375, 1/16=.0625, 1/3≈.333, 1/6≈.167, 1/7≈.143. For 8 / 0.32: multiply both by 100 → 800/32 = 25. Convert awkward divisions into clean ones by scaling."
+      },
+      {
+        "title": "Percentages and the swap trick",
+        "detail": "x% of y = y% of x (so 18% of 50 = 50% of 18 = 9). 15% = 10% + half of 10%. For compounding/markups, approximate (1+r)² ≈ 1 + 2r for small r. Percent change and basis points (1bp = 0.01%) should be instant."
+      },
+      {
+        "title": "Squares, and estimation",
+        "detail": "Memorize squares to ~30 and use a²−b² = (a−b)(a+b). For estimation (Fermi) questions, decompose into factors you can each estimate, multiply, and sanity-check the order of magnitude. State assumptions out loud."
+      }
+    ],
+    "notes": [
+      {
+        "title": "How to practice for the negative-marking test",
+        "detail": "With negative marking (e.g., −1 wrong, sometimes −2), accuracy matters as much as speed — a wild guess has negative EV. Practice your true error rate, decide a skip policy (if skipping is 0 and wrong is −1, skip questions you can't do reliably), and pace so you finish what you can do correctly rather than rushing into errors."
+      }
+    ],
+    "pitfalls": [
+      "Cramming the night before — this skill needs spaced daily reps to stick.",
+      "Optimizing only speed and ignoring accuracy under negative marking — wrong answers cost you.",
+      "Not memorizing fraction↔decimal conversions and squares — these are the 'multiplication table' of the test.",
+      "Freezing on estimation questions instead of decomposing and stating assumptions."
+    ]
+  },
+  "practice": {
+    "intro": "Do these in your head, then check. The goal is speed AND accuracy. Then go drill Zetamac daily.",
+    "interviewQuestions": [
+      {
+        "id": "q-mult",
+        "q": "Compute quickly in your head: 48 × 52.",
+        "tag": "Arithmetic",
+        "a": [
+          "These straddle 50, so use difference of squares: 48 × 52 = (50−2)(50+2) = 50² − 2² = 2500 − 4 = 2496.",
+          "This 'straddle a round number' pattern (a−b)(a+b) = a²−b² is one of the highest-value tricks — spot it whenever two numbers are symmetric around something round."
+        ]
+      },
+      {
+        "id": "q-div",
+        "q": "Compute: 7 / 0.28.",
+        "tag": "Arithmetic",
+        "a": [
+          "Scale both by 100 to clear the decimal: 700 / 28. Simplify: 28 = 4×7, and 700 = 100×7, so 700/28 = 100/4 = 25.",
+          "General move: turn division by a decimal into division by an integer by scaling, then factor to cancel."
+        ]
+      },
+      {
+        "id": "q-pct",
+        "q": "What is 16% of 75?",
+        "tag": "Arithmetic",
+        "a": [
+          "Use the swap trick: 16% of 75 = 75% of 16 = (3/4)·16 = 12.",
+          "x% of y = y% of x is a massive time-saver whenever one side becomes a clean fraction or round number."
+        ]
+      },
+      {
+        "id": "q-fermi",
+        "q": "Estimate: how many trades per second does a busy US equity exchange handle at peak? Walk through your reasoning.",
+        "tag": "Estimation",
+        "a": [
+          "Decompose. Say a busy exchange handles billions of messages a day, but trades (executions) are a fraction of messages. Suppose ~tens of millions of trades per day on a busy venue. The active trading day is ~6.5 hours ≈ 23,000 seconds, but volume is concentrated near the open/close.",
+          "If ~30 million trades / 23,000 s ≈ ~1,300 trades/sec on average, with peaks several times higher near the open/close — so order ~thousands of trades/sec at peak. The exact number isn't the point; the interviewer wants a structured decomposition, explicit assumptions, and a sane order of magnitude. (Message rates, including quotes/cancels, are far higher — millions/sec — which is a useful distinction to mention.)"
+        ]
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Zetamac arithmetic game", "link": "https://arithmetic.zetamac.com/", "note": "The standard practice tool — set a daily target and track it." },
+    { "title": "Secrets of Mental Math", "by": "Arthur Benjamin", "note": "Techniques for fast multiplication, division, and squaring." }
+  ]
+}

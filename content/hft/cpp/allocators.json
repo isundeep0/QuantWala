@@ -1,0 +1,116 @@
+{
+  "slug": "allocators",
+  "sectionId": "cpp",
+  "order": 4,
+  "title": "Allocators: Staying Off the Heap",
+  "tagline": "malloc on the hot path is the enemy — preallocate, pool, and reuse so no order-critical code ever allocates.",
+  "level": "Advanced",
+  "track": ["dev", "systems"],
+  "estMinutes": 20,
+  "concept": {
+    "analogy": "Imagine a busy kitchen during the dinner rush. You don't run to the store for a pan mid-order — you laid out every pan, knife, and bowl before service began, and you reuse and wipe them as you go. Heap allocation (malloc/new) is that mid-service grocery run: slow, unpredictable, and sometimes it makes you wait in line (lock contention) or come back with the wrong aisle (a cache miss). HFT preps everything in advance and never shops during the rush.",
+    "paragraphs": [
+      "Calling malloc/new (or anything that does, like growing a std::vector or constructing a std::string) on the hot path is one of the cardinal sins of low-latency C++. General-purpose allocators are designed for flexibility, not predictable latency: they may take a lock (contending with other threads), search free lists, touch cold metadata (cache misses), or occasionally trigger expensive system calls — and their worst-case latency is far above their average. Tail latency, not average, is what gets you picked off.",
+      "The fix is to do all allocation up front, off the critical path, and then reuse fixed memory on the hot path with zero dynamic allocation. The main tools are: preallocation (size containers once with reserve(); allocate buffers at startup), object pools / free lists (a fixed set of reusable objects you 'check out' and 'return'), arena / bump allocators (carve from a big preallocated block, reset en masse), and placement new (construct an object into memory you already own).",
+      "Custom allocators plug into the standard containers (the Allocator template parameter, or polymorphic memory resources, std::pmr, in C++17) so a std::vector or map can draw from your arena/pool instead of the global heap. This lets you keep using familiar containers while controlling exactly where their memory comes from.",
+      "The principle: separate the allocation phase (startup/config, where latency doesn't matter) from the steady-state hot phase (where you must not allocate). If a hot-path function can ever call malloc, it can ever take a tail-latency spike — so you engineer it out."
+    ],
+    "points": [
+      "malloc/new on the hot path → lock contention, free-list search, cache misses, bad tail latency.",
+      "Worst-case (tail) latency, not average, is what matters — and general allocators have nasty tails.",
+      "Tools: preallocation (reserve), object pools/free lists, arena/bump allocators, placement new.",
+      "std::pmr and custom allocators let standard containers draw from your own memory.",
+      "Allocate at startup (cold), reuse on the hot path (zero dynamic allocation)."
+    ],
+    "keyIdea": "On the hot path, never touch the heap. Preallocate everything at startup and reuse it via pools, arenas, and placement new — because a single malloc can inject a tail-latency spike that costs you a fill."
+  },
+  "deepDive": {
+    "intro": "The concrete techniques, from simplest to most powerful.",
+    "steps": [
+      {
+        "title": "Preallocate and reserve",
+        "detail": "The cheapest win: call reserve() so a vector never reallocates during the hot phase; size ring buffers and arrays once at startup. Reuse a single buffer across iterations (clear() keeps capacity) instead of creating a new one each time. Avoid std::string on the hot path (it allocates) — use fixed buffers or string_view."
+      },
+      {
+        "title": "Object pools / free lists",
+        "detail": "Preallocate N objects (e.g., order nodes). Keep a free list of available ones. 'Allocate' = pop from the free list (O(1), no malloc); 'free' = push back. This is exactly how a fast order book recycles order nodes for O(1) cancel without ever calling new. When the pool is sized for the worst case, you never hit the heap."
+      },
+      {
+        "title": "Arena / bump allocator",
+        "detail": "Reserve one big block; an 'allocation' just returns the current offset and bumps it forward — extremely fast, no per-object bookkeeping. You don't free individual objects; you reset the whole arena at a natural boundary (e.g., end of a processing cycle). Perfect for many short-lived allocations within a frame/event."
+      },
+      {
+        "title": "Placement new and manual lifetime",
+        "detail": "`new (ptr) T(args)` constructs a T into memory you already own (no allocation), and you call `obj->~T()` explicitly to destroy it. This is how pools/arenas construct objects in their preallocated storage. std::aligned_storage / std::byte buffers + placement new give you full control of object lifetime within fixed memory."
+      },
+      {
+        "title": "Custom allocators and std::pmr",
+        "detail": "Standard containers accept an Allocator. C++17's polymorphic memory resources (std::pmr) make this ergonomic: create a monotonic_buffer_resource over a stack/preallocated buffer and pass it to pmr containers, so e.g. a pmr::vector allocates from your buffer, not the heap. Great for keeping familiar APIs while controlling memory."
+      }
+    ],
+    "notes": [
+      {
+        "title": "Touch (warm) the memory at startup",
+        "detail": "Preallocating isn't enough if pages are lazily mapped — the first write faults in the page (a syscall) on the hot path. Pre-fault by writing to the memory at startup (and consider locking it with mlock and using huge pages) so steady-state access never triggers a page fault. We revisit this in the systems section."
+      }
+    ],
+    "pitfalls": [
+      "Hidden allocations: std::string, std::function, growing a vector past capacity, std::map node inserts — all malloc.",
+      "Preallocating but not pre-faulting the pages — the first touch still faults on the hot path.",
+      "Sizing a pool/arena too small for the worst case, forcing a fallback to the heap exactly when busy.",
+      "Forgetting to call the destructor for placement-new'd objects (resource leaks) or double-destroying.",
+      "Optimizing average allocation cost while ignoring the tail — the tail spike is what hurts."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-why-no-malloc",
+        "q": "Why is calling malloc/new on the hot path discouraged in HFT, and what do you do instead?",
+        "tag": "Systems",
+        "a": [
+          "General-purpose allocators optimize for flexibility and average throughput, not worst-case latency. A single allocation may take a lock (contending with other threads — unpredictable stalls), walk free lists, touch cold metadata causing cache misses, or fall through to a system call (sbrk/mmap). The average might be fine, but the *tail* (worst-case) latency is large and unpredictable — and in HFT the tail is what loses you a race or a fill.",
+          "Instead, you allocate everything up front, off the critical path, and reuse it on the hot path with no dynamic allocation: reserve() containers, use object pools/free lists for recycled objects, arena/bump allocators for many short-lived ones, and placement new to construct into owned memory. The hot path then has deterministic, allocation-free behavior. You also pre-fault and (often) lock pages so the first touch doesn't fault."
+        ],
+        "followups": ["What hidden allocations might sneak onto the hot path?", "How do huge pages and mlock help?"]
+      },
+      {
+        "id": "q-pool",
+        "q": "Describe an object pool and why it gives O(1), allocation-free object reuse.",
+        "tag": "Systems",
+        "a": [
+          "An object pool preallocates a fixed array (or block) of N objects at startup and maintains a free list of the ones currently available — typically as a stack/intrusive linked list of free slots. 'Acquiring' an object pops a slot off the free list and (if needed) placement-news into it; 'releasing' it pushes the slot back. Both are O(1) pointer operations with no call to malloc.",
+          "It's allocation-free on the hot path because all memory was reserved up front; you're only moving slots between 'in use' and 'free'. This is exactly how a fast limit order book recycles order nodes — cancels return a node to the pool in O(1), and new orders reuse it — so the book never touches the heap during trading. The key constraint is sizing the pool for the worst-case live object count so you never exhaust it under load."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-pool",
+        "title": "Fixed-size object pool",
+        "difficulty": "Intermediate",
+        "statement": "Implement a fixed-capacity object pool for a POD-like type T: preallocate storage for N objects at construction, support acquire() returning a pointer to a free slot (or nullptr if exhausted) and release(ptr) returning a slot to the pool. acquire/release must be O(1) with no heap allocation after construction.",
+        "hint": "Preallocate a contiguous array of T and keep a stack (vector or intrusive list) of free indices/pointers. acquire pops; release pushes.",
+        "tests": "The core allocation-free reuse pattern used in order books and message handling.",
+        "solution": {
+          "approach": [
+            "At construction, allocate one contiguous buffer of N T's (the only heap allocation, done off the hot path) and push all N slot pointers onto a free-list stack.",
+            "acquire() pops a free slot pointer in O(1) (or returns nullptr if empty). release(p) pushes p back in O(1). No per-operation allocation. (For non-trivial T you'd use raw storage + placement new in acquire and an explicit destructor call in release; shown here for a trivially-constructible T for clarity.)"
+          ],
+          "complexity": { "time": "O(1) acquire/release", "space": "O(N)" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "pool.cpp",
+              "source": "#include <vector>\n#include <cstddef>\n\ntemplate <class T>\nclass ObjectPool {\n    std::vector<T>  storage_;   // contiguous backing store, sized once\n    std::vector<T*> free_;      // stack of available slots\npublic:\n    explicit ObjectPool(size_t n) : storage_(n) {\n        free_.reserve(n);\n        for (size_t i = 0; i < n; ++i) free_.push_back(&storage_[i]);\n    }\n    // O(1), no heap allocation; nullptr if exhausted.\n    T* acquire() noexcept {\n        if (free_.empty()) return nullptr;\n        T* p = free_.back();\n        free_.pop_back();\n        return p;\n    }\n    // O(1) return to pool.\n    void release(T* p) noexcept { free_.push_back(p); }\n    size_t available() const noexcept { return free_.size(); }\n};"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "std::pmr (polymorphic memory resources)", "note": "C++17 facility for custom container memory — read cppreference's pmr section." },
+    { "title": "CppCon: 'Local' Allocators / arena allocation talks (e.g., Lakos)", "note": "Why arena/pool allocators dramatically cut latency and improve locality." }
+  ]
+}

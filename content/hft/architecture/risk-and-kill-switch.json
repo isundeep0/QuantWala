@@ -1,0 +1,133 @@
+{
+  "slug": "risk-and-kill-switch",
+  "sectionId": "architecture",
+  "order": 6,
+  "title": "Pre-Trade Risk & The Kill Switch",
+  "tagline": "The last gate before the wire: fast, mandatory checks that turn a software bug from a catastrophe into a rejected order.",
+  "level": "Advanced",
+  "track": ["dev", "systems"],
+  "estMinutes": 18,
+  "concept": {
+    "analogy": "Pre-trade risk is the circuit breaker in your house. Electricity (orders) flows freely most of the time, but the breaker sits in the path doing one job: if current spikes beyond a safe limit, it trips instantly and cuts the flow before the wiring catches fire. It must be fast enough not to dim your lights, but absolutely cannot be bypassed — because the one time it's needed, it prevents the house from burning down. The kill switch is you running to the panel and throwing the master breaker.",
+    "paragraphs": [
+      "Pre-trade risk is a mandatory gate every order passes through before it leaves for the exchange. Its job is to ensure that no single order — and no runaway sequence of orders from a buggy or misconfigured strategy — can cause catastrophic loss. It is the difference between a bad day and a firm-ending event (the Knight Capital collapse in 2012 lost ~$440M in 45 minutes from a deployment bug with inadequate controls). Regulators mandate it too (e.g., SEC Rule 15c3-5, the 'Market Access Rule').",
+      "The checks are deliberately simple and fast because they're on the hot path: maximum order size and notional (fat-finger limits), price sanity / collars (reject orders far from the current market), maximum position per instrument and aggregate, maximum gross/net exposure, order rate limits and order-to-trade ratio, duplicate/self-trade prevention, and 'is this instrument/strategy enabled?' Each is a comparison against a pre-set limit using state the risk layer already maintains (current position, recent message counts). They must add only tens of nanoseconds, yet they cannot be skipped — fail-safe means a check that errors out rejects the order rather than letting it through.",
+      "The kill switch is the human/automated emergency stop: a single action that immediately halts all new orders and (usually) cancels all resting orders and flattens or freezes positions. It can be triggered manually by a risk operator, or automatically when a tripwire fires — PnL drawdown beyond a threshold, position limit breached, error rate spike, loss of market data, or a heartbeat failure. Many firms also rely on exchange-side controls (cancel-on-disconnect, exchange kill switches) as an independent backstop, so a failure in your software is still contained.",
+      "Architecturally, risk lives as close to the wire as possible and is independent of the strategy that it polices — ideally a separate module (or even FPGA logic on the NIC) so a strategy bug can't disable its own safety net. It maintains its own authoritative position/exposure counters (reconciled with the OMS/drop-copy), enforces limits atomically, and logs every decision. The guiding principle: risk is not a feature you optimize away for latency — it's the component that lets you survive the inevitable bug."
+    ],
+    "points": [
+      "Mandatory gate before every send; prevents a single order or runaway loop from causing catastrophic loss (and is legally required).",
+      "Fast, simple checks: max size/notional, price collars, position & exposure limits, rate limits / order-to-trade ratio, self-trade prevention, enablement.",
+      "Fail-safe: an error in the check rejects the order; risk can never be silently bypassed.",
+      "Kill switch: one action halts new orders, cancels resting orders, flattens/freezes — manual or auto-triggered (PnL drawdown, limit breach, feed loss, heartbeat fail).",
+      "Independent of the strategy (separate module / FPGA) + exchange-side backstops (cancel-on-disconnect)."
+    ],
+    "callouts": [
+      { "type": "warn", "title": "Knight Capital, 45 minutes, $440M", "body": "A deployment activated dead code that sent millions of erroneous orders; inadequate pre-trade controls and a slow kill response let it run. The lesson the whole industry internalized: risk gates and a fast, tested kill switch are non-negotiable." },
+      { "type": "tip", "title": "Make risk independent", "body": "Put risk in a separate module (or FPGA) with its own position counters, so a bug in the strategy or OMS can't disable the very check meant to catch it. Defense in depth: app-level + exchange-level controls." }
+    ],
+    "keyIdea": "Pre-trade risk is a fast, fail-safe, non-bypassable gate on every order — size/notional, price collars, position/exposure, rate limits, self-trade — backed by a kill switch that instantly halts and flattens on manual or automatic triggers. It lives close to the wire and independent of the strategy, because its purpose is to survive the inevitable bug, not to shave nanoseconds."
+  },
+  "deepDive": {
+    "intro": "The checks and how to make them fast, fail-safe state, the kill switch mechanics, and defense in depth.",
+    "steps": [
+      {
+        "title": "The core checks",
+        "detail": "For each outbound order verify: size ≤ maxOrderSize and price*size ≤ maxNotional (fat-finger); price within a collar of the current market (reject obviously-wrong prices); resulting position ≤ per-instrument and aggregate limits; gross/net exposure within bounds; message rate and order-to-trade ratio within exchange/firm limits; not a self-trade against your own resting order; instrument and strategy enabled. Reject on the first failure with a clear reason code."
+      },
+      {
+        "title": "Make it fast but never skip it",
+        "detail": "All inputs (current position, exposure, recent counts) are maintained incrementally by the risk module, so each check is a comparison — tens of ns total. Keep it branch-light and cache-resident. Crucially, design it fail-safe/fail-closed: if a limit is unset, a counter is inconsistent, or the check throws, REJECT the order. Never let an exception or missing config become an open gate."
+      },
+      {
+        "title": "Authoritative, reconciled state",
+        "detail": "Risk maintains its own position/exposure counters updated on every send and fill, reconciled continuously against the OMS and the exchange drop-copy. It must not trust the strategy's view of position — independence is the point. On any divergence, it should fail safe (block trading) until reconciled."
+      },
+      {
+        "title": "The kill switch",
+        "detail": "A single, well-tested action that: stops accepting new orders, mass-cancels all resting orders (or relies on cancel-on-disconnect), and flattens or freezes positions per policy. It must be reachable instantly (operator hotkey/button and a programmatic API), fast, and idempotent. Test it regularly — a kill switch you've never fired is a liability."
+      },
+      {
+        "title": "Automatic tripwires & defense in depth",
+        "detail": "Wire auto-triggers: PnL drawdown beyond a threshold, position/exposure breach, error/reject-rate spike, stale or lost market data, missed heartbeats, or latency blowout. Layer controls: app-level pre-trade risk + an independent risk monitor + exchange-side controls (price bands, cancel-on-disconnect, exchange kill switch). Multiple independent layers mean one failure doesn't remove all protection."
+      }
+    ],
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "pretrade_risk.cpp — fast, fail-closed gate",
+        "source": "#include <cstdint>\n#include <atomic>\n\nstruct Limits { uint32_t max_size; int64_t max_notional; int64_t max_pos; int32_t collar_ticks; uint32_t max_msgs_per_sec; };\nenum class Risk { OK, SIZE, NOTIONAL, PRICE, POSITION, RATE, DISABLED, ERROR };\n\nclass PreTradeRisk {\npublic:\n    // Returns OK or the first failing reason. Tens of ns; on doubt -> reject.\n    Risk check(bool buy, int32_t tick, uint32_t qty, int32_t mkt_mid) const noexcept {\n        if (!enabled_.load(std::memory_order_relaxed)) return Risk::DISABLED;\n        if (qty == 0 || qty > lim_.max_size)                  return Risk::SIZE;\n        const int64_t notional = (int64_t)tick * qty;          // proxy; use real price\n        if (notional > lim_.max_notional)                      return Risk::NOTIONAL;\n        if (std::abs(tick - mkt_mid) > lim_.collar_ticks)      return Risk::PRICE;   // collar\n        const int64_t newpos = position_ + (buy ? (int64_t)qty : -(int64_t)qty);\n        if (std::abs(newpos) > lim_.max_pos)                   return Risk::POSITION;\n        if (msgs_this_sec_ >= lim_.max_msgs_per_sec)           return Risk::RATE;\n        return Risk::OK;\n    }\n    void on_send(uint32_t)  { ++msgs_this_sec_; }              // rate accounting\n    void on_fill(bool buy, uint32_t qty) { position_ += buy ? (int64_t)qty : -(int64_t)qty; }\n    void kill() { enabled_.store(false, std::memory_order_relaxed); }   // part of kill switch\nprivate:\n    Limits lim_{};\n    int64_t position_ = 0;\n    uint32_t msgs_this_sec_ = 0;\n    std::atomic<bool> enabled_{true};\n};"
+      },
+      {
+        "language": "cpp",
+        "title": "kill_switch.cpp — halt, cancel, flatten",
+        "source": "struct KillSwitch {\n    PreTradeRisk& risk; OMS& oms; bool flatten;\n\n    void trigger(const char* reason) {\n        risk.kill();                 // 1) block all new orders immediately (fail-closed)\n        oms.cancel_all();            // 2) mass-cancel resting orders\n        if (flatten) oms.flatten();  // 3) market-out to flat (or freeze per policy)\n        alert(reason);               // page humans; log; require manual re-enable\n    }\n};\n\n// Auto-tripwires evaluated off the hot path on a monitor thread:\nvoid monitor(KillSwitch& ks, const Metrics& m, const Limits& lim) {\n    if (m.pnl_drawdown > lim_pnl)       ks.trigger(\"PnL drawdown\");\n    if (m.gross_exposure > lim_exp)     ks.trigger(\"exposure breach\");\n    if (m.reject_rate > lim_rej)        ks.trigger(\"reject spike\");\n    if (m.md_stale_ms > lim_stale)      ks.trigger(\"market data stale\");\n    if (m.heartbeat_missed)             ks.trigger(\"heartbeat lost\");\n}"
+      }
+    ],
+    "notes": [
+      { "title": "Re-enable must be deliberate", "detail": "After a kill, re-enabling trading should require explicit human action and a re-checked, reconciled state — never an automatic flip back on. The asymmetry (easy to stop, hard to restart) is intentional." },
+      { "title": "Risk in hardware", "detail": "The very fastest setups implement the core gates (size/price/position) in FPGA on the order path so even a software meltdown can't bypass them and the check costs nanoseconds." },
+      { "title": "Test the unhappy path", "detail": "Regularly fire the kill switch in a controlled environment, inject limit breaches, and verify rejects/cancels actually happen. Untested safety code tends not to work when you finally need it." }
+    ],
+    "complexity": {
+      "time": "~tens of ns per order",
+      "timeReason": "Each check is a comparison against a pre-maintained counter/limit; total overhead is small enough to sit inline on every send without materially affecting tick-to-trade.",
+      "space": "O(instruments) counters",
+      "spaceReason": "Per-instrument and aggregate position/exposure/rate counters plus a limit table — small, cache-resident, reconciled with OMS/drop-copy."
+    },
+    "pitfalls": [
+      "Treating risk as optional or bypassable for latency — the one time it matters, it must be there.",
+      "Fail-open behavior: an exception, missing limit, or stale counter that lets an order through.",
+      "Risk trusting the strategy's position instead of maintaining its own reconciled counters.",
+      "A kill switch that's slow, untested, or not reachable instantly by an operator and an API.",
+      "Relying on a single layer — no exchange-side backstop (price bands, cancel-on-disconnect)."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-checks",
+        "q": "What pre-trade risk checks would you put on the order path, and how do you keep them fast without compromising safety?",
+        "tag": "Architecture",
+        "a": [
+          "Core checks: max order size and max notional (fat-finger), price collar (reject orders far from the current market), per-instrument and aggregate position limits, gross/net exposure limits, message rate and order-to-trade ratio limits, self-trade prevention, and an enablement flag per instrument/strategy. Reject on the first failure with a reason code.",
+          "Speed without compromise: maintain all inputs (current position, exposure, recent message counts) incrementally in the risk module so each check is a simple comparison — tens of nanoseconds total, branch-light and cache-resident. Critically, make it fail-closed: if a limit is unset, a counter looks inconsistent, or a check throws, reject the order rather than pass it. Risk is never skipped or bypassed for latency; the cost is tiny relative to a single uncontrolled error, and it's also legally required (e.g., SEC market access rule)."
+        ],
+        "followups": ["What does fail-closed/fail-safe mean here?", "Why should risk be independent of the strategy?"]
+      },
+      {
+        "id": "q-kill",
+        "q": "Design a kill switch. What does it do, what triggers it, and what mistakes do firms make?",
+        "tag": "Architecture",
+        "a": [
+          "A kill switch is a single, fast, idempotent action that immediately stops accepting new orders, mass-cancels resting orders (or leans on exchange cancel-on-disconnect), and flattens or freezes positions per policy, then alerts humans and requires deliberate manual re-enable. It must be reachable instantly via both an operator control and a programmatic API. Triggers are manual (a risk operator) and automatic tripwires: PnL drawdown past a threshold, position/exposure breach, a spike in rejects/errors, stale or lost market data, missed heartbeats, or a latency blowout.",
+          "Common mistakes: a kill switch that's too slow or not independent (so the failing system also disables the stop), one that's never tested (the Knight Capital lesson — controls existed but weren't adequate/fast), automatic re-enabling after a trip, and relying on a single layer with no exchange-side backstop. Best practice is defense in depth — app-level risk + an independent monitor + exchange controls — and regularly rehearsing the kill in a controlled environment."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-risk-design",
+        "title": "Design pre-trade risk + kill switch for a trading desk",
+        "difficulty": "Advanced",
+        "statement": "Design the pre-trade risk and kill-switch system for a desk running several strategies across instruments. Specify the checks and their order, how state stays authoritative and reconciled, the fail-safe behavior, the kill switch (manual + automatic triggers and exactly what it does), where the system sits architecturally, and what you'd do for defense in depth. Reference why this matters with a real example.",
+        "hint": "Independent risk module with its own reconciled counters; fail-closed checks in tens of ns; kill = halt+cancel+flatten with manual re-enable; layer app + exchange controls; remember Knight Capital.",
+        "tests": "Comprehensive risk/kill architecture.",
+        "solution": {
+          "approach": [
+            "Placement: a dedicated risk module sits on the order path between the OMS and the wire (or in FPGA on the NIC for the core gates), independent of any strategy so a strategy bug can't disable it. It maintains its own authoritative per-instrument and aggregate position/exposure counters and recent message-rate counters, updated on every send and fill and continuously reconciled against the OMS and exchange drop-copy; on divergence it fails safe (blocks) until reconciled.",
+            "Checks (first-failure-rejects, ~tens of ns each, fail-closed): enablement flag → size → notional → price collar vs current market → resulting per-instrument and aggregate position → gross/net exposure → message rate & order-to-trade ratio → self-trade prevention. Any error, missing limit, or inconsistent counter rejects the order rather than passing it. Every decision is logged with a reason code.",
+            "Kill switch: a single fast idempotent action (operator hotkey/button + API) that disables new orders, mass-cancels resting orders (plus exchange cancel-on-disconnect as backstop), and flattens or freezes per policy, then pages humans and requires explicit manual re-enable after reconciliation. Automatic tripwires on a monitor thread: PnL drawdown, position/exposure breach, reject/error-rate spike, stale/lost market data, missed heartbeats, latency blowout.",
+            "Defense in depth: app-level pre-trade risk + an independent risk monitor process + exchange-side controls (price bands, cancel-on-disconnect, exchange kill switch). Test relentlessly — fire the kill switch and inject limit breaches in a controlled environment regularly. Why it matters: Knight Capital lost ~$440M in 45 minutes in 2012 because a deployment bug sent runaway orders and the controls weren't adequate or fast enough — the entire purpose of this system is to make sure the inevitable bug results in rejected orders, not an extinction event."
+          ],
+          "complexity": { "time": "~tens of ns per order; monitor off-path", "space": "O(instruments) reconciled counters + limits" }
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "SEC Rule 15c3-5 (Market Access Rule)", "note": "The regulatory requirement for pre-trade risk controls on market access." },
+    { "title": "The Knight Capital incident (SEC order & post-mortems)", "note": "The canonical case study in why fast, tested risk controls and kill switches matter." },
+    { "title": "Exchange risk features: price bands, cancel-on-disconnect, kill switches", "note": "Exchange-side backstops that complement your application controls." }
+  ]
+}

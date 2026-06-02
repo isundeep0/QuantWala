@@ -1,0 +1,113 @@
+{
+  "slug": "statistical-arbitrage",
+  "sectionId": "strategies",
+  "order": 2,
+  "title": "Statistical Arbitrage & Mean Reversion",
+  "tagline": "Trade relationships, not levels — when two prices that move together drift apart, bet they reconverge.",
+  "level": "Intermediate",
+  "track": ["research", "trader"],
+  "estMinutes": 18,
+  "concept": {
+    "analogy": "Two ferries usually cross a harbor side by side. If one suddenly lags far behind, you don't bet on where the harbor is going — you bet the gap will close, because they're tied to the same tides and routes. Pairs trading is exactly this: you don't predict the market's direction, you predict that a temporarily stretched relationship between two related things will snap back.",
+    "paragraphs": [
+      "Statistical arbitrage ('stat-arb') trades the relationship between instruments rather than their absolute direction. The classic case is pairs trading: find two assets whose prices move together (e.g., two refiners, an ETF and its basket, a stock and its ADR). Form a spread (a combination like A − β·B). When the spread deviates far from its historical mean, go long the cheap leg and short the rich leg, betting the spread mean-reverts.",
+      "The key statistical property is cointegration: even if A and B individually wander (are non-stationary), a linear combination of them may be stationary — it has a stable mean and reverts to it. You estimate the hedge ratio β (often via regression), form the spread, standardize it into a z-score, and trade when |z| is large, exiting as it returns toward zero.",
+      "This is market-neutral by construction: you're long one leg and short another, so broad market moves largely cancel. Your P&L comes from the spread converging, not from the market going up or down. Risk is that the relationship breaks (the legs decouple permanently — e.g., one company gets acquired) or the spread keeps diverging before it reverts.",
+      "In HFT, mean-reversion plays out at very short horizons too: micro-level price moves that overshoot tend to partially revert, and lead-lag relationships (one venue or instrument moving before a related one) create fast, low-risk opportunities — but they decay quickly and are fiercely competed."
+    ],
+    "points": [
+      "Trade a spread (A − β·B), not a single price — bet on convergence, not direction.",
+      "Cointegration: individual series wander, but a combination is stationary and mean-reverting.",
+      "Estimate hedge ratio β, form a z-score of the spread, enter on large |z|, exit near 0.",
+      "Market-neutral: broad moves cancel; edge is convergence. Risk: the relationship breaks.",
+      "At HFT timescales: micro mean-reversion and lead-lag effects, fiercely competed."
+    ],
+    "keyIdea": "Stat-arb monetizes stable statistical relationships: when a cointegrated spread stretches, bet it reverts. It's market-neutral, so the danger isn't direction — it's the relationship breaking or diverging further before it snaps back."
+  },
+  "deepDive": {
+    "intro": "Let's go from 'two prices look similar' to a tradeable, risk-managed signal.",
+    "steps": [
+      {
+        "title": "Find a relationship",
+        "detail": "Start from economic logic (same sector, ETF vs. constituents, dual-listed shares, futures vs. spot), then test statistically. Correlation of returns is a weak first filter; cointegration (e.g., Engle-Granger or Johansen tests) is the right tool because it tests whether a combination is stationary, not just co-moving."
+      },
+      {
+        "title": "Estimate the hedge ratio and form the spread",
+        "detail": "Regress A on B to get β (the hedge ratio): spread = A − β·B. β tells you how many units of B to short per unit of A so the combination is balanced and market-neutral. Re-estimate β periodically — it drifts."
+      },
+      {
+        "title": "Standardize and set entry/exit",
+        "detail": "Compute the spread's rolling mean and std, then z = (spread − mean)/std. Enter when |z| > z_enter (say 2): if z is high (spread rich), short the spread (short A, long B); if low, long the spread. Exit when z returns toward 0 (or flips). Use a stop (e.g., |z| > z_stop) to cap losses if it keeps diverging."
+      },
+      {
+        "title": "Risk management",
+        "detail": "Size by volatility and correlation, cap exposure per pair and in aggregate, and detect regime breaks (a structural shift, a merger, an index reconstitution) that invalidate the relationship. The classic failure mode (à la LTCM) is over-leverage plus a relationship that diverges far longer than your capital can withstand."
+      },
+      {
+        "title": "From daily to micro",
+        "detail": "The same logic compresses to milliseconds: short-term overreactions revert, and a faster-moving leg predicts a slower one (lead-lag). These micro signals are tiny and decay fast, so they reward speed (HFT) far more than the slower, capacity-rich daily stat-arb run by quant funds."
+      }
+    ],
+    "pitfalls": [
+      "Trading on correlation alone — correlated series can still drift apart forever; test for cointegration.",
+      "Treating β as constant — re-estimate; a stale hedge ratio leaves you with directional risk.",
+      "No stop / over-leverage — 'the market can stay irrational longer than you can stay solvent.'",
+      "Lookahead bias in research — computing the mean/std using future data inflates backtest results (see the backtesting lesson)."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-coint",
+        "q": "What's the difference between two assets being correlated and being cointegrated, and why does it matter for pairs trading?",
+        "tag": "Stats",
+        "a": [
+          "Correlation measures whether two series' returns move together over short intervals — it can be high even for two series that are slowly drifting apart, and it says nothing about a stable long-run relationship between price levels.",
+          "Cointegration means a specific linear combination of the (individually non-stationary) price series is stationary — it has a constant mean and reverts to it. That's exactly what pairs trading needs: a spread that reliably returns to a mean. Trading on correlation alone can leave you holding a spread that wanders off and never reverts; cointegration is the property that justifies betting on convergence."
+        ]
+      },
+      {
+        "id": "q-neutral",
+        "q": "Why is a properly hedged pairs trade 'market-neutral', and what risk does that leave you exposed to?",
+        "tag": "Strategy",
+        "a": [
+          "If you're long A and short β units of B, and A and B both move with the broad market, the market component of their moves largely cancels in the combined position. So a market-wide rally or selloff has limited effect on the pair's P&L — your exposure is to the *spread* (the relative move), not the market level. That's market-neutrality.",
+          "It leaves you exposed to relationship/idiosyncratic risk: the spread diverging further before reverting (timing/drawdown risk), or the relationship breaking permanently (a merger, a fundamental shift, an index change) so the spread never reverts. Also basis/financing and short-borrow costs, and model risk in the hedge ratio. Neutral to the market ≠ riskless."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-zscore",
+        "title": "Spread z-score and signal",
+        "difficulty": "Core",
+        "statement": "Given two price series A and B (equal length), a hedge ratio beta, and a lookback window w, compute the current z-score of the spread s_t = A_t − beta*B_t using the trailing-window mean and std (population std, excluding the current point is fine to assume included). Return a signal: −1 (short spread) if z > 2, +1 (long spread) if z < −2, else 0. If std is 0 or fewer than w points exist, return 0.",
+        "hint": "Compute the spread series, take the last w values, get mean and std, then z = (latest − mean)/std and threshold.",
+        "tests": "Turning a cointegrated spread into a standardized, tradeable signal.",
+        "solution": {
+          "approach": [
+            "Form the spread s_t = A_t − β·B_t for all t. Take the trailing window of the last w spread values. Compute their mean and standard deviation.",
+            "The z-score of the latest spread is (s_last − mean)/std. A high positive z means the spread is unusually rich → short it (−1); a low negative z means unusually cheap → long it (+1); within the band → no trade. Guard for too-few points or zero variance."
+          ],
+          "complexity": { "time": "O(w)", "space": "O(n)" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "zscore.cpp",
+              "source": "#include <vector>\n#include <cmath>\nint spreadSignal(const std::vector<double>& A, const std::vector<double>& B,\n                 double beta, int w){\n    int n = A.size();\n    if (n < w) return 0;\n    std::vector<double> s(n);\n    for (int i = 0; i < n; i++) s[i] = A[i] - beta * B[i];\n    double mean = 0;\n    for (int i = n - w; i < n; i++) mean += s[i];\n    mean /= w;\n    double var = 0;\n    for (int i = n - w; i < n; i++) var += (s[i] - mean) * (s[i] - mean);\n    var /= w;\n    double sd = std::sqrt(var);\n    if (sd == 0) return 0;\n    double z = (s[n - 1] - mean) / sd;\n    if (z > 2) return -1;\n    if (z < -2) return 1;\n    return 0;\n}"
+            },
+            {
+              "language": "python",
+              "title": "zscore.py",
+              "source": "import statistics\n\ndef spread_signal(A, B, beta, w):\n    n = len(A)\n    if n < w:\n        return 0\n    s = [A[i] - beta * B[i] for i in range(n)]\n    window = s[-w:]\n    mean = sum(window) / w\n    sd = statistics.pstdev(window)\n    if sd == 0:\n        return 0\n    z = (s[-1] - mean) / sd\n    if z > 2:\n        return -1\n    if z < -2:\n        return 1\n    return 0"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Pairs Trading: Quantitative Methods and Analysis", "by": "Ganapathy Vidyamurthy", "note": "Practical treatment of cointegration-based pairs trading." },
+    { "title": "Engle & Granger (1987), cointegration", "note": "The original statistical foundation — worth understanding conceptually." }
+  ]
+}

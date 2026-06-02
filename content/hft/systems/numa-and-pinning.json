@@ -1,0 +1,139 @@
+{
+  "slug": "numa-and-pinning",
+  "sectionId": "systems",
+  "order": 7,
+  "title": "NUMA, Core Pinning & Isolation",
+  "tagline": "Determinism is a feature: pin threads, isolate cores, keep memory local, and stop the OS from stealing your nanoseconds.",
+  "level": "Advanced",
+  "track": ["systems", "dev"],
+  "estMinutes": 20,
+  "concept": {
+    "analogy": "Imagine a workshop with two benches (sockets), each with its own toolbox (local memory). A worker at bench A reaches for tools in bench B's box constantly — every trip across the room (the interconnect) wastes time. Now add a manager (the OS scheduler) who keeps reassigning workers to whichever bench is free, and a janitor (interrupts, other processes) who keeps interrupting them. To go fast and predictably, you assign each worker a fixed bench, keep their tools at that bench, and post a 'do not disturb' sign on their station.",
+    "paragraphs": [
+      "On a multi-socket server, memory is Non-Uniform: each CPU socket has its own attached DRAM that it can reach quickly (~80 ns), while reaching the other socket's memory crosses an interconnect (QPI/UPI/Infinity Fabric) and costs noticeably more (~120–160 ns). A thread that runs on socket 0 but allocated its data on socket 1 pays that remote penalty on every access. NUMA-awareness means keeping a thread and the memory it touches on the same node.",
+      "Even within a socket, the OS scheduler is a source of jitter: by default it can migrate a thread to a different core (losing its warm caches and TLB), preempt it for other work, and handle interrupts/timers on the same core. For HFT, predictability matters as much as raw speed — a 99.9th-percentile spike from a context switch can be worse than a slightly higher median. So you pin each hot thread to a specific core and isolate that core from the rest of the system.",
+      "The toolkit: set CPU affinity (`pthread_setaffinity_np`, `taskset`, `numactl --physcpubind`) to pin a thread to one core; allocate memory on the local node (`numactl --membind`, `numa_alloc_onnode`, or first-touch on the right thread); isolate cores from the scheduler and from interrupts (`isolcpus`, `nohz_full`, `rcu_nocbs`, IRQ affinity); use huge pages to cut TLB misses; and disable frequency scaling / C-states so the core stays at full clock and doesn't sleep. The goal is a quiet, dedicated core whose caches stay hot and whose timing is repeatable.",
+      "HFT engines typically dedicate cores: one busy-spinning the NIC/feed, one running the strategy, one for the order gateway — each pinned, isolated, with local memory and hyperthreading often disabled on those cores to avoid a sibling stealing execution resources. This trades CPU efficiency (cores sit spinning) for the determinism that wins races."
+    ],
+    "points": [
+      "NUMA: local DRAM is fast, remote (other socket) DRAM is ~1.5–2x slower — keep thread + data on one node.",
+      "The scheduler causes jitter via migrations, preemption, and interrupts on your core.",
+      "Pin hot threads to specific cores (affinity) and isolate those cores (isolcpus/nohz_full/IRQ affinity).",
+      "Use huge pages (fewer TLB misses) and 'first-touch' allocation on the owning thread.",
+      "Disable frequency scaling / C-states; often disable hyperthreading on hot cores for determinism."
+    ],
+    "callouts": [
+      { "type": "tip", "title": "First-touch allocation", "body": "Linux assigns a page to the NUMA node of the thread that first writes it, not the one that malloc'd it. So initialize/zero your buffers from the same pinned thread that will use them, or use numactl/numa_alloc_onnode to force locality." },
+      { "type": "warn", "title": "Busy-spin needs isolation", "body": "A busy-spinning thread on a non-isolated core fights the scheduler and other tasks, causing jitter for everyone. Always pair busy-polling with a pinned, isolated, dedicated core." }
+    ],
+    "keyIdea": "Latency determinism comes from a quiet, dedicated core: pin each hot thread to a specific isolated core, keep its memory on the local NUMA node (first-touch / membind), use huge pages, and disable scheduler/IRQ interference, frequency scaling, and C-states. You trade some CPU efficiency for repeatable, low-tail latency."
+  },
+  "deepDive": {
+    "intro": "The concrete knobs — affinity, NUMA binding, kernel isolation, huge pages, power — and how to verify them.",
+    "steps": [
+      {
+        "title": "Discover the topology",
+        "detail": "`lscpu`, `numactl --hardware`, and `lstopo` (hwloc) show sockets, NUMA nodes, cores, and which logical CPUs are hyperthread siblings sharing an L1/L2. You pin to physical cores and avoid putting two latency-critical threads on sibling hyperthreads (they share execution units)."
+      },
+      {
+        "title": "Set thread affinity",
+        "detail": "At runtime, build a cpu_set_t and call `pthread_setaffinity_np` (or `sched_setaffinity`) to bind the thread to one core. From the shell, `taskset -c 5 ./app` or `numactl --physcpubind=5 --membind=0 ./app`. Pinning prevents migration so the core's L1/L2/TLB stay warm for that thread."
+      },
+      {
+        "title": "Keep memory local (NUMA)",
+        "detail": "Allocate on the local node: `numactl --membind=0`, libnuma's `numa_alloc_onnode`, or rely on first-touch by zeroing the buffer from the pinned worker thread. Verify with `numastat -p <pid>` (look for low numa_miss / remote accesses) and `perf c2c` / `perf mem`. Remote allocations silently add ~50% latency per access."
+      },
+      {
+        "title": "Isolate the core from the OS",
+        "detail": "Boot params: `isolcpus=5,7` removes cores from the general scheduler; `nohz_full=5,7` stops the periodic scheduler tick on them; `rcu_nocbs=5,7` offloads RCU callbacks; pin IRQs away via `/proc/irq/*/smp_affinity` (and irqbalance off). Now nothing the kernel does routinely lands on your hot core, so timing is repeatable."
+      },
+      {
+        "title": "Power, TLB, and SMT",
+        "detail": "Set the CPU governor to 'performance' and disable deep C-states (e.g., kernel `idle=poll` or per-core PM-QoS) so the core never sleeps and never throttles. Use huge pages (2 MB/1 GB via hugetlbfs/THP-off-then-explicit) to shrink TLB pressure for big working sets. Consider disabling hyperthreading on hot cores so a sibling thread can't steal the pipeline."
+      }
+    ],
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "pin_thread.cpp — affinity + verify",
+        "source": "#define _GNU_SOURCE\n#include <pthread.h>\n#include <sched.h>\n#include <cstdio>\n\n// Pin the calling thread to a single physical core.\nbool pin_to_core(int core) {\n    cpu_set_t set;\n    CPU_ZERO(&set);\n    CPU_SET(core, &set);\n    int rc = pthread_setaffinity_np(pthread_self(), sizeof(set), &set);\n    if (rc != 0) { perror(\"setaffinity\"); return false; }\n    // verify\n    CPU_ZERO(&set);\n    pthread_getaffinity_np(pthread_self(), sizeof(set), &set);\n    printf(\"pinned to core %d? %d (running on %d)\\n\",\n           core, CPU_ISSET(core, &set), sched_getcpu());\n    return true;\n}\n\n// Strategy thread entry: pin first, then warm/init memory (first-touch local).\nvoid strategy_main(int core) {\n    pin_to_core(core);\n    // touch/zero buffers HERE so pages land on this core's NUMA node\n    // ... busy-spin event loop ...\n}"
+      },
+      {
+        "language": "shell",
+        "title": "launch.sh — bind cores & memory, isolate, power",
+        "source": "# Boot (grub) for dedicated cores 4-7 on a 2-socket box:\n#   isolcpus=4-7 nohz_full=4-7 rcu_nocbs=4-7 intel_pstate=disable\n\n# Force performance governor, disable deep idle:\nsudo cpupower frequency-set -g performance\nsudo cpupower idle-set -D 0          # or kernel idle=poll\n\n# Move device IRQs off the hot cores (example IRQ 130 -> core 0):\necho 1 | sudo tee /proc/irq/130/smp_affinity_list\nsudo systemctl stop irqbalance\n\n# Run pinned to socket-0 cores with socket-0 memory, huge pages enabled:\nnumactl --physcpubind=4-7 --membind=0 ./trader\n\n# Verify locality and that nothing migrated:\nnumastat -p $(pgrep trader)\nfor t in $(ls /proc/$(pgrep trader)/task); do taskset -cp $t; done"
+      }
+    ],
+    "notes": [
+      { "title": "Pin before you allocate", "detail": "Because of first-touch, the order matters: pin the thread, then allocate/initialize its hot buffers from that thread so the pages are placed on the local node." },
+      { "title": "Determinism vs utilization", "detail": "Dedicating spinning cores wastes raw CPU capacity. HFT accepts that: a core that does nothing but instantly handle the next packet beats a 'shared' core that's busy when the packet arrives." },
+      { "title": "Don't forget the kernel still exists", "detail": "Even isolated cores can be hit by TLB shootdowns, NMIs, or maintenance threads. nohz_full + rcu_nocbs + IRQ affinity reduce but don't fully eliminate this; measure your tail to confirm." }
+    ],
+    "complexity": {
+      "time": "Lower & far more stable latency",
+      "timeReason": "Local memory avoids the ~50% remote penalty; pinning keeps caches/TLB warm; isolation removes context-switch and interrupt spikes — the win is mostly in the tail (p99/p99.9).",
+      "space": "Huge pages reduce TLB misses",
+      "spaceReason": "2 MB/1 GB pages cover more address space per TLB entry, cutting page-walk stalls for large working sets at the cost of coarser allocation."
+    },
+    "pitfalls": [
+      "Allocating memory on the wrong NUMA node (or before pinning) → silent remote-access penalty.",
+      "Busy-spinning on a non-isolated core, creating jitter for the whole machine.",
+      "Pinning two hot threads to hyperthread siblings — they contend for the same physical core.",
+      "Leaving the frequency governor on 'powersave'/C-states enabled, so the core throttles or sleeps between packets.",
+      "Not verifying: assume nothing — check sched_getcpu, numastat, and your latency histogram."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-numa",
+        "q": "What is NUMA, and how does it affect a multi-threaded trading app?",
+        "tag": "Systems",
+        "a": [
+          "NUMA (Non-Uniform Memory Access) means each CPU socket has its own local DRAM that it accesses quickly, while accessing another socket's DRAM goes over an interconnect and is significantly slower (often ~1.5–2x latency). So memory access cost depends on which node the data lives on relative to the running core.",
+          "For a trading app it matters because a thread pinned to socket 0 that touches buffers allocated on socket 1 pays the remote penalty on every access, adding latency and jitter. The fix is locality: pin each hot thread to a core and ensure its hot data is allocated on that core's node (via numactl --membind, numa_alloc_onnode, or first-touch from the pinned thread), and verify with numastat. Cross-node sharing (and cross-node false sharing) is especially costly."
+        ],
+        "followups": ["What is first-touch allocation?", "How would you confirm memory is local?"]
+      },
+      {
+        "id": "q-isolation",
+        "q": "Why pin and isolate cores instead of just letting the scheduler do its job, and what specifically do you turn off?",
+        "tag": "Systems",
+        "a": [
+          "Because HFT cares about the tail, not just the average. The default scheduler migrates threads (cold caches/TLB), preempts them for other work, and runs timer ticks and interrupts on your core — each a source of unpredictable latency spikes. Pinning keeps a thread on one warm core; isolation keeps the kernel and other tasks off it.",
+          "Concretely: pin with CPU affinity; isolate cores with isolcpus, stop the tick with nohz_full, offload RCU with rcu_nocbs, move device IRQs off the core and disable irqbalance; set the performance governor and disable deep C-states so the core stays at full clock and doesn't sleep; optionally disable hyperthreading on hot cores. Then validate by measuring the latency histogram — the spikes should shrink."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-pin",
+        "title": "Pin a strategy thread and prove locality",
+        "difficulty": "Intermediate",
+        "statement": "Write the startup sequence for a strategy thread that must run on physical core 6 (socket 0) with all its hot buffers on NUMA node 0. List the exact steps in the right order, the calls/commands you'd use, and how you'd prove afterward that (a) the thread never migrates and (b) its memory is node-local.",
+        "hint": "Order matters because of first-touch: pin, then allocate/zero from that thread. Verify with sched_getcpu and numastat.",
+        "tests": "Affinity + NUMA-local allocation in practice.",
+        "solution": {
+          "approach": [
+            "Order: (1) Launch under `numactl --physcpubind=6 --membind=0 ./app` (or set governor/isolation at boot for core 6). (2) Inside the thread, call pthread_setaffinity_np to bind to core 6 (belt-and-suspenders). (3) Only now allocate the hot buffers and immediately zero/initialize them from this same thread, so first-touch places the pages on node 0. (4) Enter the busy-spin loop. Pinning must precede allocation because Linux places a page on the node of the thread that first writes it.",
+            "Prove no migration: log sched_getcpu() periodically (should always be 6); check `taskset -cp <tid>` shows only core 6; and confirm /proc/<pid>/status nonvoluntary_ctxt_switches stays flat. Prove locality: `numastat -p <pid>` should show numa_hit high and numa_miss/other_node near zero; `perf mem`/`perf c2c` should show local accesses; or read /proc/<pid>/numa_maps.",
+            "Finally, measure the latency histogram before/after isolation+pinning to show the tail (p99.9) shrank — the real point of the exercise."
+          ],
+          "complexity": { "time": "Stable, local-memory latency", "space": "Buffers on node 0" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "startup.cpp",
+              "source": "void strategy_thread() {\n    pin_to_core(6);                 // 1) bind first\n    auto* buf = new (std::align_val_t(64)) Event[1 << 16];\n    for (auto& e : std::span(buf, 1 << 16)) e = Event{}; // 2) first-touch -> node 0\n    // 3) verify\n    assert(sched_getcpu() == 6);\n    run_loop(buf);                  // 4) busy-spin\n}"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Red Hat Low Latency Performance Tuning Guide", "note": "isolcpus, nohz_full, IRQ affinity, tuned profiles — the practical knobs." },
+    { "title": "numactl, libnuma, hwloc/lstopo man pages", "note": "Topology discovery and NUMA binding tooling." },
+    { "title": "Brendan Gregg — Systems Performance", "note": "Methodologies for finding and removing latency outliers." }
+  ]
+}

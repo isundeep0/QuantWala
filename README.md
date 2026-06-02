@@ -175,11 +175,6 @@ an interview cheat sheet, and a practice question set. Possible future enhanceme
 - An interactive "design canvas" for drawing architectures.
 - Spaced‑repetition review queue across the practice questions.
 
-**Module 3 — HFT / Low Latency (content):**
-- Real C++/Python snippets with syntax highlighting, runnable benchmarks, and the
-  benchmark/comparison tables.
-- Firm‑specific interview tracks (Jane Street, Citadel, Tower, HRT, Optiver).
-
 **Platform:**
 - Optional accounts + DB to sync progress across devices (the current `localStorage`
   layer is intentionally swappable behind `ProgressContext`).

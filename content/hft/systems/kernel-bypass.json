@@ -1,0 +1,145 @@
+{
+  "slug": "kernel-bypass",
+  "sectionId": "systems",
+  "order": 8,
+  "title": "Kernel-Bypass Networking",
+  "tagline": "Why the OS network stack is too slow for HFT, and how DPDK, Onload, and RDMA put packets straight into your process.",
+  "level": "Elite",
+  "track": ["systems"],
+  "estMinutes": 22,
+  "concept": {
+    "analogy": "The normal way to receive mail is: the post office sorts it, a courier drives it to your building, the front desk logs it, and finally someone walks it up to your desk — lots of hands, lots of waiting. Kernel bypass is like having the delivery truck back up to your office window and drop the parcel directly on your desk. You skip the front desk (the OS), the building mailroom (the kernel stack), and the elevator (context switches). You handle sorting yourself, but the parcel arrives in a fraction of the time.",
+    "paragraphs": [
+      "When a packet arrives normally, the NIC raises an interrupt, the kernel copies the data into kernel buffers, runs the TCP/IP stack, copies again into user space, and wakes your process via the socket API. Each step adds latency and — worse for HFT — jitter: interrupts, copies, context switches, and scheduler decisions. The standard stack costs single-digit microseconds and a long tail.",
+      "Kernel bypass removes the kernel from the data path. The NIC DMAs packets directly into memory mapped into your process, and your application polls for them in user space (busy-spinning) instead of waiting on interrupts. You either run a user-space network stack or parse the raw frames yourself. This cuts receive latency to hundreds of nanoseconds with far tighter jitter, at the cost of burning a core polling and taking on more of the networking yourself.",
+      "The main approaches: DPDK (a full user-space poll-mode driver framework — you get raw packets and bring your own UDP/TCP handling, great for building feed handlers); Solarflare/Xilinx Onload and TCPDirect, and Mellanox VMA (transparent socket acceleration — your normal socket calls are intercepted and run in user space, often with a kernel fallback); and RDMA / RoCE / InfiniBand (the NIC writes directly into a remote machine's memory, used more in colocation back-ends and HPC than in the public market-data path). AF_XDP is a modern Linux option that gets much of the benefit with less vendor lock-in.",
+      "For HFT this is the difference between competitive and not on the wire: market-data feeds are usually UDP multicast, and a kernel-bypass feed handler that busy-polls a dedicated, isolated core can ingest, sequence, and decode them in hundreds of nanoseconds. The trade-offs are real — dedicated cores, specialized NICs, more code to maintain, and you reimplement reliability/sequencing yourself — so bypass is reserved for the genuinely latency-critical path while control/admin traffic stays on the normal stack."
+    ],
+    "points": [
+      "The kernel stack adds latency and jitter via interrupts, copies, context switches, and the scheduler.",
+      "Bypass: NIC DMAs into user memory; the app busy-polls — no kernel on the data path.",
+      "DPDK = raw packets + your own stack; Onload/VMA = transparent socket acceleration; RDMA = remote memory writes.",
+      "Cuts receive latency from microseconds to hundreds of ns with much tighter tails.",
+      "Costs: dedicated polling cores, special NICs, more code, and you own reliability/sequencing."
+    ],
+    "callouts": [
+      { "type": "info", "title": "Market data is UDP multicast", "body": "Exchanges multicast data so every subscriber gets the same packets. UDP has no retransmission, so feed handlers detect gaps via sequence numbers and recover from a secondary feed or a 'snapshot' channel — logic you own when you bypass the kernel." },
+      { "type": "warn", "title": "Bypass is for the hot path only", "body": "Polling burns a whole core and you reimplement networking. Use it for the latency-critical feed/order path; keep logging, config, and admin traffic on ordinary sockets." }
+    ],
+    "keyIdea": "Kernel bypass takes the OS off the packet data path: the NIC DMAs frames directly into user-space memory that the application busy-polls. With DPDK, Onload/VMA, RDMA, or AF_XDP this turns microsecond, jittery socket I/O into sub-microsecond, predictable I/O — at the price of dedicated cores, special hardware, and owning more of the stack."
+  },
+  "deepDive": {
+    "intro": "Where the kernel's time goes, the bypass techniques, and what you have to build yourself when you remove the kernel.",
+    "steps": [
+      {
+        "title": "Anatomy of a normal receive",
+        "detail": "NIC → interrupt (or NAPI poll) → DMA into kernel skb → IP/UDP processing → copy to socket buffer → wake the blocked thread → recvmsg copies to your buffer. That's two copies, an interrupt, a softirq, and a wakeup/context switch — each adding ns to µs and, crucially, variance. Even tuned (busy-poll sockets, SO_BUSY_POLL), the kernel path has a floor."
+      },
+      {
+        "title": "DPDK: poll-mode drivers",
+        "detail": "DPDK binds the NIC to a user-space poll-mode driver, maps RX/TX descriptor rings and packet mbufs into your process (huge pages), and you spin reading descriptors — no interrupts, no copies, no syscalls. You get raw Ethernet frames and supply your own parsing/UDP/sequencing. Ideal for a bespoke multicast feed handler; you pin the poll loop to an isolated core."
+      },
+      {
+        "title": "Transparent acceleration: Onload / VMA",
+        "detail": "Solarflare/Xilinx Onload (and TCPDirect) and Mellanox VMA implement the socket API in a user-space library that you LD_PRELOAD. Your existing send/recv calls run against a user-space stack talking straight to the NIC, with the kernel as fallback. Less code change than DPDK, supports TCP too, and great for order-entry sessions (often TCP/FIX)."
+      },
+      {
+        "title": "RDMA / RoCE / InfiniBand",
+        "detail": "RDMA lets one machine's NIC read/write another's memory directly (zero-copy, kernel-bypass, with hardware doing the transfer). Verbs API (queue pairs, completion queues). Common in HPC and intra-datacenter back-ends; in trading it appears in colocated infrastructure more than the public market-data leg, but it's worth knowing the model."
+      },
+      {
+        "title": "AF_XDP and busy-poll: the middle ground",
+        "detail": "AF_XDP (with an XDP/eBPF program steering packets to a user-space UMEM ring) gives much of DPDK's zero-copy speed using mainline Linux drivers — less vendor lock-in. SO_BUSY_POLL / NAPI busy-polling reduces (but doesn't remove) kernel-path latency without rewriting your app. Choose based on how many nanoseconds and how much maintenance you can afford."
+      }
+    ],
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "dpdk_rx_loop.cpp — the polling shape (pseudo-API)",
+        "source": "// Conceptual DPDK-style RX loop. Real code initializes EAL, ports, mempools.\n#include <cstdint>\nstruct mbuf; // packet buffer mapped into user space (no copy)\n\nextern uint16_t rx_burst(uint16_t port, uint16_t queue, mbuf** bufs, uint16_t n);\nextern void     free_burst(mbuf** bufs, uint16_t n);\nextern const uint8_t* payload(mbuf*, uint16_t* len);\n\nvoid feed_handler(uint16_t port, uint16_t queue) {\n    constexpr uint16_t BURST = 32;\n    mbuf* bufs[BURST];\n    for (;;) {                                   // busy-poll on a pinned core\n        uint16_t n = rx_burst(port, queue, bufs, BURST);  // 0 if nothing yet\n        for (uint16_t i = 0; i < n; ++i) {\n            uint16_t len; const uint8_t* p = payload(bufs[i], &len);\n            decode_market_data(p, len);          // your own parser + sequencing\n        }\n        if (n) free_burst(bufs, n);\n        // no interrupt, no syscall, no copy: just spin and process bursts\n    }\n}"
+      },
+      {
+        "language": "shell",
+        "title": "onload_run.sh — transparent acceleration",
+        "source": "# Run an existing sockets app on a Solarflare NIC via Onload's user-space stack.\n# No code change: Onload intercepts socket calls and runs them in user space.\nonload --profile=latency ./order_gateway\n\n# Tune: spin instead of block on recv, pin the stack to the app's core.\nEF_POLL_USEC=1000000 \\\nEF_INT_DRIVEN=0 \\\nonload ./order_gateway     # busy-spin the user-space stack for lowest latency"
+      }
+    ],
+    "notes": [
+      { "title": "You inherit the hard parts", "detail": "Remove the kernel and you own MTU/fragmentation, ARP, UDP gap detection and recovery, TCP if you need it, and flow steering. Frameworks help, but the reliability logic for market data (sequence gaps, A/B feed arbitration, snapshot recovery) is yours." },
+      { "title": "A/B feeds and arbitration", "detail": "Exchanges send two identical multicast feeds (A and B) on different paths. A fast handler takes whichever packet of a given sequence arrives first and drops the duplicate — improving both latency and loss resilience." },
+      { "title": "Measure the wire, not just the host", "detail": "True latency includes the NIC, switch, and cabling. Hardware timestamping (PTP/PHC on the NIC) and packet capture taps let you measure wire-to-wire, beyond what software clocks see." }
+    ],
+    "complexity": {
+      "time": "~hundreds of ns vs single-digit µs",
+      "timeReason": "Eliminating interrupts, two copies, softirq, and the wakeup/context switch removes both the latency floor and most of the jitter of the kernel path.",
+      "space": "Huge pages + pinned mbuf pools",
+      "spaceReason": "Bypass frameworks pre-allocate packet buffer pools in huge pages mapped into the process; a polling core is dedicated."
+    },
+    "pitfalls": [
+      "Using kernel bypass everywhere — wasting cores and code on non-critical traffic.",
+      "Forgetting UDP has no retransmit: not implementing sequence-gap detection / A-B arbitration / snapshot recovery.",
+      "Polling on a shared, non-isolated core, so you reintroduce the jitter you tried to remove.",
+      "Ignoring NIC/switch latency and assuming software timestamps tell the whole story.",
+      "Vendor lock-in: building everything on one NIC's API with no fallback (AF_XDP can mitigate)."
+    ]
+  },
+  "benchmark": {
+    "intro": "Approximate one-way userspace receive latency for a small UDP datagram (order-of-magnitude).",
+    "columns": ["Path", "Typical latency", "Jitter", "Notes"],
+    "rows": [
+      ["Standard sockets (interrupt)", "~3–10 µs", "High", "Interrupt + 2 copies + wakeup/context switch"],
+      ["Sockets + SO_BUSY_POLL / NAPI", "~2–5 µs", "Medium", "Polls in kernel; less wakeup cost"],
+      ["AF_XDP (zero-copy)", "~1–2 µs", "Low-med", "Mainline Linux, user-space UMEM ring"],
+      { "cells": ["DPDK / Onload (busy-poll)", "~0.3–1 µs", "Low", "No kernel on data path; dedicated core"], "best": true }
+    ],
+    "note": "Highly hardware/tuning dependent; the consistent story is lower latency AND tighter tails as the kernel leaves the data path.",
+    "takeaway": "Each step that removes the kernel from the packet path cuts both median latency and jitter. Full bypass (DPDK/Onload) reaches sub-microsecond receive — the price is a dedicated polling core and owning the stack."
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-why-bypass",
+        "q": "Why is the standard kernel network stack too slow for HFT, and what does kernel bypass change?",
+        "tag": "Systems",
+        "a": [
+          "The kernel path adds an interrupt (or softirq), at least two memory copies (NIC→kernel, kernel→user), TCP/IP processing, and a wakeup/context switch to deliver a packet to your code via recv. That's microseconds of latency and, worse, high variance from scheduling and interrupts — unacceptable when you're racing other firms by nanoseconds.",
+          "Kernel bypass maps the NIC's packet buffers into the application and has it busy-poll for packets in user space, removing interrupts, copies, and syscalls from the data path. Latency drops to hundreds of nanoseconds with much tighter tails. The trade is that you dedicate a core to polling, often need a special NIC, and take responsibility for parts of the network stack (parsing, UDP gap recovery)."
+        ],
+        "followups": ["DPDK vs Onload — when would you pick each?", "What do you have to implement yourself once the kernel is gone?"]
+      },
+      {
+        "id": "q-dpdk-onload",
+        "q": "Contrast DPDK with Onload/VMA. When would you choose one over the other?",
+        "tag": "Systems",
+        "a": [
+          "DPDK is a poll-mode driver framework that hands you raw packets in user space; you bring your own UDP/TCP/sequencing. It's maximally flexible and fast and is ideal for a bespoke market-data feed handler where you want full control over parsing and want to busy-poll on a dedicated core. The cost is significant engineering — you build a lot yourself.",
+          "Onload (Solarflare/Xilinx) and VMA (Mellanox) are transparent socket accelerators: you LD_PRELOAD them and your existing socket-based code runs against a user-space stack with kernel fallback, including TCP. You'd choose these when you have an existing sockets app (e.g., a TCP/FIX order gateway) and want most of the latency benefit with minimal code change. Rule of thumb: DPDK for custom UDP multicast ingestion, Onload/VMA for accelerating existing socket apps (especially TCP order entry)."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-feed-handler",
+        "title": "Design a kernel-bypass UDP multicast feed handler",
+        "difficulty": "Elite",
+        "statement": "Sketch the design of a feed handler that ingests an exchange's UDP multicast market data with minimum, predictable latency. Address: the I/O mechanism, threading/core layout, how you handle UDP's lack of reliability (gaps), A/B redundant feeds, and how you hand decoded events to the strategy. Note the main failure modes you must handle.",
+        "hint": "Bypass + busy-poll on an isolated core; sequence numbers for gaps; A/B arbitration; SPSC ring to the strategy.",
+        "tests": "End-to-end ingestion design under latency constraints.",
+        "solution": {
+          "approach": [
+            "I/O: use DPDK (or AF_XDP) to receive raw multicast frames with zero copy, busy-polling in a tight loop on a dedicated, pinned, isolated core (isolcpus/nohz_full, IRQs moved away, performance governor). Subscribe to the exchange's multicast groups (IGMP). Parse the exchange protocol (e.g., ITCH-style) with a zero-copy, branch-light decoder operating directly on the mbuf payload.",
+            "Reliability: market data is UDP, so every message carries a sequence number. Track the expected next sequence; on a gap, switch to the redundant feed and/or request a snapshot/retransmit channel to recover, buffering out-of-order messages until the gap fills. Run both A and B feeds and arbitrate per sequence — take whichever copy arrives first, discard the duplicate; this lowers latency and survives loss on one path.",
+            "Hand-off: decode into compact, fixed-size events and push them to the strategy thread via a lock-free SPSC ring (release/acquire, padded indices) — no allocation, no lock, tens of ns. The strategy runs on its own pinned core.",
+            "Failure modes to handle: sequence gaps and bursts overflowing the ring (back-pressure/drop policy), out-of-order across A/B, snapshot/incremental re-sync at startup or after a gap, malformed/truncated packets, multicast join failures, and clock/timestamp issues. Instrument every stage with low-overhead latency histograms and gap counters so you can prove correctness and latency in production."
+          ],
+          "complexity": { "time": "~sub-µs ingest, bounded by NIC + decode", "space": "Pre-allocated mbuf pools + fixed SPSC ring" }
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "DPDK Programmer's Guide", "note": "Poll-mode drivers, mempools, and the EAL — the standard for user-space packet I/O." },
+    { "title": "Solarflare/Xilinx Onload & TCPDirect docs; Mellanox VMA", "note": "Transparent socket acceleration for existing apps." },
+    { "title": "Linux AF_XDP & XDP (eBPF) documentation", "note": "Mainline kernel-bypass-ish fast path with less vendor lock-in." }
+  ]
+}

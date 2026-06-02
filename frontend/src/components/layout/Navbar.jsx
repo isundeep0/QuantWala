@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
-import { Menu, X, Cpu, Network, Boxes } from "lucide-react";
+import { Menu, X, Cpu, Network, Boxes, Trophy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "@/components/ThemeToggle.jsx";
 import { useProgress } from "@/context/ProgressContext.jsx";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn.js";
 
 const LINKS = [
   { to: "/algorithms", label: "Algorithms", icon: Boxes, color: "#3b82f6" },
+  { to: "/cp", label: "Road to CM", icon: Trophy, color: "#a855f7" },
   { to: "/system-design", label: "System Design", icon: Network, color: "#f59e0b" },
   { to: "/hft", label: "HFT / Low Latency", icon: Cpu, color: "#10b981" },
 ];

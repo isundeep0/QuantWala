@@ -4,6 +4,7 @@ import {
   Boxes,
   Network,
   Cpu,
+  Trophy,
   ArrowRight,
   PlayCircle,
   Route as RouteIcon,
@@ -11,6 +12,7 @@ import {
   ListChecks,
   Sparkles,
 } from "lucide-react";
+import { CP_TOTAL_PROBLEMS } from "@/data/cpRoadmap.js";
 import { useProgress } from "@/context/ProgressContext.jsx";
 import { TOTAL_ALGORITHMS } from "@/data/registry.js";
 import GlassCard from "@/components/liquid/GlassCard.jsx";
@@ -47,6 +49,16 @@ export default function Landing() {
       color: "#3b82f6",
       status: "Fully available",
       live: true,
+    },
+    {
+      to: "/cp",
+      eyebrow: "Module 04",
+      title: "Road to Candidate Master",
+      desc: `A Codeforces-only ladder of ${CP_TOTAL_PROBLEMS} real, curated problems that turns the Module 1 toolbox into rating — grouped by pattern, ramped by difficulty, from Newbie all the way to Master.`,
+      icon: Trophy,
+      color: "#a855f7",
+      status: "Fully available",
+      live: false,
     },
     {
       to: "/system-design",
@@ -140,7 +152,7 @@ export default function Landing() {
 
       {/* Module orbs */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {modules.map((m, i) => {
             const Icon = m.icon;
             return (

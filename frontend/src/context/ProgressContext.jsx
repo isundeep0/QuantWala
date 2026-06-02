@@ -3,7 +3,6 @@ import {
   ALGORITHMS_BY_CATEGORY,
   ALGORITHMS_FLAT,
   TOTAL_ALGORITHMS,
-  getCategoryOrderedSlugs,
 } from "@/data/registry.js";
 
 const ProgressContext = createContext(null);
@@ -74,16 +73,10 @@ export function ProgressProvider({ children }) {
 
     const getViewedSteps = (slug) => state.steps[slug] || {};
 
-    // Per-category linear unlocking: first algo unlocked; next unlocks when the
-    // previous algorithm in the category is completed.
-    const isUnlocked = (slug) => {
-      const algo = ALGORITHMS_FLAT.find((a) => a.slug === slug);
-      if (!algo) return true;
-      const ordered = getCategoryOrderedSlugs(algo.categoryId);
-      const idx = ordered.indexOf(slug);
-      if (idx <= 0) return true;
-      return isComplete(ordered[idx - 1]);
-    };
+    // Free exploration: every lesson is open. Completion is still tracked so the
+    // roadmap shows progress, checkmarks, and an overall percentage — it just
+    // never blocks access to a lesson.
+    const isUnlocked = () => true;
 
     const categoryCompletion = (categoryId) => {
       const cat = ALGORITHMS_BY_CATEGORY.find((c) => c.id === categoryId);

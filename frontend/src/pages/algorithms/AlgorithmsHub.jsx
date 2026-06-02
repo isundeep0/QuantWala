@@ -64,8 +64,8 @@ export default function AlgorithmsHub() {
           </div>
           <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Algorithm Mastery</h1>
           <p className="mt-2 max-w-2xl text-muted">
-            A guided roadmap through every standard algorithm. Complete one to unlock the
-            next. Each lesson: intuition → logic → dry run → interactive simulator → problems.
+            A guided roadmap through every standard algorithm — jump in anywhere. Each lesson:
+            intuition → logic → dry run → interactive simulator → problems.
           </p>
         </div>
         <div className="flex items-center gap-5">

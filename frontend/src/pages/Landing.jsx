@@ -31,7 +31,7 @@ const fadeUp = {
 function StatPill({ icon: Icon, label }) {
   return (
     <div className="glass-orb flex items-center gap-2 px-3 py-1.5 text-sm text-muted">
-      <Icon className="h-4 w-4 text-brand-400" style={{ filter: "drop-shadow(0 0 4px rgba(59,130,246,0.6))" }} />
+      <Icon className="h-4 w-4 text-brand-500 dark:text-brand-400" />
       {label}
     </div>
   );
@@ -98,7 +98,7 @@ export default function Landing() {
             animate="show"
             className="glass-orb inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted"
           >
-            <Sparkles className="h-3.5 w-3.5 text-brand-400" style={{ filter: "drop-shadow(0 0 4px rgba(59,130,246,0.7))" }} />
+            <Sparkles className="h-3.5 w-3.5 text-brand-500 dark:text-brand-400" />
             Learn by seeing — interactive, visual, from-scratch
           </motion.div>
 
@@ -132,7 +132,7 @@ export default function Landing() {
             animate="show"
             className="mt-8 flex flex-wrap items-center gap-3"
           >
-            <Link to="/algorithms" className="btn-primary px-5 py-2.5 text-base" style={{ boxShadow: "0 0 24px rgba(37,99,235,0.45)" }}>
+            <Link to="/algorithms" className="btn-primary px-5 py-2.5 text-base">
               Start learning <ArrowRight className="h-4 w-4" />
             </Link>
             <Link to="/system-design" className="glass glass-interactive btn px-5 py-2.5 text-base">
@@ -175,12 +175,12 @@ export default function Landing() {
                       <span
                         className="grid h-12 w-12 place-items-center rounded-2xl"
                         style={{
-                          background: `radial-gradient(120% 120% at 30% 20%, ${m.color}45, ${m.color}12)`,
-                          boxShadow: `inset 0 0 16px ${m.color}40, 0 0 14px ${m.color}26`,
+                          background: `linear-gradient(160deg, ${m.color}26, ${m.color}0d)`,
+                          boxShadow: `inset 0 0 0 1px ${m.color}2e`,
                           color: m.color,
                         }}
                       >
-                        <Icon className="h-6 w-6" style={{ filter: `drop-shadow(0 0 5px ${m.color})` }} />
+                        <Icon className="h-6 w-6" />
                       </span>
                       {m.live ? (
                         <SwirlProgress value={m.percent} size={58} stroke={6} color={m.color} />
@@ -206,7 +206,7 @@ export default function Landing() {
 
                     <div
                       className="mt-5 flex items-center gap-1.5 text-sm font-semibold"
-                      style={{ color: m.color, textShadow: `0 0 10px ${m.color}55` }}
+                      style={{ color: m.color }}
                     >
                       Enter
                       <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />

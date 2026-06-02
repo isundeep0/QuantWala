@@ -1,0 +1,151 @@
+{
+  "slug": "lock-free-spsc",
+  "sectionId": "systems",
+  "order": 4,
+  "title": "Lock-Free SPSC Queues",
+  "tagline": "The workhorse of low-latency pipelines: a wait-free ring buffer that hands data between two threads with no locks.",
+  "level": "Advanced",
+  "track": ["dev", "systems"],
+  "estMinutes": 24,
+  "visualizer": "ring-buffer",
+  "concept": {
+    "analogy": "Picture a sushi conveyor belt with a fixed number of plates arranged in a circle. The chef (producer) puts a dish on the next empty plate and advances his marker; the diner (consumer) takes from the next ready plate and advances hers. Neither ever waits for the other to 'finish' — they just watch each other's markers. As long as the chef doesn't lap the diner (overfill) and the diner doesn't reach for an empty plate (underflow), they cooperate at full speed with no manager (lock) coordinating them.",
+    "paragraphs": [
+      "A lock-free queue lets threads communicate without mutexes. Mutexes are expensive on the hot path: they can cause syscalls, context switches, priority inversion, and unbounded blocking — exactly the jitter HFT cannot tolerate. The single-producer / single-consumer (SPSC) ring buffer is the simplest and fastest lock-free structure, and it covers the most common HFT pattern: one thread feeds another (feed handler → strategy, strategy → order gateway).",
+      "It is a fixed-size circular array with two indices: a write index (tail) owned by the producer and a read index (head) owned by the consumer. The producer writes a slot then publishes by advancing tail; the consumer reads up to tail then advances head. Because exactly one thread writes each index, there's no compare-and-swap needed — just atomic loads/stores with correct memory ordering. That makes it effectively wait-free: each operation completes in a bounded number of steps.",
+      "The subtlety is memory ordering. The producer must ensure the data write becomes visible before the index update (a release store on tail); the consumer must acquire-load tail so it sees the data the producer wrote. Get the ordering wrong and the consumer can read a slot before the payload is actually there — a data race that only shows up on weakly-ordered hardware (ARM) or under heavy load. This is the practical payoff of understanding the C++ memory model.",
+      "Two more details decide its speed: keep head and tail on separate cache lines (or you get false sharing), and use a power-of-two capacity so index wrap is a cheap mask (`& (N-1)`) instead of a modulo. Done right, an SPSC ring buffer hands off an item in tens of nanoseconds with no kernel involvement."
+    ],
+    "points": [
+      "Lock-free avoids mutex jitter (syscalls, context switches, priority inversion) on the hot path.",
+      "SPSC ring buffer: fixed array + producer-owned tail + consumer-owned head; no CAS needed.",
+      "Producer release-stores tail after writing data; consumer acquire-loads tail before reading.",
+      "Put head and tail on separate cache lines to avoid false sharing.",
+      "Power-of-two capacity → wrap with a mask `& (N-1)`, not modulo."
+    ],
+    "callouts": [
+      { "type": "warn", "title": "Lock-free ≠ easy or always faster", "body": "Lock-free code is hard to get right and to verify. Use battle-tested implementations (Boost.Lockfree, folly, moodycamel, Disruptor-style) where you can, and reserve hand-rolled queues for the measured hot path." },
+      { "type": "tip", "title": "Cache the other index", "body": "Each side can keep a local 'cached' copy of the other side's index and only re-read the shared atomic when its cache says the queue is full/empty. This cuts cross-core reads of the contended index and is a standard speedup." }
+    ],
+    "keyIdea": "An SPSC ring buffer is a fixed circular array with a producer-owned tail and consumer-owned head. Publish data with a release store on the index and consume with an acquire load; pad the two indices onto separate cache lines and use a power-of-two size. That yields a wait-free, lock-free, tens-of-nanoseconds handoff — the backbone of low-latency pipelines."
+  },
+  "deepDive": {
+    "intro": "Building a correct SPSC queue step by step, with the exact memory ordering and the cache-line layout that make it fast.",
+    "steps": [
+      {
+        "title": "Layout: indices on separate lines",
+        "detail": "Store `head` and `tail` as atomics, each `alignas(64)`, so the producer writing tail never invalidates the consumer's cached head and vice versa. The data array is separate. Capacity is a power of two so `index & (capacity-1)` computes the slot — branchless and far cheaper than `%`."
+      },
+      {
+        "title": "Producer: write then publish (release)",
+        "detail": "push(x): load tail (relaxed — we own it), compute next = (tail+1) & mask. Load head with acquire; if next == head the queue is full → fail/spin. Otherwise write buffer[tail] = x, then `tail.store(next, release)`. The release store guarantees the payload write is visible to any consumer that acquire-loads this new tail. Order matters: data first, then the index."
+      },
+      {
+        "title": "Consumer: observe then read (acquire)",
+        "detail": "pop(): load head (relaxed — we own it). Load tail with acquire; if head == tail the queue is empty → fail. Otherwise read x = buffer[head] (the acquire on tail ensures this data is visible), then `head.store((head+1) & mask, release)` to free the slot for the producer."
+      },
+      {
+        "title": "Why release/acquire and not seq_cst",
+        "detail": "Release/acquire is exactly the 'message passing' guarantee we need: the consumer that sees the new tail also sees everything the producer did before the release store (the payload). It's cheaper than seq_cst (which adds a global total order and full barriers we don't require). Relaxed is used for reading your own index, where no cross-thread ordering is needed."
+      },
+      {
+        "title": "Batching and false-empty avoidance",
+        "detail": "Reading the other side's atomic every operation costs a coherence miss when it's being written. Cache it: the producer keeps `cachedHead`; only when next==cachedHead does it re-read the real head with acquire. Same for the consumer with `cachedTail`. Batch pushes/pops to amortize the index updates and improve throughput."
+      }
+    ],
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "spsc_ring.cpp — correct and fast",
+        "source": "#include <atomic>\n#include <vector>\n#include <new>\n#include <optional>\n#include <cstddef>\n\ntemplate <class T>\nclass SpscRing {\npublic:\n    explicit SpscRing(size_t cap_pow2)\n        : cap_(cap_pow2), mask_(cap_pow2 - 1), buf_(cap_pow2) {\n        // cap must be a power of two\n    }\n\n    // Producer side only.\n    bool push(const T& v) {\n        const size_t t = tail_.load(std::memory_order_relaxed);\n        const size_t next = (t + 1) & mask_;\n        if (next == cachedHead_) {                 // maybe full; refresh\n            cachedHead_ = head_.load(std::memory_order_acquire);\n            if (next == cachedHead_) return false; // truly full\n        }\n        buf_[t] = v;                               // 1) write payload\n        tail_.store(next, std::memory_order_release); // 2) publish\n        return true;\n    }\n\n    // Consumer side only.\n    bool pop(T& out) {\n        const size_t h = head_.load(std::memory_order_relaxed);\n        if (h == cachedTail_) {                    // maybe empty; refresh\n            cachedTail_ = tail_.load(std::memory_order_acquire);\n            if (h == cachedTail_) return false;    // truly empty\n        }\n        out = buf_[h];                             // payload is visible (acquire above)\n        head_.store((h + 1) & mask_, std::memory_order_release);\n        return true;\n    }\n\nprivate:\n    const size_t cap_, mask_;\n    std::vector<T> buf_;\n    alignas(64) std::atomic<size_t> head_{0};\n    alignas(64) std::atomic<size_t> tail_{0};\n    alignas(64) size_t cachedHead_{0};   // producer-local\n    size_t cachedTail_{0};               // consumer-local\n};"
+      },
+      {
+        "language": "cpp",
+        "title": "usage.cpp",
+        "source": "SpscRing<MarketEvent> q(1 << 16);   // 65536 slots, mask = 0xFFFF\n\n// Feed-handler thread (producer)\nvoid feed_loop() {\n    MarketEvent ev;\n    while (read_from_nic(ev))\n        while (!q.push(ev)) { /* full: spin or drop per policy */ }\n}\n\n// Strategy thread (consumer)\nvoid strat_loop() {\n    MarketEvent ev;\n    while (running) {\n        if (q.pop(ev)) on_event(ev);   // tens of ns handoff, no syscall\n        // else busy-spin (optionally _mm_pause())\n    }\n}"
+      }
+    ],
+    "notes": [
+      { "title": "ABA isn't an issue here", "detail": "SPSC indices are monotonically advancing counters masked into the buffer; with a single writer per index there's no compare-and-swap and thus no ABA problem. ABA only arises in CAS-based MPMC structures." },
+      { "title": "Bounded by design", "detail": "A fixed-capacity ring never allocates on the hot path and gives back-pressure for free (push fails when full). Choose capacity for your burst size; sizing too small drops/blocks, too large wastes cache." },
+      { "title": "Spin politely", "detail": "When spinning on empty/full, use `_mm_pause()` (PAUSE) to reduce power and ease hyperthread contention; for longer waits, escalate to a backoff or a futex-based wait so you don't burn a core needlessly." }
+    ],
+    "complexity": {
+      "time": "O(1) wait-free push/pop, tens of ns",
+      "timeReason": "Each operation is a handful of atomic ops and one array write/read; no locks, no syscalls. Latency is dominated by the cross-core cache-line transfer of the published index.",
+      "space": "O(capacity)",
+      "spaceReason": "Fixed array of capacity slots plus two padded indices; no per-operation allocation."
+    },
+    "pitfalls": [
+      "Using relaxed (or no) ordering for the index publish/observe — works on x86 by luck, races on ARM.",
+      "Head and tail sharing a cache line → false sharing ping-pong that dominates latency.",
+      "Non-power-of-two capacity forcing a modulo on the hot path.",
+      "Writing the index before the payload (publish-before-write) — the consumer can read garbage.",
+      "Rolling your own MPMC 'SPSC' by adding threads — SPSC correctness assumes exactly one producer and one consumer."
+    ]
+  },
+  "benchmark": {
+    "intro": "Single-item handoff latency, producer→consumer, on pinned cores (order-of-magnitude).",
+    "columns": ["Mechanism", "Typical handoff", "Jitter", "Notes"],
+    "rows": [
+      ["std::mutex + condvar queue", "~1–3 µs", "High (syscalls)", "Context switches, kernel involvement"],
+      ["std::queue + spinlock", "~150–400 ns", "Medium", "No syscall but contended lock + false sharing risk"],
+      { "cells": ["SPSC ring (release/acquire, padded)", "~30–80 ns", "Low", "Wait-free, no kernel, cache-line transfer bound"], "best": true }
+    ],
+    "note": "Numbers depend on CPU/topology; the ratios and the jitter story are the durable lesson.",
+    "takeaway": "Replacing a locking queue with a properly-padded SPSC ring removes syscalls and lock contention, cutting handoff latency by 1–2 orders of magnitude and — just as important for HFT — slashing tail jitter."
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-why-spsc",
+        "q": "Why prefer a lock-free SPSC ring buffer over a mutex-protected queue on the hot path, and what's the catch?",
+        "tag": "Systems",
+        "a": [
+          "A mutex can trigger syscalls and context switches when contended, is subject to priority inversion, and gives unbounded, unpredictable blocking — all sources of tail latency / jitter that HFT can't tolerate. An SPSC ring is wait-free: each push/pop is a bounded sequence of atomic ops with no kernel involvement, so both median and tail latency are low and stable.",
+          "The catch: it only works for exactly one producer and one consumer, has fixed capacity (you must handle full/empty), and demands correct memory ordering (release on publish, acquire on observe) plus cache-line padding of the indices. Lock-free code is also harder to reason about and test, so prefer vetted implementations unless the hot path justifies a hand-rolled one."
+        ],
+        "followups": ["Where exactly do you place the release and acquire?", "What changes for MPMC?"]
+      },
+      {
+        "id": "q-ordering",
+        "q": "In the SPSC push/pop, which operations are release, acquire, or relaxed, and why?",
+        "tag": "C++",
+        "a": [
+          "Producer: read its own `tail` relaxed (no other thread writes it); read `head` with acquire to detect full; write the payload; then store `tail` with release. The release ensures the payload write happens-before the consumer observing the new tail.",
+          "Consumer: read its own `head` relaxed; read `tail` with acquire so that, having seen the new tail, it is guaranteed to see the payload the producer wrote before its release store; read the payload; then store `head` with release to free the slot. Release/acquire gives exactly the message-passing guarantee; seq_cst would be correct but unnecessarily expensive."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-build-spsc",
+        "title": "Implement a correct SPSC ring buffer",
+        "difficulty": "Advanced",
+        "statement": "Implement a fixed-capacity SPSC ring buffer supporting `bool push(const T&)` and `bool pop(T&)` that is correct on weakly-ordered hardware. Your solution must: use power-of-two capacity with mask-based wrap, place head/tail on separate cache lines, use the minimal correct memory orderings, and avoid any heap allocation in push/pop. Then explain how you'd test it for correctness.",
+        "hint": "Producer owns tail (release on publish); consumer owns head (acquire on observe). Cache the other index to cut cross-core reads.",
+        "tests": "Lock-free design, memory ordering, cache-line layout.",
+        "solution": {
+          "approach": [
+            "Use a `std::vector<T>` (or aligned array) of power-of-two capacity and a mask = cap-1; the slot for an index is `i & mask`. Keep `std::atomic<size_t> head, tail`, each `alignas(64)` on its own cache line, plus producer-local `cachedHead` and consumer-local `cachedTail` to avoid re-reading the contended atomic every call.",
+            "push: relaxed-load tail, compute next; if next == cachedHead, acquire-load head into cachedHead and recheck for full; write payload; release-store tail. pop: relaxed-load head; if == cachedTail, acquire-load tail into cachedTail and recheck for empty; read payload; release-store head. The release/acquire pair on tail is what makes the payload visible across cores.",
+            "Test it: (1) single-threaded FIFO/order/wrap correctness; (2) a stress test with one producer + one consumer pushing/popping millions of monotonically increasing values and asserting the consumer sees them strictly in order with none lost/duplicated; (3) run under ThreadSanitizer and on an ARM machine (or with relaxed orderings forced) to catch missing barriers; (4) verify with `perf c2c` that head/tail aren't false-sharing."
+          ],
+          "complexity": { "time": "O(1) wait-free per op", "space": "O(capacity)" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "spsc.hpp (core)",
+              "source": "template <class T>\nclass Spsc {\npublic:\n    explicit Spsc(size_t n) : mask_(n - 1), buf_(n) { /* n must be pow2 */ }\n    bool push(const T& v) {\n        size_t t = tail_.load(std::memory_order_relaxed);\n        size_t next = (t + 1) & mask_;\n        if (next == cachedHead_ &&\n            next == (cachedHead_ = head_.load(std::memory_order_acquire)))\n            return false;                 // full\n        buf_[t] = v;\n        tail_.store(next, std::memory_order_release);\n        return true;\n    }\n    bool pop(T& o) {\n        size_t h = head_.load(std::memory_order_relaxed);\n        if (h == cachedTail_ &&\n            h == (cachedTail_ = tail_.load(std::memory_order_acquire)))\n            return false;                 // empty\n        o = buf_[h];\n        head_.store((h + 1) & mask_, std::memory_order_release);\n        return true;\n    }\nprivate:\n    size_t mask_;\n    std::vector<T> buf_;\n    alignas(64) std::atomic<size_t> head_{0};\n    alignas(64) std::atomic<size_t> tail_{0};\n    alignas(64) size_t cachedHead_{0};\n    size_t cachedTail_{0};\n};"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Boost.Lockfree, folly ProducerConsumerQueue, moodycamel", "note": "Production-quality SPSC/MPMC queues to study and reuse." },
+    { "title": "C++ Concurrency in Action (Ch. on lock-free)", "by": "Anthony Williams", "note": "Builds lock-free queues with correct memory ordering from scratch." },
+    { "title": "CppCon: 'Lock-free programming' talks", "by": "Fedor Pikus / Tony Van Eerd", "note": "Pragmatic guidance on when and how to go lock-free." }
+  ]
+}

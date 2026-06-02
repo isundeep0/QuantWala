@@ -5,7 +5,10 @@
   "title": "Value Semantics, RAII & the Cost Model",
   "tagline": "Know what every line costs — where copies, allocations, and indirections hide in 'innocent' C++.",
   "level": "Core",
-  "track": ["dev", "systems"],
+  "track": [
+    "dev",
+    "systems"
+  ],
   "estMinutes": 20,
   "concept": {
     "analogy": "Driving a manual car forces you to feel the engine — you know exactly when you're burning fuel. C++ is the manual transmission of programming: nothing happens that you didn't ask for, but you have to know what each gesture costs. A stray copy or heap allocation is like riding the clutch — invisible to the careless, obvious and avoidable to someone who understands the machine.",
@@ -72,7 +75,10 @@
           "(a) f takes the string by value → the caller's argument is copied into s (heap buffer allocation + memcpy) unless the caller passes a temporary/std::move (then it's moved, no alloc). (b) g takes by const reference → no copy, no allocation; just binds a reference. (c) copies each element w (allocation per string). (d) binds a const reference per element → no copy.",
           "Rule of thumb: use const& for read-only non-trivial parameters and range-loop variables. Take by value only for cheap types or when you'll keep/move the argument."
         ],
-        "followups": ["When is pass-by-value actually better?", "What is RVO and when does returning by value avoid a copy?"]
+        "followups": [
+          "When is pass-by-value actually better?",
+          "What is RVO and when does returning by value avoid a copy?"
+        ]
       },
       {
         "id": "q-raii",
@@ -91,11 +97,59 @@
           "The rule of zero says: design classes so they need no user-declared destructor, copy/move constructors, or copy/move assignment — by composing members that already manage their own resources (e.g., std::vector, std::unique_ptr, std::string). The compiler-generated special members then do the right thing, and you write less error-prone code.",
           "It's preferred because manually writing the destructor and the copy/move operations (the rule of three/five) is a common source of bugs: forget one and you get leaks, double-frees, or broken move semantics. By pushing resource ownership into well-tested RAII members, you get correctness 'for free'. You only fall back to the rule of three/five when you genuinely must manage a raw resource yourself — and then you must implement the whole consistent set."
         ]
+      },
+      {
+        "id": "q-pass-by",
+        "q": "When should you pass by value, by const reference, or by rvalue reference, and why does it matter for performance?",
+        "tag": "C++",
+        "a": [
+          "Pass by const reference (`const T&`) for read-only parameters you don't need to copy — it avoids any copy and is the default for non-trivial types (strings, vectors, structs). Pass by value (`T`) for small/cheap-to-copy types (int, pointer, small trivially-copyable structs), or deliberately when you're going to take ownership and will move from the parameter (the 'sink' idiom: take by value, then std::move into a member — this lets callers pass an rvalue with zero extra copies and an lvalue with exactly one). Pass by rvalue reference (`T&&`) for overloads that explicitly consume/move from a temporary.",
+          "It matters because the wrong choice silently copies (allocations, cache traffic) on the hot path: taking a big vector by value when you only read it copies the whole thing; taking by const reference when you actually need to store a copy just defers the copy. The general rule: read-only → const&; need-to-own → take by value and move (or provide const&/&& overloads); cheap/trivial → by value. On the hot path, prefer references/views (string_view, span) to avoid copies entirely."
+        ],
+        "followups": [
+          "What is the 'pass by value and move' sink idiom?",
+          "When is passing by value actually faster than const&?"
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-count-allocs",
+        "title": "Count the hidden allocations and copies",
+        "difficulty": "Intermediate",
+        "statement": "For the function below, list every heap allocation and every copy, then rewrite it to be allocation- and copy-free on the hot path:\n\n```\nstd::vector<std::string> hot(std::vector<std::string> names, std::string prefix) {\n    std::vector<std::string> out;\n    for (std::string n : names) {\n        std::string label = prefix + n;\n        out.push_back(label);\n    }\n    return out;\n}\n```",
+        "hint": "Look at by-value parameters, the range-loop copy, the string concatenation temporary, and vector growth without reserve.",
+        "tests": "Recognizing the C++ cost model in practice.",
+        "solution": {
+          "approach": [
+            "Hidden costs: (1) `std::vector<std::string> names` taken BY VALUE copies the whole vector and every string (N allocations) at the call. (2) `std::string prefix` by value copies the prefix. (3) `for (std::string n : names)` copies each element every iteration (N more string allocations) — should be `const auto&`. (4) `prefix + n` builds a temporary std::string (an allocation per iteration). (5) `out` is never reserved, so it reallocates and copies as it grows (log N reallocations, each copying existing strings). (6) Returning by value is fine (NRVO/move) — not a real cost.",
+            "Rewrite: take inputs by const reference, iterate by const reference, reserve the output, and build labels in place to cut temporaries. This removes the input copies, per-element copies, and growth reallocations; the only unavoidable allocations are the N result strings themselves (and even those can be reduced if the caller can accept string_views or a flat buffer).",
+            "The lesson is the C++ cost model: by-value parameters, range-loops without references, operator+ on strings, and unreserved containers each hide allocations/copies that are invisible in the source but dominate hot-path cost. Reading code for these is a core HFT C++ skill."
+          ],
+          "complexity": {
+            "time": "From O(N) allocations down to N result strings",
+            "space": "O(N) output, reserved once"
+          },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "fixed.cpp",
+              "source": "std::vector<std::string> hot(const std::vector<std::string>& names,\n                             std::string_view prefix) {   // no input copies\n    std::vector<std::string> out;\n    out.reserve(names.size());                  // one allocation, no growth churn\n    for (const std::string& n : names) {        // no per-element copy\n        std::string label;\n        label.reserve(prefix.size() + n.size()); // build in place, no '+' temporary\n        label.append(prefix).append(n);\n        out.push_back(std::move(label));          // move into the vector, no copy\n    }\n    return out;                                  // NRVO / move, not a copy\n}"
+            }
+          ]
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Effective Modern C++", "by": "Scott Meyers", "note": "Items on value semantics, copies, and resource management — essential." },
-    { "title": "CppCon talks on 'the cost of abstraction'", "note": "Several talks demonstrate hidden copies/allocations and how to find them." }
+    {
+      "title": "Effective Modern C++",
+      "by": "Scott Meyers",
+      "note": "Items on value semantics, copies, and resource management — essential."
+    },
+    {
+      "title": "CppCon talks on 'the cost of abstraction'",
+      "note": "Several talks demonstrate hidden copies/allocations and how to find them."
+    }
   ]
 }

@@ -5,7 +5,10 @@
   "title": "The C++ Memory Model & Atomics",
   "tagline": "What 'happens-before' really means — the rules that make lock-free code correct across CPU cores.",
   "level": "Advanced",
-  "track": ["dev", "systems"],
+  "track": [
+    "dev",
+    "systems"
+  ],
   "estMinutes": 22,
   "concept": {
     "analogy": "Two chefs work from a shared whiteboard but each keeps private sticky notes (CPU caches) and reorders their own tasks for efficiency (compiler/CPU reordering). If chef A writes 'sauce ready' on a sticky and only later copies it to the whiteboard, chef B might start plating before the sauce exists. Memory ordering is the agreed protocol — 'finish the sauce, THEN publish to the whiteboard; don't read the plate-up flag until you've checked the board' — that guarantees B never acts on data A hasn't actually published yet.",
@@ -72,7 +75,10 @@
           "In the pattern, the producer writes the payload (ordinary writes), then performs a release store to a shared atomic flag/index: data is written, THEN `ready.store(true, memory_order_release)`. The consumer spins on `ready.load(memory_order_acquire)` and only proceeds when it reads true.",
           "The guarantee: a release store synchronizes-with an acquire load that reads the stored value, establishing a happens-before relationship. That means every memory write the producer did *before* the release store is guaranteed visible to the consumer *after* its acquire load returns true. So the consumer can safely read the payload — it cannot observe the flag as set while still seeing stale/partial data. This is precisely why a lock-free SPSC queue is correct: the producer release-stores the head index after writing the slot, and the consumer acquire-loads head before reading it."
         ],
-        "followups": ["Where exactly does the SPSC ring buffer use this?", "Why is acquire/release cheaper than seq_cst on x86?"]
+        "followups": [
+          "Where exactly does the SPSC ring buffer use this?",
+          "Why is acquire/release cheaper than seq_cst on x86?"
+        ]
       },
       {
         "id": "q-volatile",
@@ -92,10 +98,46 @@
           "It's dangerous whenever you're using the atomic to *publish or guard other data*. If a producer writes a payload and then relaxed-stores a 'ready' flag, a consumer reading the flag relaxed has no guarantee the payload is visible — there's no happens-before, so it may read stale data. For any publish/consume or guarding scenario you need at least acquire/release. Rule of thumb: relaxed for independent counters; acquire/release (or seq_cst) for anything that protects or publishes other memory."
         ]
       }
+    ],
+    "problems": [
+      {
+        "id": "p-spinlock",
+        "title": "Implement a correct spinlock with the right ordering",
+        "difficulty": "Advanced",
+        "statement": "Implement a minimal spinlock using std::atomic_flag (or std::atomic<bool>) with correct memory ordering for lock() and unlock(). Justify the orderings (acquire on lock, release on unlock) and add a PAUSE in the spin loop. Then explain why a spinlock is sometimes appropriate in HFT and when it is NOT.",
+        "hint": "lock: test_and_set with acquire, spin (with _mm_pause) until acquired. unlock: clear with release. Acquire/release create the critical-section ordering.",
+        "tests": "Applying acquire/release to build a primitive correctly.",
+        "solution": {
+          "approach": [
+            "lock(): repeatedly test_and_set with memory_order_acquire until it returns false (you got the lock); spin with a CPU PAUSE between attempts to reduce contention and power. unlock(): clear with memory_order_release. The acquire on lock and release on unlock are what make the critical section correct: the release on unlock ensures all writes inside the critical section happen-before the next thread's acquire on lock sees the lock free, so that thread observes those writes. relaxed here would be a data race; seq_cst would be correct but stronger/slower than needed.",
+            "PAUSE (_mm_pause): in the spin loop it hints the CPU you're busy-waiting, reducing power and easing contention with a hyperthread sibling and the memory subsystem; without it, tight spinning wastes resources and worsens contention.",
+            "When a spinlock is appropriate in HFT: protecting a *very short* critical section where the expected wait is shorter than the cost of a context switch (mutex syscall), on pinned/isolated cores where you can afford to busy-wait, and where contention is low. When it is NOT: if the critical section is long or contended (spinning burns a whole core and can cause priority inversion / livelock), or if a thread can be preempted while holding the lock (then others spin uselessly). For the true HFT hot path, the better answer is usually to avoid shared mutable state entirely — use a lock-free SPSC queue and single-threaded ownership — so no lock (spin or otherwise) is on the path at all."
+          ],
+          "complexity": {
+            "time": "O(1) uncontended",
+            "space": "O(1)"
+          },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "spinlock.cpp",
+              "source": "#include <atomic>\n#if defined(__x86_64__)\n#include <immintrin.h>\n#define CPU_PAUSE() _mm_pause()\n#else\n#define CPU_PAUSE() ((void)0)\n#endif\n\nclass SpinLock {\n    std::atomic_flag flag_ = ATOMIC_FLAG_INIT;\npublic:\n    void lock() noexcept {\n        while (flag_.test_and_set(std::memory_order_acquire)) {  // acquire on entry\n            while (flag_.test(std::memory_order_relaxed))         // C++20: spin read-only\n                CPU_PAUSE();                                     // ease contention/power\n        }\n    }\n    void unlock() noexcept { flag_.clear(std::memory_order_release); } // release on exit\n};\n// acquire(lock)/release(unlock) => writes in the critical section are visible to the next locker."
+            }
+          ]
+        }
+      }
     ]
   },
   "resources": [
-    { "title": "C++ Concurrency in Action", "by": "Anthony Williams", "note": "The definitive, readable treatment of the C++ memory model and atomics." },
-    { "title": "Jeff Preshing's blog (acquire/release, lock-free)", "link": "https://preshing.com/", "note": "Outstanding intuition-building posts on memory ordering." }
+    {
+      "title": "C++ Concurrency in Action",
+      "by": "Anthony Williams",
+      "note": "The definitive, readable treatment of the C++ memory model and atomics."
+    },
+    {
+      "title": "Jeff Preshing's blog (acquire/release, lock-free)",
+      "link": "https://preshing.com/",
+      "note": "Outstanding intuition-building posts on memory ordering."
+    }
   ]
 }

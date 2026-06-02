@@ -5,7 +5,10 @@
   "title": "Move Semantics & Avoiding Copies",
   "tagline": "Transfer ownership instead of duplicating — the C++11 feature that eliminates needless allocations.",
   "level": "Intermediate",
-  "track": ["dev", "systems"],
+  "track": [
+    "dev",
+    "systems"
+  ],
   "estMinutes": 18,
   "concept": {
     "analogy": "Imagine handing off a heavy suitcase. A copy means buying an identical suitcase and repacking every item — slow and wasteful. A move means just handing over the handle: the suitcase (and everything in it) is now yours, and the other person is left holding nothing. Move semantics lets C++ pass the handle instead of repacking the bag.",
@@ -105,7 +108,10 @@
             "The move constructor copies the source's data_ and size_ into the new object, then sets the source's data_ = nullptr and size_ = 0, so when the source is destroyed it deletes nothing — ownership has transferred. No allocation, no element copy: O(1).",
             "Move assignment must first release the buffer it currently owns (else a leak), guard against self-assignment, then steal the source's resources and null the source. Both are marked noexcept since they only manipulate pointers/integers and can't throw."
           ],
-          "complexity": { "time": "O(1)", "space": "O(1)" },
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -114,11 +120,44 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-move-buffer",
+        "title": "Implement move for a buffer class (Rule of Five)",
+        "difficulty": "Advanced",
+        "statement": "Write a `Buffer` class owning a heap `char*` + size. Implement the destructor, copy constructor/assignment (deep copy), and move constructor/assignment (steal the pointer, leave source valid/empty), all correct and exception-safe, with the move operations marked noexcept. Explain why noexcept on the move ctor matters for std::vector growth.",
+        "hint": "Move = copy the pointer/size from source, null out source. Mark noexcept. Use copy-and-swap or explicit self-assignment checks.",
+        "tests": "Rule of Five and why noexcept moves matter.",
+        "solution": {
+          "approach": [
+            "Own the resource and implement all five special members consistently. The move constructor takes the source's pointer and size and sets the source's pointer to nullptr/size to 0, so the source remains in a valid, destructible (empty) state and won't double-free. The move assignment frees the current resource, steals the source's, and nulls the source (guard against self-assignment). Copy operations allocate a new buffer and memcpy the contents (deep copy). The destructor frees the pointer.",
+            "Mark the move operations `noexcept`: they only copy a pointer and an integer and null the source — nothing that can throw. This is not just cosmetic: std::vector (and other containers) will only use your move constructor during reallocation/growth IF it is noexcept; otherwise, to preserve its strong exception guarantee, the vector falls back to COPYING every element when it grows. So a missing noexcept silently turns cheap moves into expensive deep copies on every reallocation — a classic hidden hot-path cost. Hence: moves should be noexcept whenever possible.",
+            "Test it: verify move leaves the source empty (no double free), copy produces an independent buffer, self-assignment is safe, and that `std::vector<Buffer>` grows by moving (not copying) — e.g., observe no deep copies on reallocation."
+          ],
+          "complexity": {
+            "time": "move O(1), copy O(n)",
+            "space": "O(n) per buffer"
+          },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "buffer.cpp",
+              "source": "#include <cstring>\n#include <utility>\n#include <cstddef>\n\nclass Buffer {\npublic:\n    explicit Buffer(size_t n = 0) : size_(n), data_(n ? new char[n] : nullptr) {}\n    ~Buffer() { delete[] data_; }\n\n    Buffer(const Buffer& o) : size_(o.size_), data_(o.size_ ? new char[o.size_] : nullptr) {\n        if (size_) std::memcpy(data_, o.data_, size_);          // deep copy\n    }\n    Buffer& operator=(const Buffer& o) {                         // copy-and-swap\n        Buffer tmp(o); swap(*this, tmp); return *this;\n    }\n\n    Buffer(Buffer&& o) noexcept : size_(o.size_), data_(o.data_) { // steal\n        o.data_ = nullptr; o.size_ = 0;                          // leave source empty/valid\n    }\n    Buffer& operator=(Buffer&& o) noexcept {\n        if (this != &o) { delete[] data_; data_ = o.data_; size_ = o.size_; o.data_ = nullptr; o.size_ = 0; }\n        return *this;\n    }\n    friend void swap(Buffer& a, Buffer& b) noexcept {\n        std::swap(a.size_, b.size_); std::swap(a.data_, b.data_);\n    }\nprivate:\n    size_t size_ = 0;\n    char*  data_ = nullptr;\n};\n// noexcept moves => std::vector<Buffer> MOVES (not copies) elements when it grows."
+            }
+          ]
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Effective Modern C++", "by": "Scott Meyers", "note": "Items 23–30 cover move, forwarding, and reference collapsing precisely." },
-    { "title": "Back to Basics: Move Semantics (CppCon)", "note": "Several clear introductory talks on the topic." }
+    {
+      "title": "Effective Modern C++",
+      "by": "Scott Meyers",
+      "note": "Items 23–30 cover move, forwarding, and reference collapsing precisely."
+    },
+    {
+      "title": "Back to Basics: Move Semantics (CppCon)",
+      "note": "Several clear introductory talks on the topic."
+    }
   ]
 }

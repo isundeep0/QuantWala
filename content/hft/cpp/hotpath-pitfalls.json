@@ -5,7 +5,10 @@
   "title": "Hot-Path Pitfalls",
   "tagline": "The 'innocent' constructs that silently allocate, branch, or stall — and how to spot them in a code review.",
   "level": "Advanced",
-  "track": ["dev", "systems"],
+  "track": [
+    "dev",
+    "systems"
+  ],
   "estMinutes": 18,
   "concept": {
     "analogy": "A hot path is like a race car's pit lane: anything that makes the car pause — a loose bolt, a misplaced tool, a chat with a mechanic — costs the race. Many C++ features are perfectly fine in the garage (setup code) but disastrous in the pit lane (hot path). The skill is recognizing, at a glance, which 'normal' code hides a stall.",
@@ -81,6 +84,19 @@
           "Each shared_ptr copy increments, and each destruction decrements, an atomic reference count in the shared control block. Atomic read-modify-write operations are much more expensive than a plain pointer copy, and when many threads copy/destroy shared_ptrs to the same object, they contend on that one cache line holding the refcount — causing cache-line ping-pong and serialization. So 'just passing a shared_ptr around' can quietly become a latency and scalability problem.",
           "On the hot path, prefer clear single ownership with std::unique_ptr (no refcount) and pass non-owning references/observer (raw) pointers or references to functions that just use the object without taking ownership. Reserve shared_ptr for genuine shared-ownership scenarios in cold/setup code, and if you must, pass it by `const&` (avoiding refcount churn) rather than by value."
         ]
+      },
+      {
+        "id": "q-stdlib-hazards",
+        "q": "List the standard-library features you avoid on the hot path and what you use instead.",
+        "tag": "C++",
+        "a": [
+          "Avoid, and the reason: std::shared_ptr (atomic refcount on every copy + heap control block) → use raw/owning pointers from a pool or pass references; std::function (type-erasure indirection, may heap-allocate captures, blocks inlining) → use templates/CRTP or function pointers; std::string concatenation / small ops (allocations) → string_view, fixed-size buffers, or build into a preallocated buffer; std::map/std::set/std::list (node-based, pointer-chasing, allocation per node) → flat contiguous arrays or open-addressing hash maps; std::unordered_map default (node-based, allocates) → a pre-sized open-addressing map; unbounded std::vector growth (reallocation + copy) → reserve up front or fixed-capacity; exceptions on the hot path and dynamic_cast (RTTI) → avoid; iostreams/printf logging inline → push a binary record to a ring and format off-path; std::regex, locale, throwing-at-scale → keep off the path.",
+          "The unifying principle: anything that may allocate, lock, take a syscall, indirect/virtual-dispatch, or chase pointers is a hot-path hazard because it adds latency and — worse — jitter. None of these are 'bad'; they're fine on cold/config paths. The skill is recognizing them and reaching for the contiguous, pre-allocated, statically-dispatched alternative on the measured hot path."
+        ],
+        "followups": [
+          "Why is std::shared_ptr's refcount a problem even when single-threaded use seems fine?",
+          "How do you do logging without touching the hot path?"
+        ]
       }
     ],
     "problems": [
@@ -96,7 +112,10 @@
             "The comparison `a[i] >= t` yields a bool (0 or 1). Instead of branching on it, multiply: `sum += a[i] * (a[i] >= t);`. There's no data-dependent branch, so the CPU can't mispredict it — the work is the same regardless of data, which is exactly what the branch-prediction visualization in the systems section demonstrates.",
             "When it helps: when the branch is *unpredictable* (e.g., random data), branchless avoids costly mispredict flushes. When the branch is highly predictable (almost always taken or not), the branchy version may be just as fast or faster (and clearer), so always measure. Compilers sometimes auto-vectorize/auto-branchless this, but writing it explicitly guarantees it on the hot path."
           ],
-          "complexity": { "time": "O(n)", "space": "O(1)" },
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -110,11 +129,44 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-audit",
+        "title": "Audit and rewrite a hot-path handler",
+        "difficulty": "Advanced",
+        "statement": "Audit this market-data handler for hot-path hazards and rewrite it. Name each hazard and its cost:\n\n```\nvoid onQuote(std::shared_ptr<Quote> q, std::map<std::string,double>& book) {\n    std::string sym = q->symbol;\n    book[sym] = q->price;\n    std::function<void()> notify = [=]{ logger.info(\"quote \" + sym); };\n    notify();\n}\n```",
+        "hint": "shared_ptr by value, string copy, std::map, std::function capturing lambda, string concatenation, inline logging.",
+        "tests": "Comprehensive hot-path hazard recognition and fix.",
+        "solution": {
+          "approach": [
+            "Hazards: (1) `std::shared_ptr<Quote> q` by value → atomic refcount increment/decrement (cross-core contention) and it implies heap-managed lifetime; pass `const Quote&` from a pool instead. (2) `std::string sym = q->symbol` copies/allocates; use string_view or a fixed-size symbol. (3) `std::map<std::string,double>` is a red-black tree — pointer-chasing + a node allocation on insert, O(log n); use a pre-sized open-addressing hash map keyed by an interned symbol id (O(1), cache-friendly). (4) `std::function<void()>` with a capturing lambda type-erases (indirection, possible heap allocation of captures, blocks inlining). (5) `\"quote \" + sym` builds a temporary std::string (allocation). (6) `logger.info(...)` inline does formatting/I/O on the hot path — huge, unpredictable cost.",
+            "Rewrite: take the quote by const reference; key the book with an interned integer symbol id into a pre-sized flat/open-addressing map; drop std::function and call directly (or template the callback); and move logging off the hot path by pushing a compact binary record into an SPSC ring that a background thread formats and writes. The result is allocation-free, lock-free, indirection-free, and does no I/O inline.",
+            "Net effect: the function goes from several allocations + an atomic refcount + a tree insert + type-erased call + synchronous logging (microseconds, jittery) to a handful of cache-resident operations (tens of ns, predictable). This is the canonical 'spot the costs and fix them' exercise HFT interviews use."
+          ],
+          "complexity": {
+            "time": "O(1), allocation/lock/IO-free",
+            "space": "pre-sized map + ring"
+          },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "rewritten.cpp",
+              "source": "// book: pre-sized open-addressing map from interned symbol id -> price\nvoid onQuote(const Quote& q, FlatBook& book, LogRing& log) noexcept {\n    book.set(q.sym_id, q.price);                 // O(1), no alloc, no tree\n    log.push(LogRec{LogRec::QUOTE, q.sym_id});   // off-path: bg thread formats/writes\n}\n// No shared_ptr, no string copy, no std::map, no std::function, no inline I/O."
+            }
+          ]
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Optimizing software in C++", "by": "Agner Fog", "note": "Free manuals on the real cost of language features and how to avoid stalls." },
-    { "title": "CppCon: 'When a Microsecond Is an Eternity' (Carl Cook)", "note": "A canonical talk on hot-path discipline in trading systems." }
+    {
+      "title": "Optimizing software in C++",
+      "by": "Agner Fog",
+      "note": "Free manuals on the real cost of language features and how to avoid stalls."
+    },
+    {
+      "title": "CppCon: 'When a Microsecond Is an Eternity' (Carl Cook)",
+      "note": "A canonical talk on hot-path discipline in trading systems."
+    }
   ]
 }

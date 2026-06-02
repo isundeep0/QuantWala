@@ -5,7 +5,10 @@
   "title": "Zero-Cost Abstractions: Templates & CRTP",
   "tagline": "Get polymorphism and reuse with no runtime overhead — resolve at compile time, not via vtables.",
   "level": "Advanced",
-  "track": ["dev", "systems"],
+  "track": [
+    "dev",
+    "systems"
+  ],
   "estMinutes": 20,
   "concept": {
     "analogy": "A virtual function call is like calling a phone operator who looks up the right extension before connecting you — flexible, but every call pays for that lookup. Templates and CRTP are like having the number wired straight to the right desk at build time: the connection is direct, instantaneous, and the compiler can even merge the conversation into yours (inlining). You keep the abstraction, you drop the lookup.",
@@ -80,7 +83,23 @@
           "CRTP (Curiously Recurring Template Pattern) is when a class derives from a base class template instantiated with the derived class itself: `struct Derived : Base<Derived>`. Because Base is parameterized on Derived, the base's methods can `static_cast<Derived*>(this)` and call the derived's methods — all resolved at compile time.",
           "This gives you the 'shared interface + per-type behavior' benefit of inheritance, but every dispatch is a compile-time static cast and direct call, so there's no vtable, no runtime indirection, and the calls can be fully inlined. The trade-off vs. virtual: the concrete type must be known at compile time (it's not runtime polymorphism over a heterogeneous container of unknown types), and you get the usual template code-size/compile-time costs."
         ],
-        "followups": ["How would you store a heterogeneous collection if you used CRTP?", "When would std::variant be a better fit than CRTP?"]
+        "followups": [
+          "How would you store a heterogeneous collection if you used CRTP?",
+          "When would std::variant be a better fit than CRTP?"
+        ]
+      },
+      {
+        "id": "q-variant",
+        "q": "When would you use std::variant + std::visit instead of CRTP or virtual functions?",
+        "tag": "C++",
+        "a": [
+          "Use std::variant + std::visit when you have a *closed, known-at-compile-time set* of types but you need to choose among them at *runtime* and store them heterogeneously (e.g., a queue of different message types). CRTP gives static dispatch but can't hold a runtime-heterogeneous collection of unknown-at-each-element type; virtual functions give runtime heterogeneity but cost a vtable indirection, block inlining, and usually require heap allocation per object.",
+          "std::variant stores one of a fixed set of types inline (a tagged union — no heap allocation, cache-friendly) and std::visit dispatches via a switch/jump table that the compiler can often optimize better than a virtual call, with the visitor's branches inlinable. So for a bounded set of event/message types on the hot path that you must store together and dispatch at runtime, variant+visit is frequently faster and more cache-friendly than a virtual base class, while still being type-safe. Choose virtual only for truly open-ended/plugin hierarchies; CRTP when the type is known at the call site; variant+visit for a closed set chosen at runtime."
+        ],
+        "followups": [
+          "Why is a variant more cache-friendly than a pointer to a virtual base?",
+          "What's the downside of variant for a very large type set?"
+        ]
       }
     ],
     "problems": [
@@ -96,7 +115,10 @@
             "Base<Derived>::process performs shared work, then calls static_cast<Derived*>(this)->onTick(t). Because Derived is a concrete type known at instantiation, the compiler resolves onTick directly — there's no vtable lookup and the call can be inlined into process.",
             "MyStrategy derives from Handler<MyStrategy> and provides onTick. Calling process on a MyStrategy generates code where onTick is dispatched and inlined statically. The call is inlinable precisely because the target is known at compile time (no runtime indirection through a function pointer)."
           ],
-          "complexity": { "time": "O(1) dispatch (inlined)", "space": "O(1)" },
+          "complexity": {
+            "time": "O(1) dispatch (inlined)",
+            "space": "O(1)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -105,11 +127,44 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-virtual-to-crtp",
+        "title": "Convert a virtual hot path to static dispatch",
+        "difficulty": "Advanced",
+        "statement": "A strategy framework calls `strategy->onTick(tick)` on a `Strategy*` base with a virtual onTick, millions of times/sec, where the concrete type is actually known at the call site. Show how to remove the virtual dispatch using CRTP (or templates), and explain precisely what you gain and the constraint you accept.",
+        "hint": "Templatize the runner on the concrete strategy type, or use CRTP so the call resolves and inlines at compile time.",
+        "tests": "Eliminating runtime polymorphism on the hot path.",
+        "solution": {
+          "approach": [
+            "If the concrete type is known where the loop runs, make the runner a template on the strategy type (or use CRTP). Instead of holding a `Strategy*` and calling a virtual onTick (vptr load + vtable load + indirect call, not inlinable), instantiate the loop with the concrete `MyStrategy`, so `s.onTick(tick)` is a direct, inlinable call.",
+            "What you gain: no vtable indirection (two dependent loads removed), no indirect-branch misprediction risk, and — most importantly — the compiler can inline onTick into the loop and then apply constant propagation, dead-code elimination, and vectorization across the boundary. On a hot path this can be a large win.",
+            "Constraint accepted: the concrete type must be known at compile time at the call site (you give up runtime polymorphism over a heterogeneous collection of unknown strategies), and you pay in code size/compile time (one instantiation per type). That's the right trade for the measured hot path; keep virtual dispatch for cold/config code or genuinely open-ended plugin sets. If you need a closed runtime set, std::variant+visit is the middle ground."
+          ],
+          "complexity": {
+            "time": "O(1) call, now inlinable",
+            "space": "code size per instantiation"
+          },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "static_dispatch.cpp",
+              "source": "// Before: virtual dispatch (indirection, no inlining)\nstruct Strategy { virtual void onTick(const Tick&) = 0; virtual ~Strategy()=default; };\n\n// After: template the runner on the concrete type -> direct, inlinable calls\ntemplate <class S>\nvoid run(S& strat, const Tick* ticks, int n) {\n    for (int i = 0; i < n; ++i)\n        strat.onTick(ticks[i]);     // resolved at compile time, inlined\n}\n\n// Or CRTP if you want a shared base with static dispatch:\ntemplate <class D> struct StrategyBase {\n    void handle(const Tick& t) { static_cast<D*>(this)->onTick(t); } // inlinable\n};\nstruct MyStrategy : StrategyBase<MyStrategy> {\n    void onTick(const Tick& t) noexcept { /* hot logic, no vtable */ }\n};"
+            }
+          ]
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Effective Modern C++ & C++ Templates: The Complete Guide", "by": "Meyers / Vandevoorde et al.", "note": "Templates, CRTP, and forwarding in depth." },
-    { "title": "CppCon: 'Inheritance Is The Base Class of Evil' / static polymorphism talks", "note": "On choosing static vs dynamic dispatch and variant-based designs." }
+    {
+      "title": "Effective Modern C++ & C++ Templates: The Complete Guide",
+      "by": "Meyers / Vandevoorde et al.",
+      "note": "Templates, CRTP, and forwarding in depth."
+    },
+    {
+      "title": "CppCon: 'Inheritance Is The Base Class of Evil' / static polymorphism talks",
+      "note": "On choosing static vs dynamic dispatch and variant-based designs."
+    }
   ]
 }

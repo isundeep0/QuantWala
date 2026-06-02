@@ -5,7 +5,10 @@
   "title": "Allocators: Staying Off the Heap",
   "tagline": "malloc on the hot path is the enemy — preallocate, pool, and reuse so no order-critical code ever allocates.",
   "level": "Advanced",
-  "track": ["dev", "systems"],
+  "track": [
+    "dev",
+    "systems"
+  ],
   "estMinutes": 20,
   "concept": {
     "analogy": "Imagine a busy kitchen during the dinner rush. You don't run to the store for a pan mid-order — you laid out every pan, knife, and bowl before service began, and you reuse and wipe them as you go. Heap allocation (malloc/new) is that mid-service grocery run: slow, unpredictable, and sometimes it makes you wait in line (lock contention) or come back with the wrong aisle (a cache miss). HFT preps everything in advance and never shops during the rush.",
@@ -72,7 +75,10 @@
           "General-purpose allocators optimize for flexibility and average throughput, not worst-case latency. A single allocation may take a lock (contending with other threads — unpredictable stalls), walk free lists, touch cold metadata causing cache misses, or fall through to a system call (sbrk/mmap). The average might be fine, but the *tail* (worst-case) latency is large and unpredictable — and in HFT the tail is what loses you a race or a fill.",
           "Instead, you allocate everything up front, off the critical path, and reuse it on the hot path with no dynamic allocation: reserve() containers, use object pools/free lists for recycled objects, arena/bump allocators for many short-lived ones, and placement new to construct into owned memory. The hot path then has deterministic, allocation-free behavior. You also pre-fault and (often) lock pages so the first touch doesn't fault."
         ],
-        "followups": ["What hidden allocations might sneak onto the hot path?", "How do huge pages and mlock help?"]
+        "followups": [
+          "What hidden allocations might sneak onto the hot path?",
+          "How do huge pages and mlock help?"
+        ]
       },
       {
         "id": "q-pool",
@@ -97,7 +103,10 @@
             "At construction, allocate one contiguous buffer of N T's (the only heap allocation, done off the hot path) and push all N slot pointers onto a free-list stack.",
             "acquire() pops a free slot pointer in O(1) (or returns nullptr if empty). release(p) pushes p back in O(1). No per-operation allocation. (For non-trivial T you'd use raw storage + placement new in acquire and an explicit destructor call in release; shown here for a trivially-constructible T for clarity.)"
           ],
-          "complexity": { "time": "O(1) acquire/release", "space": "O(N)" },
+          "complexity": {
+            "time": "O(1) acquire/release",
+            "space": "O(N)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -106,11 +115,69 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-object-pool",
+        "title": "Implement a fixed-size object pool",
+        "difficulty": "Advanced",
+        "statement": "Implement a fixed-capacity object pool for a hot-path type (e.g., Order) that hands out and reclaims objects in O(1) with zero heap allocation after construction. Use a free-list. Explain how it avoids hot-path allocation and fragmentation, and how it interacts with object construction/destruction.",
+        "hint": "Pre-allocate a contiguous block; thread a free-list through the unused slots; alloc=pop, free=push; placement-new to construct.",
+        "tests": "Custom allocator design for the hot path.",
+        "solution": {
+          "approach": [
+            "Pre-allocate a contiguous array of N slots at startup (one allocation, ever). Maintain a free-list: a singly-linked list threaded *through the unused slots themselves* (each free slot stores the index/pointer of the next free slot), so the list costs no extra memory. allocate() pops the head of the free-list (O(1)); deallocate() pushes a slot back (O(1)). No heap calls on the hot path, and because all slots are contiguous and reused, there's no fragmentation and the data stays cache-friendly.",
+            "Construction/destruction: the pool manages raw storage, so you construct objects with placement-new into a slot on allocate and explicitly call the destructor on deallocate (or hand back raw storage and let the caller construct). This separates memory management (the pool) from object lifetime (placement new / explicit dtor), which is exactly how std::pmr monotonic/pool resources and intrusive designs work.",
+            "Why it matters: `new`/`delete` on the hot path can take a lock, search free-lists in the general allocator, cause unpredictable latency, and fragment memory — all jitter you can't afford. A fixed pool gives O(1), allocation-free, contiguous object churn with predictable latency. Bound the capacity to your worst-case concurrent objects; if exhausted, fail fast or apply back-pressure rather than fall back to the heap."
+          ],
+          "complexity": {
+            "time": "O(1) alloc/free",
+            "space": "O(N) pre-allocated"
+          },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "object_pool.cpp",
+              "source": "#include <cstddef>\n#include <new>\n#include <vector>\n\ntemplate <class T, size_t N>\nclass ObjectPool {\n    union Slot { Slot* next; alignas(T) unsigned char storage[sizeof(T)]; };\n    std::vector<Slot> slots_{N};\n    Slot* free_ = nullptr;\npublic:\n    ObjectPool() { for (size_t i = 0; i < N; ++i) { slots_[i].next = free_; free_ = &slots_[i]; } }\n\n    template <class... Args>\n    T* alloc(Args&&... args) {                  // O(1), no heap\n        if (!free_) return nullptr;             // exhausted -> fail fast / back-pressure\n        Slot* s = free_; free_ = s->next;\n        return ::new (s->storage) T(std::forward<Args>(args)...);  // placement new\n    }\n    void free(T* p) {                           // O(1)\n        p->~T();                                // explicit destruction\n        Slot* s = reinterpret_cast<Slot*>(p);\n        s->next = free_; free_ = s;             // push back on free-list\n    }\n};"
+            }
+          ]
+        }
+      },
+      {
+        "id": "p-arena",
+        "title": "Arena (bump) allocator for per-event scratch",
+        "difficulty": "Intermediate",
+        "statement": "Design an arena/bump allocator for per-event temporary allocations that are all freed together at the end of each event. Explain how allocation and the bulk 'reset' work, why it's faster than per-object new/delete, and when it's the wrong tool.",
+        "hint": "Allocate by bumping a pointer in a pre-allocated block; 'free' everything at once by resetting the pointer.",
+        "tests": "Arena/monotonic allocation pattern.",
+        "solution": {
+          "approach": [
+            "An arena owns a pre-allocated block and a current offset. allocate(n) returns the current position and bumps the offset by n (rounded for alignment) — that's it: a pointer add, O(1), no bookkeeping per object. There is no per-object free; instead, at the end of the event you call reset(), which just sets the offset back to 0, 'freeing' everything at once in O(1). std::pmr::monotonic_buffer_resource is the standard-library version of this.",
+            "Why it's faster: per-object new/delete maintains free-lists, may lock, and fragments; an arena is a single pointer bump per allocation and a single pointer reset to free a whole batch, with perfect contiguity (cache-friendly) and no fragmentation. It's ideal for the very common hot-path pattern of 'allocate a bunch of short-lived scratch objects while processing one event, then discard them all.'",
+            "When it's the wrong tool: when object lifetimes are *not* tied to a clear batch/scope (objects outlive the reset, or are freed individually at varying times) — the arena can't reclaim individual objects, so memory grows until reset. Also be careful that objects needing destructors are destroyed before reset (a monotonic resource doesn't call destructors). So use arenas for per-event/per-frame scratch with uniform lifetime; use a pool or general allocator when lifetimes are individual and long-lived."
+          ],
+          "complexity": {
+            "time": "O(1) alloc, O(1) reset",
+            "space": "O(block size)"
+          },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "arena.cpp",
+              "source": "#include <cstddef>\n#include <cstdint>\n\nclass Arena {\n    std::byte* buf_; size_t cap_, off_ = 0;\npublic:\n    Arena(std::byte* buf, size_t cap) : buf_(buf), cap_(cap) {}\n    void* alloc(size_t n, size_t align = alignof(std::max_align_t)) {\n        size_t p = (off_ + (align - 1)) & ~(align - 1);   // align up\n        if (p + n > cap_) return nullptr;                 // out of arena\n        off_ = p + n;                                     // bump\n        return buf_ + p;\n    }\n    void reset() { off_ = 0; }   // free EVERYTHING at once (call dtors first if needed)\n};\n// Per event: allocate scratch from the arena, process, then arena.reset()."
+            }
+          ]
+        }
       }
     ]
   },
   "resources": [
-    { "title": "std::pmr (polymorphic memory resources)", "note": "C++17 facility for custom container memory — read cppreference's pmr section." },
-    { "title": "CppCon: 'Local' Allocators / arena allocation talks (e.g., Lakos)", "note": "Why arena/pool allocators dramatically cut latency and improve locality." }
+    {
+      "title": "std::pmr (polymorphic memory resources)",
+      "note": "C++17 facility for custom container memory — read cppreference's pmr section."
+    },
+    {
+      "title": "CppCon: 'Local' Allocators / arena allocation talks (e.g., Lakos)",
+      "note": "Why arena/pool allocators dramatically cut latency and improve locality."
+    }
   ]
 }

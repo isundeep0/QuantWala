@@ -5,7 +5,12 @@
   "title": "Order Types: Limit, Market, IOC, FOK & More",
   "tagline": "The vocabulary of trading — every instruction you can give an exchange and what it costs you.",
   "level": "Core",
-  "track": ["dev", "research", "trader", "systems"],
+  "track": [
+    "dev",
+    "research",
+    "trader",
+    "systems"
+  ],
   "estMinutes": 16,
   "concept": {
     "analogy": "Ordering at a busy deli. A market order is 'I'll take whatever you've got, right now, at whatever price' — instant, but you might overpay if stock is low. A limit order is 'I'll buy, but only at $6 or less' — you pin it on the board and wait; you might never get served. IOC is 'fill what you can this instant, cancel the rest.' FOK is 'all of it now, or nothing.' Each instruction trades off certainty of execution against control of price.",
@@ -75,7 +80,10 @@
           "IOC (Immediate-Or-Cancel): execute as much as is immediately available at acceptable prices, cancel any remainder — partial fills are fine. FOK (Fill-Or-Kill): execute the entire requested quantity immediately or cancel the whole order — no partials.",
           "Prefer IOC when you want to take exactly the liquidity that's there without leaving a resting order or revealing intent (e.g., sweeping the top of book for whatever size is available). Prefer FOK when a partial fill is useless or risky — e.g., one leg of an arbitrage or hedge that must be complete to be valid; a half-fill would leave you with naked, unintended risk."
         ],
-        "followups": ["Why might FOK be rare in practice for large size?", "How does an IOC interact with hidden liquidity?"]
+        "followups": [
+          "Why might FOK be rare in practice for large size?",
+          "How does an IOC interact with hidden liquidity?"
+        ]
       },
       {
         "id": "q-postonly",
@@ -94,6 +102,19 @@
           "Under price-time (FIFO) priority — the most common model — the earlier order fills first. Time priority within a price level rewards being early to the queue.",
           "This matters enormously for passive/rebate strategies: your fill probability depends on queue position, not just price. It motivates being fast to post when a new level forms, careful about modifications that reset priority, and aware that a long queue at the touch may mean you rarely fill there. Some venues use pro-rata priority (fills split by size), which changes the incentives toward posting more size."
         ]
+      },
+      {
+        "id": "q-ioc-fok",
+        "q": "Compare IOC, FOK, and a plain limit order. When do you use each?",
+        "tag": "Microstructure",
+        "a": [
+          "A plain limit order rests in the book at your price until filled or cancelled — you provide liquidity and wait for a fill (you're the maker). IOC (Immediate-Or-Cancel) executes as much as possible right now against available liquidity and cancels any unfilled remainder — it never rests. FOK (Fill-Or-Kill) executes the *entire* quantity immediately or cancels the whole thing — no partial fills.",
+          "Use a plain limit when you want to post passively and earn the spread/rebate and are willing to wait and bear queue/adverse-selection risk. Use IOC when you want to take available liquidity now without leaving a resting order that signals your intent or exposes you to adverse selection (common for aggressive takers sweeping the book). Use FOK when you need all-or-nothing atomicity — e.g., a multi-leg or arbitrage trade that only makes sense if the full size executes, so a partial fill would leave you with unwanted exposure."
+        ],
+        "followups": [
+          "Why might leaving a resting remainder be undesirable?",
+          "How does IOC interact with sweeping multiple price levels?"
+        ]
       }
     ],
     "problems": [
@@ -109,7 +130,10 @@
             "Iterate the ask levels from cheapest to most expensive. At each level, take min(remaining, level size) shares at that level's price, add price×taken to cost, and reduce remaining.",
             "Stop when remaining hits 0 (fully filled) or you run out of levels (partial fill; shortfall = remaining). Average price = cost / filled. This directly models 'walking the book'."
           ],
-          "complexity": { "time": "O(L) over levels touched", "space": "O(1)" },
+          "complexity": {
+            "time": "O(L) over levels touched",
+            "space": "O(1)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -123,10 +147,53 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-order-trace",
+        "title": "Trace fills for different order types",
+        "difficulty": "Intermediate",
+        "statement": "The ask side of a book is: 100 shares @ $10.01, then 200 @ $10.02, then 150 @ $10.03. For each incoming BUY order, state the fills and the resulting state: (a) limit buy 250 @ $10.02; (b) IOC buy 400 @ $10.02; (c) FOK buy 400 @ $10.02; (d) market buy 250.",
+        "hint": "Marketable orders walk the book up to their limit price; IOC cancels the remainder; FOK needs the full size available within the limit or nothing.",
+        "tests": "Order-type execution semantics against a real book.",
+        "solution": {
+          "approach": [
+            "(a) Limit buy 250 @ $10.02: fills 100 @ $10.01 and 150 @ $10.02 (250 total, all ≤ limit). Remaining ask: 50 @ $10.02, 150 @ $10.03. Fully filled, nothing rests (it was marketable and fully filled). If it hadn't been fully filled, the remainder would rest as a bid @ $10.02.",
+            "(b) IOC buy 400 @ $10.02: fills 100 @ $10.01 + 200 @ $10.02 = 300 shares (all liquidity ≤ $10.02), then cancels the unfilled 100 (it won't pay $10.03). Remaining ask: 150 @ $10.03. No resting order.",
+            "(c) FOK buy 400 @ $10.02: available within limit is only 300 shares (< 400), so the whole order is killed — zero fills, book unchanged. FOK is all-or-nothing.",
+            "(d) Market buy 250: takes best prices regardless of level — 100 @ $10.01 + 150 @ $10.02 = 250 shares. Remaining ask: 50 @ $10.02, 150 @ $10.03. (A market order has no price limit, so it would keep walking the book if larger.)",
+            "Key contrasts: (a) vs (b) differ only if the limit binds; (c) shows FOK refusing partial fills; (d) shows a market order ignoring price and consuming liquidity by level."
+          ],
+          "complexity": {
+            "time": "O(levels walked)",
+            "space": "O(1)"
+          }
+        }
+      },
+      {
+        "id": "p-postonly",
+        "title": "Capture rebate without crossing",
+        "difficulty": "Intermediate",
+        "statement": "You want to BUY passively to earn the maker rebate, never accidentally crossing the spread (which would make you a fee-paying taker). The best ask is $10.02. You submit a buy limit @ $10.02. What can go wrong, which order type prevents it, and what risk does that order type introduce?",
+        "hint": "A buy limit at the ask is marketable — it may execute immediately as a taker. Think about post-only.",
+        "tests": "Post-only semantics and the maker/taker boundary.",
+        "solution": {
+          "approach": [
+            "Problem: a buy limit @ $10.02 equals the best ask, so it's marketable — it will likely execute immediately against the resting ask, making *you* the aggressor (taker). You pay the taker fee instead of earning the maker rebate, the opposite of your intent.",
+            "Fix: a post-only order. Post-only guarantees the order will only ever rest (add liquidity); if it would execute on entry (cross or lock the book), the exchange either rejects it or reprices it one tick away, so you never accidentally pay the taker fee. It enforces the maker role.",
+            "Risk introduced: by refusing to cross, you may not get filled at all (if the book moves, your order just sits or gets rejected/repriced), and you bear queue position and adverse-selection risk while resting. So post-only trades certainty/immediacy for guaranteed maker economics — appropriate for rebate-capture and passive market making, not when you actually need the fill now."
+          ],
+          "complexity": {
+            "time": "n/a",
+            "space": "n/a"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Your exchange's order-type spec (e.g., Nasdaq, Cboe)", "note": "The authoritative semantics — read the actual venue docs; details vary." }
+    {
+      "title": "Your exchange's order-type spec (e.g., Nasdaq, Cboe)",
+      "note": "The authoritative semantics — read the actual venue docs; details vary."
+    }
   ]
 }

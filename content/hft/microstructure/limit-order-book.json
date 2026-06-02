@@ -5,7 +5,12 @@
   "title": "The Limit Order Book",
   "tagline": "The central data structure of modern markets — and how price-time priority decides who trades.",
   "level": "Core",
-  "track": ["dev", "research", "trader", "systems"],
+  "track": [
+    "dev",
+    "research",
+    "trader",
+    "systems"
+  ],
   "estMinutes": 20,
   "visualizer": "order-book",
   "concept": {
@@ -64,12 +69,49 @@
   },
   "benchmark": {
     "intro": "Common ways to represent the book, and their trade-offs. 'Best' depends on price density and access pattern, but flat tick-indexed arrays dominate for liquid instruments.",
-    "columns": ["Representation", "Best/cancel", "Memory", "Notes"],
+    "columns": [
+      "Representation",
+      "Best/cancel",
+      "Memory",
+      "Notes"
+    ],
     "rows": [
-      { "cells": ["std::map<tick, Level>", "O(log n)", "Pointer-chasing", "Simple, correct, but cache-hostile; fine for prototypes / sparse books."], "best": false },
-      { "cells": ["Flat array indexed by tick", "O(1)", "Contiguous", "Cache-friendly, O(1) access; wastes memory if price range is huge/sparse. Common for liquid names."], "best": true },
-      { "cells": ["Hash map<tick, Level>", "O(1) avg", "Scattered", "O(1) average but cache misses and rehash jitter; ok for sparse, wide ranges."], "best": false },
-      { "cells": ["Array + intrusive FIFO per level", "O(1) cancel by ID", "Contiguous + pooled", "The HFT-grade approach: O(1) cancel via node pointer, no allocation with an object pool."], "best": true }
+      {
+        "cells": [
+          "std::map<tick, Level>",
+          "O(log n)",
+          "Pointer-chasing",
+          "Simple, correct, but cache-hostile; fine for prototypes / sparse books."
+        ],
+        "best": false
+      },
+      {
+        "cells": [
+          "Flat array indexed by tick",
+          "O(1)",
+          "Contiguous",
+          "Cache-friendly, O(1) access; wastes memory if price range is huge/sparse. Common for liquid names."
+        ],
+        "best": true
+      },
+      {
+        "cells": [
+          "Hash map<tick, Level>",
+          "O(1) avg",
+          "Scattered",
+          "O(1) average but cache misses and rehash jitter; ok for sparse, wide ranges."
+        ],
+        "best": false
+      },
+      {
+        "cells": [
+          "Array + intrusive FIFO per level",
+          "O(1) cancel by ID",
+          "Contiguous + pooled",
+          "The HFT-grade approach: O(1) cancel via node pointer, no allocation with an object pool."
+        ],
+        "best": true
+      }
     ],
     "takeaway": "For liquid instruments with dense prices, a flat array indexed by integer ticks, with intrusive linked-list FIFO queues and an object pool, gives O(1) updates and great cache behavior — the standard production pattern."
   },
@@ -92,7 +134,10 @@
           "Maintain a local book and apply each incremental message (add/modify/delete/trade) in strict sequence-number order. Track the last applied sequence number; the next message must be exactly +1.",
           "On a gap (you receive seq N+2 after N), you've missed N+1. You can't trust the book anymore for affected state. Recovery options: request/await a fresh snapshot and a re-base point, or switch to a redundant feed (many feeds are sent on two multicast channels — 'A/B arbitration' — so you can fill the gap from the other line). Until recovered, you typically stop quoting in that instrument rather than act on a stale/incorrect book."
         ],
-        "followups": ["What is A/B line arbitration?", "How do you bound memory if you buffer out-of-order messages?"]
+        "followups": [
+          "What is A/B line arbitration?",
+          "How do you bound memory if you buffer out-of-order messages?"
+        ]
       },
       {
         "id": "q-datastruct",
@@ -101,6 +146,19 @@
         "a": [
           "std::map is a balanced BST: O(log n) operations and, crucially, node-per-element pointer-chasing that causes cache misses on the hot path. For a liquid instrument with dense prices and millions of updates/sec, that's too slow and too jittery.",
           "Use a flat array indexed by integer price-tick (price/tick size), giving O(1) access with contiguous, cache-friendly memory. Each slot holds a price level; the level's resting orders are an intrusive FIFO linked list whose nodes come from a preallocated object pool, so cancel-by-order-ID is O(1) (follow the node pointer) and there's no allocation on the hot path. Handle the (rare) out-of-range price by a fallback map."
+        ]
+      },
+      {
+        "id": "q-queue-pos",
+        "q": "What is 'queue position' and why does it matter so much to a market maker?",
+        "tag": "Microstructure",
+        "a": [
+          "Under price-time priority, orders at the same price are filled in the order they arrived (FIFO). Your queue position is how many shares are ahead of you at your price level. It matters because it determines your fill probability and the quality of your fills: if you're near the front, an incoming aggressive order fills you soon, before the price moves; if you're at the back, you may only get filled after everyone ahead of you — often exactly when the price is about to move against you (adverse selection).",
+          "So queue position is a real, tradeable asset. Market makers race to improve it (post early, at the right price), value it when deciding whether to cancel-and-replace (a reprice sends you to the back of the new queue, losing priority), and model it to estimate fill probability and expected adverse selection. Much of low-latency market making is about winning and keeping good queue position."
+        ],
+        "followups": [
+          "Why does a price-improving modify usually lose queue priority?",
+          "How would you estimate fill probability from queue position?"
         ]
       }
     ],
@@ -117,7 +175,10 @@
             "Imbalance measures which side has more resting size. A heavy bid relative to a thin ask means buyers are queued and the ask is more likely to be lifted, predicting an up-tick (and vice versa).",
             "Compute I = Qb/(Qb+Qa), guarding the empty-book case, then threshold it into {−1, 0, +1}."
           ],
-          "complexity": { "time": "O(1)", "space": "O(1)" },
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -131,11 +192,54 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-fillprob",
+        "title": "Estimate fill probability from queue position",
+        "difficulty": "Advanced",
+        "statement": "You rest 100 shares at the best bid. Ahead of you in the queue are 500 shares. Over the next interval, suppose aggressive sells consume shares from the front of the queue at an average of 300 shares, while cancellations remove shares uniformly from those ahead of you. Qualitatively (and with a simple estimate), how would you reason about your fill probability, and what actions improve it?",
+        "hint": "Fills consume from the front; your shares trade only once everything ahead is consumed or cancelled. Compare shares-ahead to expected consumption.",
+        "tests": "Reasoning about queue dynamics and fill probability.",
+        "solution": {
+          "approach": [
+            "Your 100 shares only start filling once the 500 ahead are removed, either by aggressive sells (which consume from the front) or by cancellations ahead of you. With ~300 shares of aggressive selling expected and some cancellations reducing the 500, you're unlikely to be fully filled this interval but may be partially reached if cancellations are significant: e.g., if ~200 shares ahead cancel and 300 are consumed by trades, the 500 ahead is cleared and your order begins filling. A rough estimate: P(reached) rises as (expected consumption + expected cancels ahead) approaches/exceeds the 500 shares ahead.",
+            "The key insight is that being 500-deep means most near-term fills go to others; you're more likely to be filled later — precisely when the imbalance/price may be turning against you (adverse selection). Actions that improve fill probability and quality: get a better queue position (post earlier / be faster so fewer shares are ahead), or post at a price with a shorter queue, or quote a slightly more aggressive price (accepting worse price for better priority) when you want fills. Conversely, if you're deep in the queue and conditions look toxic, cancelling avoids being filled into an adverse move. Real systems estimate this with models of arrival/cancel rates per level."
+          ],
+          "complexity": {
+            "time": "O(1) for the estimate",
+            "space": "O(1)"
+          }
+        }
+      },
+      {
+        "id": "p-book-trace",
+        "title": "Maintain the book through an event stream",
+        "difficulty": "Intermediate",
+        "statement": "Starting from an empty book, apply this sequence and give best bid/ask and depth after each: 1) ADD buy 100 @ 10.00; 2) ADD buy 200 @ 9.99; 3) ADD sell 150 @ 10.02; 4) ADD sell 100 @ 10.01; 5) TRADE: incoming market buy 120; 6) CANCEL the remaining 10.01 sell. Track it as a book engine would.",
+        "hint": "Bids sorted high→low, asks low→high; a market buy lifts the lowest asks; update best levels as they empty.",
+        "tests": "Applying events to maintain an order book.",
+        "solution": {
+          "approach": [
+            "1) Bids: 100@10.00 (best bid 10.00). 2) Bids: 100@10.00, 200@9.99 (best bid still 10.00). 3) Asks: 150@10.02 (best ask 10.02). 4) Asks: 100@10.01, 150@10.02 (best ask now 10.01; spread 10.00/10.01). 5) Market buy 120 lifts the lowest asks: fills 100@10.01 (that level empties) + 20@10.02. Asks now: 130@10.02 (best ask 10.02). Bids unchanged (best bid 10.00). 6) CANCEL of the 10.01 sell — that level was already fully consumed in step 5, so this cancel finds nothing (in a real engine the order id is gone/filled; handle cancel-of-filled gracefully). Final state: best bid 100@10.00 (then 200@9.99), best ask 130@10.02.",
+            "Notes a real engine cares about: after step 5 the best-ask pointer must advance from the now-empty 10.01 level to 10.02 (the 'reseat the touch' operation); and step 6 illustrates the cancel-vs-fill race — a cancel can arrive for an order that already traded, which the engine/OMS must handle (treat as already done). This is exactly the bookkeeping the dense-array + id-map design makes O(1)."
+          ],
+          "complexity": {
+            "time": "O(1) per event (O(levels) when walking a market order)",
+            "space": "O(levels+orders)"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Trading and Exchanges", "by": "Larry Harris", "note": "Definitive treatment of order-driven markets and priority rules." },
-    { "title": "'How to Build a Fast Limit Order Book'", "note": "Classic write-ups (e.g., the WK Selph article) on the array+intrusive-list design." }
+    {
+      "title": "Trading and Exchanges",
+      "by": "Larry Harris",
+      "note": "Definitive treatment of order-driven markets and priority rules."
+    },
+    {
+      "title": "'How to Build a Fast Limit Order Book'",
+      "note": "Classic write-ups (e.g., the WK Selph article) on the array+intrusive-list design."
+    }
   ]
 }

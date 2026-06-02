@@ -5,7 +5,11 @@
   "title": "Market Data: Feeds, ITCH/OUCH & FIX",
   "tagline": "How the market tells you what's happening — and the protocols an HFT system must parse at wire speed.",
   "level": "Intermediate",
-  "track": ["dev", "systems", "research"],
+  "track": [
+    "dev",
+    "systems",
+    "research"
+  ],
   "estMinutes": 18,
   "concept": {
     "analogy": "Market data is the stadium's live scoreboard and play-by-play feed combined. A 'snapshot' is the full scoreboard right now (everyone's score). 'Incremental updates' are the play-by-play — 'team A scored 3', 'team B subbed a player' — tiny messages you apply to your own copy of the scoreboard. To stay in sync you number every play; if you miss play #58, you know to grab a fresh scoreboard before trusting your view again.",
@@ -63,11 +67,40 @@
   },
   "benchmark": {
     "intro": "Rough throughput/latency intuition for parsing approaches (illustrative — exact numbers depend on hardware and message mix).",
-    "columns": ["Approach", "Per-message", "Allocations", "Notes"],
+    "columns": [
+      "Approach",
+      "Per-message",
+      "Allocations",
+      "Notes"
+    ],
     "rows": [
-      { "cells": ["FIX text parse into objects", "~µs", "Many", "Flexible, ubiquitous for order entry; too slow for the data hot path."], "best": false },
-      { "cells": ["Binary parse, copy to structs", "~100s ns", "Some", "Better, but the copies and any allocation still cost."], "best": false },
-      { "cells": ["Zero-copy view over buffer", "~10s ns", "None", "Read fields by offset from the receive buffer; reuse buffers/pools. The HFT standard."], "best": true }
+      {
+        "cells": [
+          "FIX text parse into objects",
+          "~µs",
+          "Many",
+          "Flexible, ubiquitous for order entry; too slow for the data hot path."
+        ],
+        "best": false
+      },
+      {
+        "cells": [
+          "Binary parse, copy to structs",
+          "~100s ns",
+          "Some",
+          "Better, but the copies and any allocation still cost."
+        ],
+        "best": false
+      },
+      {
+        "cells": [
+          "Zero-copy view over buffer",
+          "~10s ns",
+          "None",
+          "Read fields by offset from the receive buffer; reuse buffers/pools. The HFT standard."
+        ],
+        "best": true
+      }
     ],
     "takeaway": "Binary, zero-copy, allocation-free parsing turns a per-message cost from microseconds into tens of nanoseconds — the difference between keeping up with the feed and falling behind it."
   },
@@ -99,6 +132,32 @@
           "You missed message 1042 (a dropped/late UDP packet). UDP doesn't retransmit, so your local book may now be wrong.",
           "Recovery: first try the redundant feed line (A/B arbitration) — the other multicast line likely delivered 1042, so you fill the gap from it. If that fails, use the venue's retransmission/recovery service if available, or re-snapshot to a fresh base sequence and resume applying increments. Critically, until you've recovered 1042 and re-synced, you treat the book as untrusted and stop quoting in that instrument to avoid acting on corrupt state."
         ]
+      },
+      {
+        "id": "q-l1l2l3",
+        "q": "What's the difference between L1, L2, and L3 market data, and when do you need each?",
+        "tag": "Microstructure",
+        "a": [
+          "L1 (top-of-book): just the best bid/ask price and size (and last trade). Cheapest and smallest; enough for strategies that only care about the touch (simple taking, basic signals). L2 (depth-by-price / aggregated book): the total size at each price level on both sides — lets you see depth, compute imbalance across levels, and gauge liquidity. L3 (order-by-order / full book, e.g., ITCH): every individual order's add/modify/cancel with order ids, so you can reconstruct the exact queue and *your own queue position*.",
+          "You need L3 for queue-position-aware market making and the most precise microstructure signals (it's the most data and most processing). L2 suffices for depth/imbalance signals without per-order tracking. L1 is enough for coarse strategies and lowest cost/latency. More granularity means more bandwidth and more parsing work, so you consume the least data your strategy actually needs."
+        ],
+        "followups": [
+          "Which level do you need to know your own queue position?",
+          "How does data level affect bandwidth and parsing cost?"
+        ]
+      },
+      {
+        "id": "q-why-udp",
+        "q": "Why is exchange market data usually delivered over UDP multicast rather than TCP?",
+        "tag": "Microstructure",
+        "a": [
+          "Because the exchange broadcasts the *same* data to thousands of subscribers simultaneously, and it needs minimum latency. UDP multicast lets the exchange send each packet once and have the network replicate it to all subscribers — efficient and fair (everyone gets it at nearly the same time). TCP is point-to-point and connection-oriented: per-subscriber state, acknowledgements, and retransmissions add latency, jitter, and don't scale to a one-to-many broadcast.",
+          "The trade-off is that UDP is unreliable (no retransmission, possible loss/reordering), so the exchange adds sequence numbers and provides redundant A/B feeds plus snapshot/retransmit channels, and each subscriber's feed handler must detect gaps and recover. This is the right design for low-latency fan-out: pay for reliability in the application layer (sequencing + recovery) rather than accept TCP's latency and scaling costs on the broadcast path."
+        ],
+        "followups": [
+          "How does a feed handler recover from a UDP gap?",
+          "Why send two identical feeds (A and B)?"
+        ]
       }
     ],
     "problems": [
@@ -114,7 +173,10 @@
             "Keep a single integer lastApplied (start at the snapshot's base seq). For each message compare its seq to lastApplied+1.",
             "If it's the expected next, apply and advance. If it's not greater than lastApplied, it's a duplicate/stale and is ignored. If it skips ahead, you have a gap of [lastApplied+1, seq-1]; report it and do not advance (real systems would now recover via the B-line or a snapshot before resuming)."
           ],
-          "complexity": { "time": "O(1) per message", "space": "O(1)" },
+          "complexity": {
+            "time": "O(1) per message",
+            "space": "O(1)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -128,11 +190,54 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-gap",
+        "title": "Detect and recover from a sequence gap",
+        "difficulty": "Advanced",
+        "statement": "Your feed handler expects sequence 1001 next but receives 1005 on feed A. Moments later feed B delivers 1001, 1002, then jumps to 1006. Walk through how a correct handler classifies and handles these, what it does about the missing messages, and how it signals downstream consumers during recovery.",
+        "hint": "Track expected seq; ahead = gap (buffer/recover), arbitrate A/B by sequence taking the first copy, use snapshot/retransmit for true gaps, mark 'stale' until resynced.",
+        "tests": "Sequencing, A/B arbitration, and recovery logic.",
+        "solution": {
+          "approach": [
+            "Expected = 1001. Feed A delivers 1005 — that's ahead of expected, so 1001–1004 are missing on A: a potential gap. The handler doesn't apply 1005 yet (applying out of order would corrupt the book); it buffers it pending the gap fill. Feed B then delivers 1001 and 1002 — these match/advance the expected sequence (arbitration: take the first feed to deliver each sequence), so apply them; expected becomes 1003. B then jumps to 1006, so 1003–1005 are now the outstanding gap (note A already has 1005 buffered, which fills part of it).",
+            "Recovery: the handler reconciles buffered messages across A and B by sequence — 1005 from A's buffer fills that slot; 1003 and 1004 are still missing from both feeds, a true gap. It requests a retransmission of 1003–1004 (if the exchange offers it) or re-syncs from the snapshot channel (which periodically broadcasts full book state), then replays buffered messages from the recovered point forward, returning to in-order processing. A/B arbitration means most one-feed gaps are instantly filled by the other feed, making true recovery rare.",
+            "Downstream signaling: while a genuine gap is unfilled, the book is not known-good, so the handler marks state 'stale' and the strategy stops quoting (or quotes conservatively) until re-synced — never trade on a desynchronized book. It also increments gap/recovery counters and alerts, so silent desync is impossible. Once 1003–1005 are recovered and applied in order, it clears 'stale' and resumes."
+          ],
+          "complexity": {
+            "time": "O(1) per message; recovery bounded by gap/snapshot size",
+            "space": "O(reorder window + replay buffer)"
+          }
+        }
+      },
+      {
+        "id": "p-bandwidth",
+        "title": "Estimate feed bandwidth and processing budget",
+        "difficulty": "Intermediate",
+        "statement": "A market-data feed averages 1 million messages/second, each ~50 bytes on the wire, but bursts to 5 million msgs/sec during the open. Estimate average and peak bandwidth, and the per-message CPU time budget you have if a single core must keep up at peak. What design choices follow from these numbers?",
+        "hint": "Bandwidth = rate × size. Per-message budget at peak = 1 second / peak rate. Compare to a cache-miss cost.",
+        "tests": "Sizing a feed handler from first principles.",
+        "solution": {
+          "approach": [
+            "Average bandwidth ≈ 1e6 × 50 B = 50 MB/s (~400 Mbit/s). Peak ≈ 5e6 × 50 B = 250 MB/s (~2 Gbit/s) — so you need a 10GbE-class NIC and headroom. Per-message CPU budget at peak on one core = 1 s / 5e6 = 200 ns/message. That's only a few hundred CPU cycles — roughly the cost of a couple of cache misses.",
+            "Design implications: 200 ns/message rules out anything slow per message — no heap allocation, no locks, no syscalls, no fully decoding fields you don't need. You must parse zero-copy at fixed offsets with branch-light dispatch, keep hot state cache-resident, and batch-process bursts to amortize overhead and stay cache-hot. Receive rings and downstream queues must be sized for the 5×-burst (not the average) with back-pressure, or you'll drop messages and trigger expensive recovery. And because a single core is near its limit at peak, you pin/isolate that core and use kernel bypass so the OS doesn't steal cycles. The arithmetic directly justifies the whole low-latency feed-handler design."
+          ],
+          "complexity": {
+            "time": "~200 ns/msg budget at peak",
+            "space": "rings sized for peak burst"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Nasdaq TotalView-ITCH specification", "note": "The actual binary message layouts — great for building a parser." },
-    { "title": "FIX protocol overview", "note": "Understand tag=value framing and why it's heavier than binary." }
+    {
+      "title": "Nasdaq TotalView-ITCH specification",
+      "note": "The actual binary message layouts — great for building a parser."
+    },
+    {
+      "title": "FIX protocol overview",
+      "note": "Understand tag=value framing and why it's heavier than binary."
+    }
   ]
 }

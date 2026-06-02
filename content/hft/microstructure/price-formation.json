@@ -5,7 +5,11 @@
   "title": "Spread, Mid & Microprice",
   "tagline": "What 'the price' even is — and why the naive mid-price is the wrong fair value.",
   "level": "Intermediate",
-  "track": ["research", "trader", "dev"],
+  "track": [
+    "research",
+    "trader",
+    "dev"
+  ],
   "estMinutes": 16,
   "visualizer": "microprice",
   "concept": {
@@ -75,6 +79,19 @@
           "Order-flow imbalance captures real-time pressure: a buildup of bids relative to asks (and a stream of buy-side aggressions) tends to precede an up-tick because that queued demand will consume the offers. Empirically it's one of the more robust predictors of the next price move over very short horizons.",
           "A maker uses it to (a) anchor fair value at the microprice rather than the mid, (b) skew quotes — lean the ask up / pull the bid when imbalance signals an imminent up-move — to avoid being adversely selected, and (c) size down or widen when imbalance + volatility indicate toxic conditions. It directly reduces the rate at which informed flow picks them off."
         ]
+      },
+      {
+        "id": "q-ofi",
+        "q": "What is order-flow imbalance and why is it predictive of short-term price moves?",
+        "tag": "Microstructure",
+        "a": [
+          "Order-flow imbalance (OFI) measures the net pressure between buying and selling interest — for example, (bid size − ask size)/(bid size + ask size) at the touch, or a signed sum of recent aggressive buys minus aggressive sells, or changes in resting size at the best levels. A large positive imbalance means much more size resting/arriving on the bid than the ask (buy pressure); negative means sell pressure.",
+          "It's predictive over very short horizons because price is formed by supply and demand at the touch: if there's far more size wanting to buy than sell, the ask is more likely to be consumed and the price to tick up (and vice versa). Mechanically, the microprice — a size-weighted mid that leans toward the heavier side — is a better fair-value estimate than the naive mid precisely because it incorporates this imbalance. The edge is small and decays in milliseconds, so it's a classic HFT signal: tradeable only with low latency, and it must be measured carefully to avoid lookahead bias."
+        ],
+        "followups": [
+          "How does imbalance relate to the microprice?",
+          "Why does the signal decay so fast?"
+        ]
       }
     ],
     "problems": [
@@ -90,7 +107,10 @@
             "Compute total = bidSize + askSize. If it's 0 the book is empty at the touch, so fall back to the mid.",
             "Otherwise I = bidSize/total and microprice = ask·I + bid·(1−I). Note when I→1 (bid-heavy) the result → ask, and when I→0 (ask-heavy) it → bid — exactly the desired tilt toward the thin side."
           ],
-          "complexity": { "time": "O(1)", "space": "O(1)" },
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -104,11 +124,57 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-microprice",
+        "title": "Compute mid vs microprice and reason about it",
+        "difficulty": "Intermediate",
+        "statement": "Best bid = $10.00 with 900 shares; best ask = $10.01 with 100 shares. Compute the naive mid-price and the size-weighted microprice (weight each side's price by the *opposite* side's size, i.e., microprice = (bid_px·ask_sz + ask_px·bid_sz)/(bid_sz+ask_sz)). Interpret which way the price is likely to move and why, and state when the microprice is a better fair-value estimate than the mid.",
+        "hint": "Mid = (bid+ask)/2. Microprice weights toward the side with MORE size because that side is less likely to be consumed. Heavy bid → price near the ask.",
+        "tests": "Microprice computation and interpretation.",
+        "solution": {
+          "approach": [
+            "Mid = (10.00 + 10.01)/2 = $10.005 — ignores the huge size imbalance. Microprice = (bid_px·ask_sz + ask_px·bid_sz)/(bid_sz+ask_sz) = (10.00·100 + 10.01·900)/(100+900) = (1000 + 9009)/1000 = 10009/1000 = $10.009. The microprice sits close to the ask ($10.01), not the mid.",
+            "Interpretation: there are 900 shares wanting to buy at $10.00 but only 100 offered at $10.01. That thin ask is likely to be consumed (lifted) and the price to tick up; the heavy bid provides support. So the 'true' near-term fair value is closer to the ask, which is exactly what the microprice captures by weighting each price by the *opposite* side's size (a large bid pulls fair value toward the ask). A market maker quoting around the naive mid would systematically misprice; quoting around the microprice accounts for the imbalance.",
+            "The microprice beats the mid as a fair-value estimate whenever there's meaningful size imbalance at the touch (the common case); when sizes are roughly equal, microprice ≈ mid. It's the standard short-horizon fair-value used in market making and as an alpha input — but its predictive edge decays in milliseconds, so it's only tradeable with low latency."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          }
+        }
+      },
+      {
+        "id": "p-spread-decompose",
+        "title": "Why does a spread exist? Decompose it",
+        "difficulty": "Advanced",
+        "statement": "A market maker quotes a 2-cent spread on a stock. Explain the components that the spread must compensate the maker for (name at least three), and how each component would push the maker to widen or tighten the spread. Then explain why, in a competitive, liquid name, spreads are razor-thin while in an illiquid name they're wide.",
+        "hint": "Order-processing/fee costs, inventory risk, and adverse selection are the classic three components of the spread.",
+        "tests": "The economic theory of the bid-ask spread.",
+        "solution": {
+          "approach": [
+            "Classic decomposition of the spread into what it compensates the maker for: (1) Order-processing / fee costs — the operational and exchange/clearing costs of providing the quote (small, fairly fixed). (2) Inventory risk — by filling buyers and sellers the maker accumulates inventory it must hold and later unwind at uncertain prices; the more volatile the asset and the larger/longer the inventory, the more compensation needed, widening the spread. (3) Adverse selection — some counterparties are informed, so fills systematically precede adverse moves; the higher the toxicity of flow, the wider the spread must be to cover expected losses to informed traders.",
+            "Each component pushes the spread: higher volatility or larger required inventory → wider (inventory risk); more informed/toxic flow → wider (adverse selection); higher fees → wider; competition and rebates → tighter. The maker sets the spread so expected revenue (captured spread + rebates × benign volume) covers these costs plus a profit margin.",
+            "Liquid vs illiquid: in a competitive, liquid name, many makers compete for the flow, volume is high, inventory is easy to offload quickly (low inventory risk), and flow is mostly benign — so the equilibrium spread is driven down to a tick. In an illiquid name, few makers, hard-to-unwind inventory (high inventory risk), thin volume, and a higher chance any given order is informed → spreads are wide to compensate for the elevated inventory and adverse-selection risk. The spread is the price of immediacy, and it equals the maker's expected cost of providing it."
+          ],
+          "complexity": {
+            "time": "n/a",
+            "space": "n/a"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "'The Micro-Price'", "by": "Sasha Stoikov", "note": "The reference paper formalizing the imbalance-adjusted fair value." },
-    { "title": "Trading and Exchanges", "by": "Larry Harris", "note": "Chapters on spreads, price discovery, and transaction costs." }
+    {
+      "title": "'The Micro-Price'",
+      "by": "Sasha Stoikov",
+      "note": "The reference paper formalizing the imbalance-adjusted fair value."
+    },
+    {
+      "title": "Trading and Exchanges",
+      "by": "Larry Harris",
+      "note": "Chapters on spreads, price discovery, and transaction costs."
+    }
   ]
 }

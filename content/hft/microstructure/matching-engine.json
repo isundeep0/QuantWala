@@ -5,7 +5,11 @@
   "title": "Inside the Matching Engine",
   "tagline": "How an exchange turns a stream of orders into trades — deterministically, fairly, and fast.",
   "level": "Intermediate",
-  "track": ["dev", "systems", "research"],
+  "track": [
+    "dev",
+    "systems",
+    "research"
+  ],
   "estMinutes": 18,
   "concept": {
     "analogy": "A matching engine is like a strict, lightning-fast auctioneer who never plays favorites. Orders arrive in a single-file line. For each one, the auctioneer checks: does this cross with what's already on the board? If yes, pair them off by the rules (best price first, then who was here longest) and announce the trades. If not, pin it on the board. The same inputs in the same order always produce the same trades — that determinism is sacred.",
@@ -88,6 +92,19 @@
           "Price-time fills the earliest resting order at a price first, so it rewards speed and queue position — participants race to post early and protect priority. Order size beyond what fills doesn't help you jump the queue.",
           "Pro-rata splits an incoming fill among resting orders proportional to their displayed size, so it rewards posting large size to capture a bigger share of each fill — leading to larger displayed quotes and sometimes 'size games'. Exchanges pick pro-rata (or hybrids) to encourage deep, visible liquidity, common in some futures/options markets."
         ]
+      },
+      {
+        "id": "q-pricetime-prorata",
+        "q": "Price-time priority vs pro-rata matching — how do they differ and where is each used?",
+        "tag": "Microstructure",
+        "a": [
+          "Both first sort by price (best price always trades first). They differ in how they allocate among orders at the *same* price. Price-time (FIFO) gives full priority to the earliest order: time of arrival breaks ties, so being first in the queue is everything. Pro-rata allocates an incoming order across all resting orders at that price *in proportion to their size*, so a larger order gets a larger share regardless of arrival time (often with a small time/priority component or a minimum allocation).",
+          "Most equity and many futures markets use price-time, which rewards speed (race to the front of the queue) — a major driver of HFT latency competition. Some markets, notably certain options and short-term interest-rate futures, use pro-rata, which rewards *size* (quote big to get a bigger fill) and changes the strategy: instead of racing for queue position you post larger size, accepting more risk to capture allocation. Knowing the venue's rule fundamentally changes optimal behavior."
+        ],
+        "followups": [
+          "How does pro-rata change what makes a good market-making strategy?",
+          "Why must the matching algorithm be public and deterministic?"
+        ]
       }
     ],
     "problems": [
@@ -103,7 +120,10 @@
             "Keep asks sorted ascending; the best ask is the front level, and within it the front order is the oldest (time priority). While the incoming buy still has quantity and the best ask crosses (price <= limitPrice), fill against the front resting order at its price.",
             "Each fill is min(remaining buy qty, front resting size). Decrement both; if the resting order hits 0, remove it; if the level empties, remove the level. Record each trade at the resting price. Stop when qty is exhausted or the best ask no longer crosses."
           ],
-          "complexity": { "time": "O(F) in number of fills", "space": "O(F) for the trade list" },
+          "complexity": {
+            "time": "O(F) in number of fills",
+            "space": "O(F) for the trade list"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -117,11 +137,56 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-prorata",
+        "title": "Compute a pro-rata allocation",
+        "difficulty": "Intermediate",
+        "statement": "At the best ask, three resting sell orders sit at the same price: A=600, B=300, C=100 shares (total 1000). An incoming market buy of 500 shares matches under pure pro-rata allocation. How many shares does each resting order get? Then contrast with what would happen under price-time priority if the arrival order was A (first), then B, then C.",
+        "hint": "Pro-rata: each gets size_i/total × incoming (then handle rounding). Price-time: fill the earliest fully before the next.",
+        "tests": "Pro-rata vs price-time allocation mechanics.",
+        "solution": {
+          "approach": [
+            "Pure pro-rata: each resting order gets its share of the 500 in proportion to size. A: 600/1000 × 500 = 300; B: 300/1000 × 500 = 150; C: 100/1000 × 500 = 50. (Sums to 500. Real venues apply rounding rules and sometimes a minimum allocation or a small time-priority overlay, but the proportional idea is the core.) Notably even the small order C gets filled — size, not arrival time, drove the allocation.",
+            "Price-time priority (arrival A→B→C): the 500 fills the earliest orders fully first — A gets 500 (it had 600 resting, so 500 of it fills, 100 remains), and B and C get nothing this time. Here being first is everything; C's only hope is to be early, not large.",
+            "Contrast/strategy implication: under pro-rata you're incentivized to quote *larger* size to capture more allocation (accepting more inventory/adverse-selection risk), and queue position barely matters; under price-time you're incentivized to be *fast and early* (small size is fine if you're at the front). The matching rule directly determines whether speed or size is the winning lever."
+          ],
+          "complexity": {
+            "time": "O(orders at level)",
+            "space": "O(1)"
+          }
+        }
+      },
+      {
+        "id": "p-determinism",
+        "title": "Why determinism matters in a matching engine",
+        "difficulty": "Intermediate",
+        "statement": "Explain why an exchange matching engine must be deterministic (same inputs in the same order always produce the same outcome), and what would go wrong for participants and for the exchange if it weren't. Tie this to why a firm's order-book replica must replicate the matching rules exactly.",
+        "hint": "Fairness, auditability, replay/recovery, and participants modeling fills all depend on determinism.",
+        "tests": "Understanding determinism's role in market integrity.",
+        "solution": {
+          "approach": [
+            "Determinism means the engine processes a single, sequenced stream of orders and always yields the same matches/fills for the same input sequence. It's essential for: fairness (the published rule — price-time/pro-rata — is applied identically to everyone, so outcomes aren't arbitrary), auditability/regulation (the exchange can prove exactly why each trade happened), recovery (it can replay the input log after a failure and reach the identical state), and participant trust (firms can model and predict fills).",
+            "If it weren't deterministic, identical situations could produce different fills, enabling unfair or unpredictable outcomes, making disputes unresolvable, and breaking replay-based recovery (the rebuilt state might differ from the original). Participants couldn't reliably estimate queue position or fill probability, undermining the whole microstructure.",
+            "This is exactly why a trading firm's local order-book replica must replicate the exchange's matching semantics precisely (same price-time/pro-rata rule, tick size, modify-priority rules): the strategy estimates its own queue position and fill probability from the replica, so any divergence from the exchange's deterministic behavior means the strategy is reasoning about a market that doesn't exist — leading to mispriced quotes and bad fills."
+          ],
+          "complexity": {
+            "time": "n/a",
+            "space": "n/a"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "LMAX Disruptor technical paper", "by": "Thompson et al.", "note": "Why single-threaded sequencing + a lock-free ring buffer beat locking for an exchange." },
-    { "title": "Build a matching engine (project)", "note": "Implementing a price-time engine over a sample feed is a top-tier portfolio project for dev roles." }
+    {
+      "title": "LMAX Disruptor technical paper",
+      "by": "Thompson et al.",
+      "note": "Why single-threaded sequencing + a lock-free ring buffer beat locking for an exchange."
+    },
+    {
+      "title": "Build a matching engine (project)",
+      "note": "Implementing a price-time engine over a sample feed is a top-tier portfolio project for dev roles."
+    }
   ]
 }

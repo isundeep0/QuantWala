@@ -1,0 +1,147 @@
+{
+  "slug": "databases",
+  "sectionId": "building-blocks",
+  "order": 4,
+  "title": "Databases: SQL vs NoSQL",
+  "tagline": "The most common 'why did you pick that?' in any interview — choose storage by access pattern, not by hype.",
+  "summary": "Relational vs the NoSQL families, and how to choose by access pattern.",
+  "difficulty": "Intermediate",
+  "estMinutes": 20,
+  "tags": ["data", "must-know"],
+  "prereqs": ["acid-vs-base"],
+  "sections": [
+    {
+      "id": "sql",
+      "title": "Relational (SQL) databases",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Relational databases store data in **tables** with a fixed **schema**, related by keys, and queried with SQL. They give you **ACID transactions**, powerful **joins**, and strong consistency — decades of tooling and reliability behind them (PostgreSQL, MySQL, etc.).",
+            "They shine when data is structured and relationships matter: you can ask complex ad-hoc questions across tables, enforce constraints (foreign keys, uniqueness), and trust that multi-step operations are atomic. The classic weakness is **horizontal scaling of writes**: a single primary handles writes, and sharding a relational DB (especially with cross-shard joins/transactions) is painful."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Choose SQL when",
+          "items": [
+            "You need ACID transactions (payments, orders, inventory, ledgers).",
+            "Data is relational and you'll run complex/ad-hoc queries and joins.",
+            "Strong consistency and constraints matter more than extreme write scale.",
+            "The schema is reasonably stable."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nosql",
+      "title": "NoSQL families",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "'NoSQL' isn't one thing — it's a family of stores that trade some relational/ACID guarantees for horizontal scale, flexible schemas, or specialized access patterns. Know the four families and a representative example of each."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Key-value", "detail": "Simple `key → value` lookups, extremely fast and scalable. Great for caches, sessions, user prefs. Examples: Redis, DynamoDB, Riak." },
+            { "term": "Document", "detail": "Stores JSON-like documents; flexible schema, query by fields. Great for catalogs, user profiles, content. Examples: MongoDB, Couchbase, DynamoDB." },
+            { "term": "Wide-column", "detail": "Rows with dynamic columns, optimized for huge write volume and queries by partition key. Great for time-series, event logs, messaging. Examples: Cassandra, HBase, Bigtable." },
+            { "term": "Graph", "detail": "First-class nodes and edges; traverses relationships efficiently. Great for social graphs, recommendations, fraud. Examples: Neo4j, Neptune." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Most NoSQL stores scale horizontally by design (built-in sharding + replication) and favour availability/eventual consistency (BASE). The price: weaker or no joins, limited transactions, and you must design the schema *around your queries* up front — there's no flexible ad-hoc querying."
+        }
+      ]
+    },
+    {
+      "id": "choosing",
+      "title": "How to actually choose",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The professional approach is **query-driven**: figure out your access patterns first (what reads/writes happen, at what ratio and scale, with what consistency needs), then pick the store that serves those patterns best. Don't pick by 'NoSQL is more scalable' — that's the answer that gets you grilled."
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["Need / signal", "Lean SQL", "Lean NoSQL"],
+          "rows": [
+            ["Transactions & strong consistency", "✓ (money, orders)", "Limited"],
+            ["Complex ad-hoc queries / joins", "✓", "Avoid — design around queries"],
+            ["Massive write throughput / huge scale", "Hard (sharding pain)", "✓ (wide-column, key-value)"],
+            ["Flexible / evolving schema", "Migrations needed", "✓ (document)"],
+            ["Relationship traversal (social graph)", "Joins get heavy", "✓ (graph DB)"],
+            ["Simple fast key lookups at scale", "Works", "✓ (key-value)"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "title": "Polyglot persistence is the senior answer",
+          "text": "Big systems use multiple databases — SQL for orders/payments, a wide-column store for the messaging firehose, a key-value cache for sessions, a graph DB for the follow network, blob storage for media. Justify each by its access pattern. 'One database for everything' is rarely the right answer at scale."
+        }
+      ]
+    },
+    {
+      "id": "modeling",
+      "title": "Modeling note: normalize vs denormalize",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Normalize (SQL default)", "detail": "Store each fact once; join at read time. Saves space, avoids update anomalies, but reads cost joins." },
+            { "term": "Denormalize (NoSQL default)", "detail": "Duplicate data so a read needs no joins — store the data shaped exactly how you'll query it. Reads are fast and single-fetch, but writes must update every copy and you trade space for speed." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "text": "Denormalization is the standard NoSQL move: model the table per query. The cost is keeping duplicated data in sync on writes — often done asynchronously. Mentioning this trade-off (read speed vs write complexity/space) is a strong signal."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "SQL: fixed schema, ACID transactions, joins, strong consistency; weak at horizontal write scaling.",
+    "NoSQL families: key-value, document, wide-column, graph — mostly horizontal-scale + BASE/eventual.",
+    "Choose by access pattern (query-driven), not by 'NoSQL scales better'.",
+    "SQL for money/orders/relational+ad-hoc; NoSQL for huge write scale, flexible schema, graph traversal, simple fast lookups.",
+    "Polyglot persistence (multiple stores per data type) is the mature answer at scale.",
+    "NoSQL denormalizes (model per query → fast reads, sync cost on writes); SQL normalizes (joins at read)."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Trade-off",
+      "difficulty": "Medium",
+      "prompt": "You're storing chat messages for a WhatsApp-scale app: billions of writes/day, queried mostly by 'messages in this conversation, newest first'. SQL or NoSQL, and which family?",
+      "hint": "Write volume is enormous and the query pattern is fixed and simple.",
+      "answer": [
+        "This is a textbook **wide-column NoSQL** case (e.g., Cassandra/HBase/Bigtable). The write volume is far beyond a single SQL primary, the access pattern is fixed and known (fetch recent messages by conversation_id), and you don't need cross-table joins or multi-row transactions for the core path.",
+        "Model it query-first: partition by `conversation_id` and cluster by `timestamp` descending, so 'latest messages in a conversation' is a single efficient partition scan. This gives massive write throughput and fast, targeted reads. You'd accept eventual consistency for delivery metadata and handle ordering with timestamps/sequence numbers. (Account/auth data, by contrast, might still live in SQL.)"
+      ],
+      "keyPoints": ["Wide-column NoSQL for huge write volume + fixed access pattern", "Partition by conversation_id, cluster by time desc", "Single-partition read for recent messages", "No joins/transactions needed on hot path; SQL elsewhere"],
+      "followUps": ["How would you handle a user who scrolls far back into history (pagination)?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "Why is 'just use NoSQL, it scales better' a weak interview answer?",
+      "hint": "What does NoSQL give up, and is scale always the constraint?",
+      "answer": [
+        "It ignores trade-offs and the actual requirements. NoSQL's scale comes from giving things up: most stores have limited or no multi-row transactions, weak/eventual consistency, and no flexible joins — you must design around fixed queries. For data that needs correctness (payments, inventory) or rich ad-hoc querying, that's the wrong tool no matter how well it scales.",
+        "The strong answer derives the choice from access patterns, consistency needs, and scale: pick SQL where transactions/joins/consistency matter, NoSQL (and which family) where the pattern is known and scale/flexibility dominate, and often use both. Interviewers are testing your *reasoning*, and 'it scales better' shows none."
+      ],
+      "keyPoints": ["NoSQL trades transactions/joins/consistency for scale", "Wrong for correctness-critical or ad-hoc-query data", "Decision should be access-pattern + consistency driven", "Often the answer is both (polyglot)"],
+      "followUps": ["Give a concrete example where NoSQL would be the wrong choice."]
+    }
+  ]
+}

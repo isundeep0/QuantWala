@@ -1,0 +1,162 @@
+{
+  "slug": "chat-system",
+  "sectionId": "case-studies",
+  "order": 5,
+  "title": "Design a Chat System (WhatsApp / Messenger)",
+  "tagline": "Real-time 1:1 and group messaging with delivery guarantees, presence, and offline delivery.",
+  "summary": "WebSocket connection servers, message routing, delivery + offline.",
+  "difficulty": "Advanced",
+  "estMinutes": 26,
+  "tags": ["case-study", "must-know", "realtime"],
+  "prereqs": ["realtime-communication", "message-queues", "databases"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "1:1 messaging in real time; group chats (small groups).",
+            "Delivery + read receipts (sent / delivered / read).",
+            "Online/offline presence.",
+            "Message persistence + history; offline users receive messages on reconnect.",
+            "(Out of scope: media details, E2E encryption internals, calls.)"
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Low latency (messages feel instant).",
+            "Highly available; reliable delivery (no lost messages).",
+            "Messages ordered within a conversation.",
+            "Scale to hundreds of millions of concurrent connections."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "connection",
+      "title": "2. The connection layer",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Chat needs the server to *push* messages to clients, so we use persistent **WebSocket** connections (long-lived, full-duplex). Because connections are stateful, we dedicate a tier of **connection servers (gateways)** whose only job is to hold open WebSockets — each can hold tens to hundreds of thousands of connections (bounded by memory/file descriptors).",
+            "A user connects to one connection server (via a load balancer that supports long-lived connections). We record *which server holds which user* in a **presence/registry** store (e.g., Redis: `user_id → connection_server`), updated on connect/disconnect with heartbeats to detect drops."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "Users hold WebSockets on connection servers; a registry maps user→server; a message bus routes between servers.",
+          "groups": [
+            { "label": "User A", "nodes": [{ "label": "WebSocket", "icon": "Smartphone", "accent": "#0ea5e9" }] },
+            { "label": "Conn servers", "nodes": [{ "label": "Conn Server 1", "icon": "Server", "accent": "#d97706" }, { "label": "Conn Server N", "icon": "Server", "accent": "#d97706" }] },
+            { "label": "Registry + bus", "nodes": [{ "label": "Presence (Redis)", "sub": "user→server", "icon": "MapPin", "accent": "#f59e0b" }, { "label": "Pub/Sub bus", "icon": "Inbox", "accent": "#8b5cf6" }] },
+            { "label": "Storage", "nodes": [{ "label": "Message Store", "sub": "wide-column", "icon": "Database", "accent": "#10b981" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "send-flow",
+      "title": "3. Sending a message (the routing problem)",
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            { "title": "A sends to its connection server", "detail": "User A's message arrives over its WebSocket to, say, connection server 1." },
+            { "title": "Persist first", "detail": "Server 1 writes the message to the durable message store (so it's never lost) and assigns it a sequence id for ordering." },
+            { "title": "Find B's server", "detail": "Look up recipient B in the presence registry → B is on connection server 7 (or offline)." },
+            { "title": "Route via the bus", "detail": "Server 1 forwards the message to server 7 through the pub/sub message bus; server 7 pushes it down B's WebSocket. Send A a 'sent' ack; when B's device acks, send a 'delivered' receipt." },
+            { "title": "If B is offline", "detail": "Store the message as undelivered (per-user inbox/queue); when B reconnects, deliver the backlog and mark delivered." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Persist-then-deliver",
+          "text": "Always durably store the message *before* attempting delivery. That way a crash mid-delivery never loses it — on reconnect the client syncs anything it's missing. Delivery is best-effort on top of a durable log."
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "4. Message storage & ordering",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The message store is write-heavy and queried by 'recent messages in a conversation' — a textbook **wide-column NoSQL** (Cassandra/HBase) case. Partition by `conversation_id` (or chat_id) and cluster by message sequence/timestamp descending, so fetching the latest messages in a chat is a single efficient partition read, and pagination scrolls back through the partition.",
+            "**Ordering**: global ordering across a distributed system is hard and unnecessary; you only need ordering *within a conversation*. Assign each message a per-conversation sequence number (or a time-sortable id) so clients can order and detect gaps. Since one conversation's messages share a partition, this is natural."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Don't store the messaging firehose in SQL",
+          "text": "At billions of messages/day, a single SQL primary can't absorb the write volume, and you don't need joins on the hot path. Wide-column NoSQL partitioned by conversation gives the write throughput and the exact read pattern you need. (User accounts/auth can still live in SQL.)"
+        }
+      ]
+    },
+    {
+      "id": "extras",
+      "title": "5. Presence, groups, and scale",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Presence (online/offline)", "detail": "Clients send periodic heartbeats; the connection server updates 'last seen' in Redis with a TTL. No heartbeat → considered offline. Broadcasting presence to all contacts is expensive — fan out lazily or only to open chats." },
+            { "term": "Group chat", "detail": "For small groups, fan out the message to each member's connection (look up each member's server, route, persist per member or once per conversation). Large groups (broadcast channels) move toward a fan-out-on-read model like feeds." },
+            { "term": "Multiple devices", "detail": "A user may have several connections (phone + web). The registry maps user→{servers}; deliver to all devices and sync read state across them." },
+            { "term": "Scaling connections", "detail": "Add connection servers; balance by connection count. The presence registry and pub/sub bus must scale (sharded Redis / partitioned topics)." },
+            { "term": "Reconnection / missed messages", "detail": "On reconnect, the client sends its last-seen sequence id per conversation; the server streams everything after it. This sync-on-reconnect makes delivery robust to drops." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "The arc to deliver: 'WebSocket connection servers + a presence registry (user→server) + a pub/sub bus to route between servers; persist every message in wide-column storage partitioned by conversation, ordered by per-conversation sequence; queue for offline users and sync on reconnect.' That's a complete senior answer."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Use WebSockets on a dedicated connection-server tier (stateful, long-lived); balance by connection count.",
+    "Presence registry (Redis: user→connection server) + pub/sub bus to route a message from sender's server to recipient's server.",
+    "Persist-then-deliver: durably store every message before pushing, so crashes never lose messages.",
+    "Store messages in wide-column NoSQL partitioned by conversation_id, clustered by sequence/time (single-partition recent reads).",
+    "Order per-conversation with a sequence id (no need for global order); offline users get a queue + sync-on-reconnect by last-seen id.",
+    "Presence via heartbeats + TTL; small groups fan-out per member, huge broadcast groups use fan-out-on-read."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Design",
+      "difficulty": "Hard",
+      "prompt": "User A (on connection server 1) sends a message to user B who is offline, then comes online 10 minutes later. Trace how B reliably receives it.",
+      "hint": "Persist first; queue for offline; sync on reconnect.",
+      "answer": [
+        "When A's message reaches connection server 1, the server first **persists** it durably to the message store (assigning a per-conversation sequence id) and acks 'sent' to A. It then looks up B in the presence registry and finds B offline. So it writes the message to B's **undelivered queue/inbox** (or simply relies on the persisted conversation log plus B's last-delivered pointer). No delivery attempt is lost because the message is durably stored.",
+        "Ten minutes later B reconnects to some connection server and sends its **last-seen sequence id** for that conversation (or globally). The server streams all messages after that id — including A's — pushes them to B, and marks them delivered (triggering a 'delivered' receipt back to A). This persist-then-store-then-sync-on-reconnect flow guarantees reliable, ordered delivery despite B being offline and despite any server crashes in between."
+      ],
+      "keyPoints": ["Persist message durably + sequence id before anything", "B offline → enqueue / rely on persisted log + last-delivered pointer", "On reconnect, B sends last-seen id; server streams everything after", "Mark delivered + send receipt to A; nothing lost via persist-first"],
+      "followUps": ["How do you keep read/delivered state consistent across B's phone and laptop?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "Why do you need a presence registry and a pub/sub bus instead of connection servers talking directly?",
+      "hint": "Server 1 doesn't hold B's socket — how does it even know where B is?",
+      "answer": [
+        "Any user's WebSocket lives on exactly one (or a few) connection servers, and the sender's server generally doesn't hold the recipient's socket. The **presence registry** (user→connection server, in Redis) is how the sender's server discovers *which* server currently holds the recipient's connection — without it, server 1 has no way to find B among hundreds of servers.",
+        "The **pub/sub bus** is how server 1 actually hands the message to server 7 (B's server) so it can push it down B's socket. Hard-wiring direct connections between every pair of connection servers would be an O(N²) mesh that's brittle and doesn't scale; a message bus (or per-server topic) decouples them — server 1 publishes to B's server's channel, server 7 consumes and delivers. Together, registry + bus let an arbitrary sender reach an arbitrary recipient across a large, dynamic fleet."
+      ],
+      "keyPoints": ["Recipient's socket is on a different server; sender must locate it", "Presence registry maps user→server (discovery)", "Pub/sub bus routes the message to the right server (delivery)", "Avoids O(N²) direct mesh; decoupled + scalable"],
+      "followUps": ["What happens to the registry entry if a connection server crashes?"]
+    }
+  ]
+}

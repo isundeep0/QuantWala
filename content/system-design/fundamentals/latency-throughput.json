@@ -1,0 +1,124 @@
+{
+  "slug": "latency-throughput",
+  "sectionId": "fundamentals",
+  "order": 3,
+  "title": "Latency, Throughput & Percentiles",
+  "tagline": "Why p99 matters more than the average, and how latency and throughput trade off.",
+  "summary": "Latency vs throughput, tail latency, and why p99 beats the mean.",
+  "difficulty": "Beginner",
+  "estMinutes": 14,
+  "tags": ["core", "performance"],
+  "prereqs": ["availability-reliability"],
+  "sections": [
+    {
+      "id": "definitions",
+      "title": "Latency vs throughput",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Latency", "detail": "How long *one* operation takes, end to end — e.g., 50 ms to load a profile. Lower is better. It's about an individual request's experience." },
+            { "term": "Throughput", "detail": "How *many* operations the system completes per unit time — e.g., 50,000 requests/second. Higher is better. It's about total capacity." }
+          ]
+        },
+        {
+          "type": "analogy",
+          "text": "A highway: latency is how long *your* car takes to drive from A to B; throughput is how many cars pass a point per hour. Adding lanes raises throughput but doesn't make your individual trip faster. They're related but distinct — and you can improve one while hurting the other."
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "They trade off",
+          "text": "Batching many requests together raises throughput (less per-item overhead) but adds latency (each item waits for the batch to fill). Conversely, processing each request the instant it arrives minimises latency but wastes capacity. Real systems tune this balance per workload."
+        }
+      ]
+    },
+    {
+      "id": "percentiles",
+      "title": "Why averages lie — use percentiles",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Never describe latency with just the average. Averages hide the painful outliers that users actually notice. Use **percentiles**: p50 (median) is the typical experience, p99 means '99% of requests are faster than this', and p999 (p99.9) captures the worst 0.1%.",
+            "Tail latency (p99/p999) matters enormously because a single user request often fans out into *many* backend calls. If one page makes 100 backend requests and each has a 1% chance of being slow, the odds that *at least one* is slow — making the whole page slow — is about 63%. So the tail becomes the typical experience. This is why Amazon, Google, etc. obsess over p99."
+          ]
+        },
+        {
+          "type": "metrics",
+          "title": "How to read a latency profile",
+          "items": [
+            { "label": "p50 (median)", "value": "40 ms", "note": "typical request" },
+            { "label": "p90", "value": "75 ms", "note": "most requests" },
+            { "label": "p99", "value": "220 ms", "note": "1 in 100 — what power users feel" },
+            { "label": "p99.9", "value": "900 ms", "note": "worst 0.1% — fan-out killer" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Say 'I'd set an SLO on p99, not the average' — it signals you understand tail latency and fan-out. Bonus: mention that one slow dependency or a GC pause/cold cache often drives the tail."
+        }
+      ]
+    },
+    {
+      "id": "sources",
+      "title": "Where latency comes from (and how to cut it)",
+      "blocks": [
+        {
+          "type": "compare",
+          "columns": ["Source of latency", "Typical fix"],
+          "rows": [
+            ["Network round trips (esp. cross-region)", "CDN/edge, co-locate services, batch calls, keep connections alive"],
+            ["Disk reads", "Cache hot data in memory; use SSDs; good indexes"],
+            ["Slow queries / N+1 queries", "Indexing, query optimisation, denormalisation, batching"],
+            ["Serial dependency chains", "Parallelise independent calls; async where possible"],
+            ["Queueing under load", "More capacity, backpressure, load shedding"],
+            ["Cold caches / GC pauses / contention", "Warm caches, tune GC, reduce lock contention"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "The cheapest latency win",
+          "text": "Don't do the work at all. Caching, precomputation (e.g., precomputed feeds), and serving stale-but-good data remove latency by avoiding the expensive operation entirely. The fastest request is the one you never make."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Latency = time for one request; throughput = requests per second. Related but distinct.",
+    "Batching raises throughput but adds latency — tune per workload.",
+    "Never quote averages — use percentiles (p50/p99/p999). Set SLOs on p99.",
+    "Tail latency dominates because one request fans out into many backend calls.",
+    "Cut latency by avoiding work (caching/precomputation), shortening/parallelising dependency chains, and indexing."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "Two services both report a 50 ms average latency. Why might one feel much worse to users?",
+      "hint": "The average hides the distribution.",
+      "answer": [
+        "Averages erase the shape of the distribution. Service A might be a tight 45–55 ms for everyone, while Service B is 20 ms for most requests but 2 seconds for the worst 1–2% (a fat tail). Both can average ~50 ms, but B's p99 is terrible, and those slow requests are exactly what frustrated users and dashboards notice.",
+        "That's why you compare p99/p999, not means — and why a system with a great average can still feel broken. Tail latency is the real user experience, especially when a page fans out into many calls."
+      ],
+      "keyPoints": ["Average hides the distribution/tail", "Same mean, very different p99", "Tail = what users actually feel", "Compare percentiles, not means"],
+      "followUps": ["What commonly causes a fat tail?", "How does request fan-out amplify the tail?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "A dashboard page makes 50 independent backend calls and renders only when all return. Each call has p99 = 100 ms. Estimate the page's p99 and suggest fixes.",
+      "hint": "If you need all 50, the slowest one dominates. What's the chance at least one is in its slow tail?",
+      "answer": [
+        "Because the page waits for the slowest of 50 calls, its latency is governed by the max, not the average. With each call having a 1% chance of exceeding 100 ms, the chance that *at least one* of 50 exceeds it is 1 − 0.99⁵⁰ ≈ 39%. So the page is slow far more often than any single call — the tail gets amplified by fan-out.",
+        "Fixes: reduce fan-out (batch/aggregate calls, precompute), make calls truly parallel (already), set tight per-call timeouts with fallbacks so one straggler can't block the page, return partial results and lazy-load the rest, and cache hot data. The goal is to stop the slowest dependency from defining the user experience."
+      ],
+      "keyPoints": ["Waiting for all → max latency, not avg", "Fan-out amplifies the tail (~39% chance one is slow)", "Reduce fan-out / batch / precompute", "Per-call timeouts + partial results + caching"],
+      "followUps": ["What is 'hedged requests' and how do they cut the tail?"]
+    }
+  ]
+}

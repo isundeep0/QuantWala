@@ -1,0 +1,156 @@
+{
+  "slug": "caching",
+  "sectionId": "building-blocks",
+  "order": 2,
+  "title": "Caching",
+  "tagline": "The single biggest lever for latency and load — plus the hard parts: invalidation, eviction, and stampedes.",
+  "summary": "Cache patterns, eviction, invalidation, Redis vs Memcached.",
+  "difficulty": "Intermediate",
+  "estMinutes": 20,
+  "tags": ["infra", "performance", "must-know"],
+  "prereqs": ["back-of-the-envelope"],
+  "sections": [
+    {
+      "id": "why",
+      "title": "Why caching is the biggest lever",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A **cache** is a fast, usually in-memory store that holds copies of data that's expensive to fetch or compute, so repeat requests are served in microseconds instead of milliseconds. Because memory is ~100,000x faster than disk, a good cache can cut latency by orders of magnitude *and* shield your database from most of the read traffic.",
+            "Caching exploits two real-world patterns: **temporal locality** (recently accessed data is likely to be accessed again) and **skew** (the 80/20 rule — a small fraction of items get most of the requests). Cache that hot 20% and you absorb ~80% of reads."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Where caches live (top to bottom)",
+          "items": [
+            { "term": "Client / browser", "detail": "Cache responses and assets locally (HTTP cache headers)." },
+            { "term": "CDN / edge", "detail": "Cache static and cacheable content near users (covered in its own lesson)." },
+            { "term": "Application / distributed cache", "detail": "Redis or Memcached shared across app servers — the classic 'the cache' in designs." },
+            { "term": "Database cache", "detail": "Query/result and buffer-pool caching inside the DB itself." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "patterns",
+      "title": "Caching patterns (how reads/writes flow)",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Cache-aside (lazy loading)", "detail": "App checks cache; on a miss it reads the DB, stores the result in cache, and returns it. The most common pattern. Pros: only requested data is cached, cache failure isn't fatal. Cons: first request is slow (cold miss), and cache can go stale on writes." },
+            { "term": "Read-through", "detail": "App always asks the cache; the cache itself loads from the DB on a miss. Similar to cache-aside but the loading logic lives in the cache layer." },
+            { "term": "Write-through", "detail": "Writes go to cache *and* DB synchronously. Cache is never stale, but every write pays both costs (higher write latency)." },
+            { "term": "Write-back (write-behind)", "detail": "Write to cache, acknowledge immediately, flush to DB asynchronously. Very fast writes, but risk of data loss if the cache dies before flushing." },
+            { "term": "Write-around", "detail": "Writes go straight to the DB, bypassing the cache; cache fills on later reads. Good for write-heavy data that isn't re-read soon." }
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "Cache-aside read path: try cache → on miss, read DB, populate cache, return.",
+          "groups": [
+            { "label": "App", "nodes": [{ "label": "App Server", "icon": "Server", "accent": "#d97706" }] },
+            { "label": "1. check", "nodes": [{ "label": "Cache (Redis)", "sub": "hit → return", "icon": "Zap", "accent": "#f59e0b" }] },
+            { "label": "2. on miss", "nodes": [{ "label": "Database", "sub": "read, then populate cache", "icon": "Database", "accent": "#10b981" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "eviction-invalidation",
+      "title": "Eviction & invalidation — the hard parts",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Memory is finite, so a cache must **evict** entries when full. And data changes, so the cache must be **invalidated** to avoid serving stale values. As the saying goes, the two hard things in computer science are naming, cache invalidation, and off-by-one errors."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Eviction policies",
+          "items": [
+            { "term": "LRU (Least Recently Used)", "detail": "Evict the entry not touched for the longest. The sensible default — matches temporal locality." },
+            { "term": "LFU (Least Frequently Used)", "detail": "Evict the least-accessed entry. Better when popularity is stable over time." },
+            { "term": "FIFO / TTL", "detail": "Evict oldest, or expire after a Time To Live. TTLs are the simplest way to bound staleness." }
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Invalidation strategies",
+          "items": [
+            { "term": "TTL expiry", "detail": "Let entries expire after N seconds. Simple; bounded staleness; great when slight staleness is OK." },
+            { "term": "Write invalidation", "detail": "On a DB write, delete (or update) the corresponding cache key so the next read repopulates it." },
+            { "term": "Versioned keys", "detail": "Include a version/etag in the key so updates naturally create a new entry and old ones age out." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Cache stampede (thundering herd)",
+          "text": "When a hot key expires, thousands of requests miss simultaneously and all hammer the DB at once — which can crash it. Mitigate with: a short lock/'request coalescing' so only one request recomputes while others wait, staggered/jittered TTLs, or serving slightly-stale data while one background refresh runs."
+        }
+      ]
+    },
+    {
+      "id": "redis-memcached",
+      "title": "Redis vs Memcached",
+      "blocks": [
+        {
+          "type": "compare",
+          "columns": ["", "Redis", "Memcached"],
+          "rows": [
+            ["Data types", "Rich: strings, hashes, lists, sets, sorted sets, streams", "Simple key→value (strings) only"],
+            ["Persistence", "Optional (snapshots + append-only log)", "None — purely in-memory"],
+            ["Replication / HA", "Built-in replication, Sentinel, Cluster", "No native replication (client-side sharding)"],
+            ["Extras", "Pub/sub, Lua scripts, atomic ops, TTLs, geo", "Multithreaded, very simple, slightly less memory overhead"],
+            ["Pick when", "You need structures, persistence, HA (the usual choice)", "You want a dead-simple, pure LRU cache at scale"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Redis is the default answer today because of its data structures, persistence, and built-in HA — and it doubles as a rate-limiter, leaderboard (sorted sets), session store, and pub/sub. Mention you'd use Redis unless you specifically need only the simplest possible cache."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Cache = fast in-memory copy of expensive data; exploits temporal locality + 80/20 skew to cut latency and DB load.",
+    "Cache-aside is the default read pattern: miss → read DB → populate cache → return.",
+    "Write patterns: write-through (consistent, slower), write-back (fast, risk loss), write-around (write-heavy data).",
+    "Eviction: LRU default, LFU for stable popularity, TTL to bound staleness. Invalidate on write or via versioned keys.",
+    "Beware cache stampede on hot-key expiry — use request coalescing/locks, jittered TTLs, or serve-stale-while-refresh.",
+    "Redis (rich types, persistence, HA) is the usual pick; Memcached for the simplest pure LRU cache."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "A single hugely popular cache key expires and your database immediately gets slammed by thousands of simultaneous misses, nearly crashing. What happened and how do you prevent it?",
+      "hint": "Many requests miss the same key at the same instant.",
+      "answer": [
+        "This is a **cache stampede / thundering herd**. The moment the hot key expired, every concurrent request missed and fell through to the database at once, multiplying load by thousands for that key.",
+        "Prevent it with: (1) **request coalescing / a mutex lock** — only the first miss recomputes the value while the rest wait for it, so the DB sees one query instead of thousands; (2) **jittered TTLs** so many keys don't expire at the same instant; (3) **serve-stale-while-revalidate** — keep returning the old value and refresh it in the background; (4) optionally pre-warm/refresh hot keys proactively before they expire."
+      ],
+      "keyPoints": ["Identify cache stampede on hot-key expiry", "Request coalescing / single-flight lock so DB sees one query", "Jitter TTLs to avoid synchronized expiry", "Serve stale + async refresh; pre-warm hot keys"],
+      "followUps": ["How would you implement single-flight in a distributed cache where requests hit different app servers?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Trade-off",
+      "difficulty": "Medium",
+      "prompt": "You're caching user profile data that's read constantly but updated occasionally. Compare write-through vs cache-aside-with-invalidation for keeping it fresh.",
+      "hint": "Who pays the cost on writes, and how stale can reads get?",
+      "answer": [
+        "Write-through updates the cache and DB together on every write, so the cache is never stale — reads are always correct. The cost is higher write latency (two writes) and you cache entries even if they're rarely read again. Good when reads vastly outnumber writes and freshness matters.",
+        "Cache-aside with write invalidation deletes the cache key on update, so the next read repopulates from the DB. It's simpler and avoids caching cold data, but there's a small race window (a read could repopulate stale data between the DB write and the cache delete) and the first post-write read is a slow miss. For profile data — read-heavy, occasionally written, mild staleness tolerable — either works; cache-aside is the common default, write-through if you want guaranteed-fresh reads."
+      ],
+      "keyPoints": ["Write-through: never stale, but every write pays double + caches cold data", "Cache-aside+invalidation: simpler, avoids cold data, small staleness race + cold-miss after write", "Choose based on read/write ratio and freshness tolerance"],
+      "followUps": ["What ordering of DB-write and cache-delete avoids the stale-repopulation race?"]
+    }
+  ]
+}

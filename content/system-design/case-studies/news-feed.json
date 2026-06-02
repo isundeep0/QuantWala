@@ -1,0 +1,190 @@
+{
+  "slug": "news-feed",
+  "sectionId": "case-studies",
+  "order": 4,
+  "title": "Design a News Feed (Twitter / Instagram)",
+  "tagline": "The fan-out problem: how do you build each user's timeline fast when they follow thousands and celebrities have millions of followers?",
+  "summary": "Fan-out on write vs read, the hybrid model, the celebrity problem.",
+  "difficulty": "Advanced",
+  "estMinutes": 28,
+  "tags": ["case-study", "must-know", "feed"],
+  "prereqs": ["caching", "message-queues", "partitioning-sharding"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Users post content (tweets/photos).",
+            "Users follow other users.",
+            "A user sees a home feed/timeline of recent posts from people they follow, newest first.",
+            "(Out of scope for time: ranking ML, ads, DMs, search.)"
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Feed must load fast (sub-second) — it's the core experience.",
+            "Eventual consistency is fine — a post appearing a few seconds late is acceptable.",
+            "Read-heavy: people scroll far more than they post.",
+            "Handle highly skewed follower counts (celebrities with 100M+ followers)."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Establish the scale: ~200M DAU, ~25:1 read:write (from the estimation lesson). The combination of read-heaviness and skewed follower counts is what makes this hard — name it early."
+        }
+      ]
+    },
+    {
+      "id": "naive",
+      "title": "2. The naive approach (and why it fails)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The obvious design: when a user opens their feed, query 'give me the latest posts from everyone I follow, sorted by time'. With a SQL-ish model that's `SELECT * FROM posts WHERE author IN (followees) ORDER BY time DESC LIMIT 50`.",
+            "This dies at scale: a user following 1,000 accounts forces a huge multi-shard query, sorted and merged, *on every feed load* — at 100,000 feed loads/sec. The work is enormous and repeated constantly. We need to **precompute** feeds instead of computing them on demand. That's the fan-out decision."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fanout",
+      "title": "3. Fan-out on write vs fan-out on read",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Fan-out on write (push)", "detail": "When a user posts, immediately push the post id into the precomputed feed cache of every follower. Reading a feed is then a trivial lookup of that user's ready-made list — blazing fast reads. Cost: a single post by someone with N followers triggers N writes; for a celebrity that's millions of writes per post (a 'fan-out storm'), and you write feeds for inactive users who may never read." },
+            { "term": "Fan-out on read (pull)", "detail": "Do nothing on write; at read time, fetch recent posts from everyone the user follows and merge them on the fly. Cheap writes, but expensive reads (the naive problem), especially for users following many accounts. Wastes no work on inactive users." }
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["", "Fan-out on write (push)", "Fan-out on read (pull)"],
+          "rows": [
+            ["Read cost", "Tiny (precomputed)", "High (gather + merge)"],
+            ["Write cost", "High (N follower writes)", "Tiny"],
+            ["Best for", "Most users (few followers)", "Celebrities (millions of followers)"],
+            ["Wasted work", "Feeds for inactive users", "Re-computing on every read"],
+            ["Freshness", "Slight delay to fan out", "Always current at read time"]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hybrid",
+      "title": "4. The hybrid model (the real answer)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Neither extreme works alone, so production systems use a **hybrid**: fan-out on write for normal users, fan-out on read for celebrities. When a normal user posts, push it to followers' feeds (cheap, since they have few followers). Celebrity posts are *not* fanned out; instead, when any user loads their feed, the precomputed feed (from normal followees) is **merged at read time** with the latest posts from the handful of celebrities they follow.",
+            "This caps the worst case on both sides: no million-write fan-out storms (celebrities are pulled), and most reads stay cheap (normal posts are precomputed). The threshold for 'celebrity' is just a follower-count cutoff you tune."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "Write path fans out normal posts to follower feeds via a queue; read path merges the precomputed feed with celebrity pulls.",
+          "groups": [
+            { "label": "Post", "nodes": [{ "label": "Post Service", "icon": "Send", "accent": "#d97706" }] },
+            { "label": "Fan-out", "nodes": [{ "label": "Fan-out workers", "sub": "via queue", "icon": "Inbox", "accent": "#0ea5e9" }] },
+            { "label": "Feed cache", "nodes": [{ "label": "Redis feed lists", "sub": "per-user post ids", "icon": "Zap", "accent": "#f59e0b" }] },
+            { "label": "Read", "nodes": [{ "label": "Feed Service", "sub": "merge + celeb pull", "icon": "List", "accent": "#10b981" }] }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Async fan-out via a queue",
+          "text": "Fan-out happens asynchronously: posting writes the post and drops a 'fan out' job on a queue; workers populate follower feeds in the background. This keeps the post request fast and absorbs spikes. Feeds store post *ids* (not full posts) in Redis lists/sorted-sets; the full post content is hydrated from a cache/store at read time."
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "5. Data model & components",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Post store", "detail": "post_id (Snowflake, time-sortable) → {author_id, content, media_url, created_at}. Sharded by post_id; media in object storage + CDN." },
+            { "term": "Graph store", "detail": "follower/followee relationships. Read constantly during fan-out; can be its own service (or graph DB), heavily cached." },
+            { "term": "Feed cache", "detail": "user_id → list of recent post_ids (Redis sorted set by time). Capped to, say, the latest ~800 ids; older pages fall back to generating from the post store." },
+            { "term": "Fan-out service + queue", "detail": "Consumes new posts, looks up followers, pushes post_id into each follower's feed (skipping celebrities)." }
+          ]
+        },
+        {
+          "type": "code",
+          "title": "API",
+          "codes": [
+            { "language": "text", "title": "api", "source": "POST /v1/posts { content, media? } → { postId }\nPOST /v1/follow { targetUserId }\nGET  /v1/feed?cursor=<postId> → { posts: [...], nextCursor }" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tradeoffs",
+      "title": "6. Scaling, edge cases & trade-offs",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Celebrity problem", "detail": "Solved by the hybrid: pull celebrity posts at read time instead of fanning out. This is the single most important point to raise." },
+            { "term": "Pagination", "detail": "Use cursor-based pagination keyed on the time-sortable post_id — stable as new posts arrive (offset pagination would duplicate/skip)." },
+            { "term": "Inactive users", "detail": "Don't fan out to users who haven't logged in for a long time; generate their feed lazily on return to avoid wasted writes/storage." },
+            { "term": "Feed ranking", "detail": "We did chronological; real feeds rank by an ML score (engagement, recency). That's a layer on top — fetch candidate posts, then score." },
+            { "term": "Consistency", "detail": "Eventual is fine; a post may take seconds to appear in all feeds. Your own posts should appear immediately (read-your-writes — inject your own new post client-side or read-through)." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Strong narrative arc: 'Naive on-read query is too slow → precompute with fan-out on write → but celebrities cause write storms → so hybrid: push for normal users, pull for celebrities, merge at read. Async fan-out via queue, feeds store post ids in Redis, cursor pagination on Snowflake ids.' Hitting these beats is a top-tier answer."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "News feed is read-heavy with skewed follower counts — precompute feeds, don't query on every read.",
+    "Fan-out on write (push): cheap reads, but a post costs N follower-writes (celebrity write storm).",
+    "Fan-out on read (pull): cheap writes, expensive reads (gather+merge).",
+    "Hybrid (the answer): push for normal users, pull celebrity posts at read time, merge — caps both worst cases.",
+    "Fan-out asynchronously via a queue; feed cache stores post IDs (Redis sorted set), hydrate content on read.",
+    "Use Snowflake IDs + cursor pagination; skip fan-out to inactive users; eventual consistency is fine (read-your-writes for own posts)."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Design",
+      "difficulty": "Hard",
+      "prompt": "Explain why pure fan-out-on-write breaks for a celebrity with 100M followers, and how the hybrid model fixes it.",
+      "hint": "Count the writes a single celebrity post triggers.",
+      "answer": [
+        "With fan-out on write, every post is pushed into each follower's precomputed feed. A celebrity with 100M followers means one post triggers ~100M feed writes — a massive, spiky write amplification that overwhelms the fan-out system, delays everyone's posts, and wastes work writing to millions of inactive/unviewed feeds. A few celebrities posting simultaneously could melt the pipeline.",
+        "The hybrid model excludes high-follower accounts from fan-out: their posts aren't pushed. Instead, when any user loads their feed, the system takes their precomputed feed (built from normal followees via push) and **merges in**, at read time, the latest posts from the small number of celebrities they follow (a quick pull of a few accounts' recent posts). So normal posts stay cheap-to-read (precomputed) and celebrity posts avoid the write storm (computed on read for the few who need them). The 'celebrity' cutoff is a tunable follower threshold."
+      ],
+      "keyPoints": ["100M followers → ~100M writes per post (write storm + wasted writes)", "Overwhelms fan-out, delays all posts", "Hybrid: don't fan out celebrities; pull their recent posts at read time", "Merge precomputed feed + celebrity pull; tunable follower threshold"],
+      "followUps": ["How do you merge the pushed feed and the celebrity-pulled posts in the right order efficiently?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "Why store post IDs (not full post content) in each user's feed cache, and why do fan-out asynchronously?",
+      "hint": "Think storage duplication and keeping the write path fast.",
+      "answer": [
+        "Storing only post **IDs** avoids duplicating full post content into millions of feeds — a celebrity's post would otherwise be copied into every follower's feed, exploding storage and making edits/deletes a nightmare. With IDs, each feed is a compact list; at read time you hydrate the actual content from a shared post store/cache (one copy of the post, referenced everywhere). Edits/deletes touch one record.",
+        "Fan-out is **asynchronous** because doing N follower-writes inline would make posting slow and bursty. Instead, posting just writes the post and enqueues a fan-out job; background workers populate follower feeds. This keeps the user's post request fast, smooths out spikes (the queue buffers), and lets fan-out scale independently. The minor cost is a brief delay before a post appears in all feeds, which is acceptable (eventual consistency)."
+      ],
+      "keyPoints": ["IDs avoid duplicating content across millions of feeds (storage + edit/delete sanity)", "Hydrate content from a single shared store/cache on read", "Async fan-out keeps the post request fast", "Queue buffers spikes; fan-out scales independently; slight delay acceptable"],
+      "followUps": ["When a post is deleted, how do you handle the dangling IDs already in feeds?"]
+    }
+  ]
+}

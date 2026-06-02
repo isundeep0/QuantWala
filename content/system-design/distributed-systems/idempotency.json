@@ -1,0 +1,121 @@
+{
+  "slug": "idempotency",
+  "sectionId": "distributed-systems",
+  "order": 5,
+  "title": "Idempotency & Exactly-Once",
+  "tagline": "In a world of retries and duplicates, the operation that's safe to repeat is the operation that survives.",
+  "summary": "Why retries cause duplicates and how idempotency keys fix it.",
+  "difficulty": "Intermediate",
+  "estMinutes": 14,
+  "tags": ["distributed", "reliability", "must-know"],
+  "prereqs": ["message-queues", "api-design"],
+  "sections": [
+    {
+      "id": "why",
+      "title": "Why duplicates are unavoidable",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Networks are unreliable, so distributed systems retry. But a retry can't tell the difference between 'my request was lost' and 'my request succeeded but the *response* was lost'. So clients and message systems retry operations that may have already happened — producing duplicates. Combined with at-least-once message delivery, duplicate processing is a *when*, not an *if*.",
+            "**Idempotency** is the property that performing an operation multiple times has the same effect as performing it once. If your operations are idempotent, duplicates become harmless — you can retry freely. This is one of the most important reliability concepts in system design."
+          ]
+        },
+        {
+          "type": "analogy",
+          "text": "Pressing a floor button in an elevator is idempotent — pressing it 5 times still takes you to that floor once. Pressing 'submit payment' 5 times, if naive, charges you 5 times. The job is to make 'submit payment' behave like the elevator button."
+        }
+      ]
+    },
+    {
+      "id": "naturally",
+      "title": "Naturally idempotent vs not",
+      "blocks": [
+        {
+          "type": "compare",
+          "columns": ["Idempotent (safe to repeat)", "Not idempotent (dangerous to repeat)"],
+          "rows": [
+            ["`SET balance = 100` (absolute)", "`balance = balance + 100` (relative increment)"],
+            ["HTTP GET, PUT (replace), DELETE", "HTTP POST (create) by default"],
+            ["`INSERT ... ON CONFLICT DO NOTHING`", "Plain `INSERT` (creates duplicate rows)"],
+            ["Setting a flag to true", "Appending to a list / sending an email"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Whenever possible, design operations to be naturally idempotent — prefer 'set to value X' over 'add X', and upserts keyed by a unique id over blind inserts. When the operation has an inherent side effect (charge a card, send an email), you need an explicit idempotency mechanism."
+        }
+      ]
+    },
+    {
+      "id": "keys",
+      "title": "Idempotency keys: the general pattern",
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Client generates a unique key", "detail": "For each *intended* operation (one payment attempt), the client creates a unique idempotency key (e.g., a UUID) and sends it with the request — and reuses the SAME key on retries." },
+            { "title": "Server checks the key", "detail": "Before doing the work, the server looks up the key in a dedup store. If it's already processed, return the stored result without redoing the work." },
+            { "title": "Process atomically", "detail": "If new, perform the operation AND record the key + result in the same transaction, so a crash can't leave them inconsistent." },
+            { "title": "Expire keys", "detail": "Store keys with a TTL (e.g., 24h) — long enough to cover all realistic retries, not forever." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Where the key comes from matters",
+          "text": "The key must identify the *logical operation*, not be generated fresh per HTTP call — otherwise each retry has a new key and dedup fails. The client (or the originating event) owns the key and reuses it across retries. For message consumers, use the message id or a business key (order_id)."
+        }
+      ]
+    },
+    {
+      "id": "exactly-once",
+      "title": "The truth about 'exactly-once'",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "True exactly-once *delivery* across independent systems is effectively impossible (you can always lose the ack and not know whether to retry). What you actually build is **at-least-once delivery + idempotent processing**, which yields exactly-once *effects* — the message may arrive twice, but the second time is a no-op.",
+            "So when an interviewer asks 'how do you guarantee exactly-once?', the strong answer is: 'I don't rely on exactly-once delivery; I make consumers idempotent (dedup by message/idempotency key) so duplicates are harmless — that gives exactly-once effect.' This reframing is a senior signal."
+          ]
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Retries can't distinguish lost-request from lost-response → duplicates are inevitable (esp. at-least-once delivery).",
+    "Idempotency = repeating an operation has the same effect as doing it once → retries become safe.",
+    "Prefer naturally idempotent ops: set-to-value over increment, upsert over blind insert, PUT/DELETE over POST.",
+    "Idempotency-key pattern: client sends a stable key per logical op; server dedups (check store, process+record atomically, TTL the key).",
+    "Exactly-once delivery is impractical; build at-least-once + idempotent consumers = exactly-once effect."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "A user taps 'Transfer $500' twice because the app froze. Walk through how an idempotency key prevents a double transfer.",
+      "hint": "Both taps should carry the same key; the server uses it to dedup.",
+      "answer": [
+        "The app should generate one idempotency key when the user initiates the transfer and attach that same key to both the original request and the retry. On the server, before executing, it checks whether that key has already been processed. The first request finds no record, so it performs the transfer and atomically stores the key with the result. The second request (same key) finds the existing record and simply returns the original result without transferring again.",
+        "The atomicity matters: writing the ledger entry and the idempotency record in one transaction ensures that even if the server crashes mid-way, you never end up having transferred without recording the key (which would allow a duplicate). Net effect: the money moves exactly once regardless of how many times the button is tapped."
+      ],
+      "keyPoints": ["Same key on original + retry (key = logical operation)", "Server checks store before executing", "First: execute + record key atomically; second: return stored result", "Atomic write prevents duplicate on mid-crash"],
+      "followUps": ["Where do you store idempotency keys at scale, and what TTL?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "Why is `UPDATE accounts SET balance = balance + 100` dangerous to retry, but `SET balance = 600` is safe?",
+      "hint": "One is relative, the other absolute.",
+      "answer": [
+        "`balance = balance + 100` is a *relative* operation: each execution adds 100, so a retry adds another 100 — running it twice credits 200. It's not idempotent.",
+        "`balance = 600` is *absolute*: it sets the value to a fixed target, so running it once or five times leaves the balance at 600. It's idempotent and safe to retry. The lesson: where you can, express operations as setting a desired end-state rather than applying a delta — then retries can't compound. (When you truly need increments, guard them with an idempotency key so the increment is applied once.)"
+      ],
+      "keyPoints": ["Relative (+100) compounds on retry → not idempotent", "Absolute (=600) converges to same state → idempotent", "Prefer end-state assignment over deltas", "Guard real increments with idempotency keys"],
+      "followUps": ["How would you make a 'increment view count' operation safe under duplicates?"]
+    }
+  ]
+}

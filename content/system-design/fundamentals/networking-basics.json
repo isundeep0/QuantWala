@@ -1,0 +1,124 @@
+{
+  "slug": "networking-basics",
+  "sectionId": "fundamentals",
+  "order": 7,
+  "title": "Networking Essentials",
+  "tagline": "DNS, IP, TCP vs UDP, HTTP/HTTPS, and the request lifecycle every design assumes you know.",
+  "summary": "DNS, TCP/UDP, HTTP/HTTPS, TLS — the request lifecycle.",
+  "difficulty": "Beginner",
+  "estMinutes": 18,
+  "tags": ["core", "networking"],
+  "prereqs": ["scalability"],
+  "sections": [
+    {
+      "id": "lifecycle",
+      "title": "What happens when you load a URL",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Tracing a single request end to end ties the whole stack together. When you type `https://app.com/feed`:"
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "DNS resolution", "detail": "The browser asks DNS to translate the human name `app.com` into an IP address (like `93.184.216.34`). Results are cached at many layers to avoid repeating this." },
+            { "title": "TCP connection", "detail": "The browser opens a TCP connection to that IP on port 443, completing the 3-way handshake (SYN → SYN-ACK → ACK) to establish a reliable channel." },
+            { "title": "TLS handshake", "detail": "For HTTPS, client and server negotiate encryption keys and verify the server's certificate, so the rest of the traffic is encrypted." },
+            { "title": "HTTP request/response", "detail": "The browser sends an HTTP request (method, path, headers); the server (often behind a load balancer) routes it, runs app logic, and returns a response (status code + body)." },
+            { "title": "Render", "detail": "The browser parses the response and fetches sub-resources (JS, CSS, images), many served from a CDN near the user." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dns",
+      "title": "DNS — the internet's phone book",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "**DNS** maps names to IP addresses through a hierarchy (root → TLD like `.com` → authoritative server for `app.com`). Crucially for system design, DNS is also a *load-distribution and routing tool*: it can hand out different IPs to balance traffic across data centers, route users to the nearest region (GeoDNS), and is the first layer of failover (point the name at a healthy region). Aggressive caching (with TTLs) keeps lookups fast but means DNS changes propagate slowly."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tcp-udp",
+      "title": "TCP vs UDP",
+      "blocks": [
+        {
+          "type": "compare",
+          "columns": ["", "TCP", "UDP"],
+          "rows": [
+            ["Connection", "Connection-oriented (handshake)", "Connectionless (fire and forget)"],
+            ["Reliability", "Guaranteed, ordered delivery; retransmits lost packets", "No guarantees — packets may drop or arrive out of order"],
+            ["Overhead / speed", "Higher overhead, slightly slower", "Minimal overhead, very low latency"],
+            ["Use for", "Web (HTTP), APIs, databases — anything needing correctness", "Live video/voice, gaming, DNS, metrics — where speed > perfection"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Rule of thumb: use TCP when every byte must arrive correctly; use UDP when a little loss is acceptable and latency is king (a dropped frame in a video call is better than a frozen stream waiting for retransmission). HTTP/3 notably runs over QUIC, which is built on UDP but adds reliability itself."
+        }
+      ]
+    },
+    {
+      "id": "http",
+      "title": "HTTP, status codes & HTTPS",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Methods", "detail": "`GET` (read, safe & cacheable), `POST` (create), `PUT`/`PATCH` (update), `DELETE` (remove). GET/PUT/DELETE should be idempotent; POST usually isn't." },
+            { "term": "Status codes", "detail": "2xx success (200 OK, 201 Created), 3xx redirect (301 permanent, 302 temporary), 4xx client error (400 bad request, 401 unauthorized, 403 forbidden, 404 not found, 429 too many requests), 5xx server error (500, 502, 503 unavailable, 504 timeout)." },
+            { "term": "Statelessness", "detail": "HTTP is stateless — each request is independent. State is carried via cookies/tokens or stored server-side in a shared store, which is exactly what lets web servers stay stateless and scale out." },
+            { "term": "HTTPS / TLS", "detail": "TLS encrypts traffic and authenticates the server via certificates, preventing eavesdropping and tampering. It's table stakes today; terminate TLS at the load balancer/CDN to offload work from app servers." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Know the difference between 502/503/504: 503 = service intentionally unavailable (overloaded/maintenance), 504 = gateway timed out waiting on an upstream, 502 = upstream returned a bad response. And 429 is the rate-limiter's status code — comes up in rate-limiting questions."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Request lifecycle: DNS → TCP handshake → TLS → HTTP request/response → render (sub-resources via CDN).",
+    "DNS maps names→IPs and is also a routing/failover/geo-load-balancing tool (with TTL-based caching).",
+    "TCP = reliable, ordered, connection-based (web/APIs); UDP = fast, lossy, connectionless (video/voice/DNS).",
+    "Know status codes: 200/201, 301/302, 400/401/403/404/429, 500/502/503/504.",
+    "HTTP is stateless → state via tokens/cookies or shared store; HTTPS/TLS encrypts + authenticates (terminate at LB/CDN)."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "Would you use TCP or UDP for a live video call, and why? What's the trade-off?",
+      "hint": "What's worse in a call: a tiny glitch or a frozen, lagging stream?",
+      "answer": [
+        "Use UDP (or a protocol built on it). In a real-time call, latency matters more than perfection: if a packet is lost, it's better to drop that tiny slice of audio/video and keep going than to stall the whole stream while TCP retransmits the missing packet — by the time it arrived, that moment of the call has passed.",
+        "The trade-off is occasional glitches/artifacts, which apps mask with error concealment and adaptive bitrate. For the call's *signaling* and any data that must be exact, you'd still use a reliable channel. This 'speed over perfection' reasoning is the key point."
+      ],
+      "keyPoints": ["UDP for low latency", "Retransmitting stale real-time data is pointless", "Accept minor loss/glitches over freezing", "Reliable channel still used for signaling/control"],
+      "followUps": ["Why does HTTP/3 use QUIC over UDP instead of TCP?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Easy",
+      "prompt": "Users in Europe complain your US-hosted app is slow, even though the servers aren't overloaded. Name two networking-level fixes.",
+      "hint": "The bytes are physically traveling across an ocean.",
+      "answer": [
+        "The cost is propagation delay — packets crossing the Atlantic add ~80–150 ms per round trip, and TLS/TCP handshakes multiply that. Fix 1: put a **CDN / edge** presence in Europe so static assets (and cacheable API responses) are served locally, cutting most round trips. Fix 2: deploy app servers in a **European region** and use **GeoDNS / global load balancing** to route European users there, so dynamic requests don't cross the ocean.",
+        "Supporting moves: keep connections alive (reuse TCP/TLS), use HTTP/2 or HTTP/3 to reduce round trips, and minimise the number of sequential requests a page makes."
+      ],
+      "keyPoints": ["Identify propagation delay, not server load", "CDN/edge for static + cacheable content near users", "Multi-region deploy + GeoDNS routing for dynamic requests", "Connection reuse / fewer round trips"],
+      "followUps": ["How does the DNS TTL affect how fast you can fail over to another region?"]
+    }
+  ]
+}

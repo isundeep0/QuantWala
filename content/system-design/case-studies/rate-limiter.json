@@ -1,0 +1,142 @@
+{
+  "slug": "rate-limiter",
+  "sectionId": "case-studies",
+  "order": 3,
+  "title": "Design a Rate Limiter",
+  "tagline": "Cap how many requests a client can make — the algorithm, where it lives, and how to make it work across a fleet.",
+  "summary": "Token bucket in Redis, where to place it, distributed counting.",
+  "difficulty": "Intermediate",
+  "estMinutes": 18,
+  "tags": ["case-study", "must-know"],
+  "prereqs": ["api-gateway-rate-limiting", "caching"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Limit each client to N requests per time window (e.g., 100 req/min per user/API key/IP).",
+            "Reject excess requests with HTTP 429 + a Retry-After header.",
+            "Support different limits for different routes/tiers (free vs paid)."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Low latency — it sits on every request, so it must add minimal overhead.",
+            "Accurate enough — strictly correct limits are nice but a tiny over/under-count is usually acceptable.",
+            "Highly available & distributed — must work consistently across many server instances.",
+            "Fail open vs fail closed — decide what happens if the limiter's store is down."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "where",
+      "title": "2. Where does it live?",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Rate limiting is a cross-cutting concern, so it usually lives at the edge — in the **API gateway / reverse proxy** — so abusive traffic is rejected *before* it reaches and wastes backend capacity. It can also be a dedicated middleware or a sidecar. Putting it client-side alone is insufficient (clients can't be trusted), and putting it deep in each service duplicates logic.",
+            "Key design choice: the counters must be **shared** across all gateway/server instances, or a client spread across instances bypasses the limit. So the limiter's state lives in a fast central store — almost always **Redis**."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "The limiter at the edge checks a shared Redis counter; over-limit requests get 429 before touching backends.",
+          "groups": [
+            { "label": "Client", "nodes": [{ "label": "Requests", "icon": "Users", "accent": "#0ea5e9" }] },
+            { "label": "Edge", "nodes": [{ "label": "Gateway + Limiter", "sub": "allow / 429", "icon": "Shield", "accent": "#ef4444" }] },
+            { "label": "State", "nodes": [{ "label": "Redis", "sub": "per-key buckets (atomic)", "icon": "Zap", "accent": "#f59e0b" }] },
+            { "label": "Backend", "nodes": [{ "label": "Services", "icon": "Server", "accent": "#d97706" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "algorithm",
+      "title": "3. Algorithm: token bucket",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Default to **token bucket**: each key (user/API key) has a bucket holding up to `capacity` tokens, refilled at `rate` tokens/sec. Each request removes one token; if the bucket is empty, reject with 429. This caps the average rate while allowing short bursts up to the bucket size — matching real client behaviour and cheap to compute. (Alternatives: leaky bucket smooths to a fixed rate; sliding-window counter is most accurate but heavier; fixed-window is simplest but allows a 2x boundary burst.)"
+          ]
+        },
+        {
+          "type": "code",
+          "title": "Token bucket state per key",
+          "codes": [
+            { "language": "text", "title": "model", "source": "key = \"rl:{user_id}:{route}\"\nstored: { tokens: float, last_refill_ts: ms }\n\non request:\n  now = nowMs()\n  refill = (now - last_refill_ts) * rate_per_ms\n  tokens = min(capacity, tokens + refill)\n  if tokens >= 1:\n      tokens -= 1; last_refill_ts = now; allow\n  else:\n      reject(429, Retry-After = (1 - tokens)/rate)" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "It must be atomic",
+          "text": "Read-modify-write on the counter must be atomic, or concurrent requests race and over-admit. In Redis, do it in a single atomic operation — a Lua script (read tokens, refill, decrement, write) or atomic INCR with expiry for window counters. Never read then write in two separate round trips."
+        }
+      ]
+    },
+    {
+      "id": "distributed",
+      "title": "4. Distributed accuracy & failure",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Shared store (Redis)", "detail": "All instances update the same per-key bucket atomically, so the limit is global regardless of which instance handles the request." },
+            { "term": "Latency optimization", "detail": "A Redis round trip per request adds latency. Mitigate by colocating Redis, pipelining, or giving each instance a small local token lease it syncs periodically (trading a little precision for speed)." },
+            { "term": "Fail open vs fail closed", "detail": "If Redis is unavailable: fail-open (allow requests) keeps the product up but drops protection; fail-closed (reject) protects backends but causes an outage. Most pick fail-open for user-facing traffic, fail-closed for protecting fragile/expensive backends. State the choice explicitly." },
+            { "term": "Choosing the key", "detail": "Limit per API key (paying customers), per user id (logged-in), or per IP (anonymous) — or layered. IP alone is weak (NAT, shared IPs, spoofing)." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "One-sentence answer to 'design a rate limiter': 'Token bucket per key stored in Redis, updated atomically with a Lua script, enforced at the API gateway; return 429 + Retry-After; fail-open if Redis is down; optimize with local token leases.' Then expand on whichever part they probe."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Place the limiter at the edge (API gateway) to reject abuse before it hits backends; client-side alone can't be trusted.",
+    "Default algorithm: token bucket (caps average rate, allows bursts); know leaky/fixed/sliding-window alternatives.",
+    "Counters must be SHARED across instances (Redis) and updated ATOMICALLY (Lua script) or requests race/over-admit.",
+    "Return 429 + Retry-After; key by API key/user/IP (IP alone is weak).",
+    "Decide fail-open (availability) vs fail-closed (protection) if the store is down; optimize latency with local token leases."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "Two requests from the same user arrive at two different gateway instances at the exact same moment when only one token remains. Both check Redis, see 1 token, and both allow. What's the bug and the fix?",
+      "hint": "It's a classic read-modify-write race.",
+      "answer": [
+        "It's a race condition from a non-atomic read-modify-write: both instances read `tokens = 1`, both decide there's a token available, both decrement and allow — admitting 2 requests when only 1 was permitted. Under load this lets clients consistently exceed the limit.",
+        "Fix it by making the check-and-decrement **atomic** at the store. In Redis, run a single Lua script that reads the bucket, refills, decrements if a token is available, and writes back — executed atomically so the second request sees the first's decrement and is correctly rejected. (Equivalent atomic primitives: `INCR`+expiry for window counters, or `SET`/`EVAL` transactions.) The principle: never split the counter update across two round trips."
+      ],
+      "keyPoints": ["Non-atomic read-modify-write race → over-admission", "Make check+decrement atomic (single Redis Lua script)", "Second request observes the decrement and is rejected", "Avoid two-round-trip read-then-write"],
+      "followUps": ["How would per-instance local token leases change the accuracy guarantee?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Trade-off",
+      "difficulty": "Medium",
+      "prompt": "Your Redis (the limiter's store) goes down. Should the rate limiter fail open or fail closed? How do you decide?",
+      "hint": "What's worse: an outage, or temporarily unprotected backends?",
+      "answer": [
+        "It depends on what you're protecting. **Fail-open** (allow requests when Redis is unavailable) keeps the product working for users but temporarily removes rate-limit protection — risky if the backend is fragile or the limit guards against cost/abuse. **Fail-closed** (reject when you can't verify the limit) protects the backend but turns a Redis blip into a full user-facing outage.",
+        "For most user-facing traffic, fail-open is the common choice — availability of the product usually outweighs brief loss of throttling, and a Redis outage is rare and short. For limiters protecting expensive or easily-overwhelmed downstreams (e.g., a costly third-party API or a fragile legacy system), fail-closed (or a conservative local fallback limit) is safer. The key is to make this a *deliberate, stated* decision and to also build Redis HA (replication/cluster) so the question rarely arises."
+      ],
+      "keyPoints": ["Fail-open = availability but no protection; fail-closed = protection but outage", "User-facing traffic usually fail-open; fragile/costly backends fail-closed", "Or fall back to a conservative local limit", "Make Redis HA so the failure is rare; state the choice explicitly"],
+      "followUps": ["How could a local in-memory fallback limit work during a Redis outage?"]
+    }
+  ]
+}

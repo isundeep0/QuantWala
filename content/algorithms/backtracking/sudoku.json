@@ -6,8 +6,15 @@
   "tagline": "Fill empty cells with constraint-checked guesses, backtracking on contradictions.",
   "estMinutes": 16,
   "simulator": null,
-  "complexity": { "time": "exponential (pruned)", "space": "O(1)" },
-  "tags": ["backtracking", "constraints", "pruning"],
+  "complexity": {
+    "time": "exponential (pruned)",
+    "space": "O(1)"
+  },
+  "tags": [
+    "backtracking",
+    "constraints",
+    "pruning"
+  ],
   "intuition": {
     "analogy": "Solving a Sudoku by hand: you pencil a candidate into an empty cell, continue solving, and if you hit an impossible cell you erase back to your last guess and try a different number.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Find an empty cell", "detail": "Optionally choose the one with the fewest candidates (most-constrained-variable heuristic)." },
-      { "title": "Try candidates", "detail": "For each digit not in the cell's row, column, or box, place it, update the masks, and recurse." },
-      { "title": "Backtrack", "detail": "If recursion fails, remove the digit and clear the masks, then try the next candidate. Success when no empty cells remain." }
+      {
+        "title": "Find an empty cell",
+        "detail": "Optionally choose the one with the fewest candidates (most-constrained-variable heuristic)."
+      },
+      {
+        "title": "Try candidates",
+        "detail": "For each digit not in the cell's row, column, or box, place it, update the masks, and recurse."
+      },
+      {
+        "title": "Backtrack",
+        "detail": "If recursion fails, remove the digit and clear the masks, then try the next candidate. Success when no empty cells remain."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "sudoku.cpp",
-      "source": "bool solve(vector<vector<char>>& b) {\n    for (int r = 0; r < 9; ++r)\n      for (int c = 0; c < 9; ++c)\n        if (b[r][c] == '.') {\n          for (char d = '1'; d <= '9'; ++d)\n            if (valid(b, r, c, d)) {\n              b[r][c] = d;\n              if (solve(b)) return true;\n              b[r][c] = '.';          // backtrack\n            }\n          return false;                // no digit fits\n        }\n    return true;                       // board full\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "sudoku.cpp",
+        "source": "bool solve(vector<vector<char>>& b) {\n    for (int r = 0; r < 9; ++r)\n      for (int c = 0; c < 9; ++c)\n        if (b[r][c] == '.') {\n          for (char d = '1'; d <= '9'; ++d)\n            if (valid(b, r, c, d)) {\n              b[r][c] = d;\n              if (solve(b)) return true;\n              b[r][c] = '.';          // backtrack\n            }\n          return false;                // no digit fits\n        }\n    return true;                       // board full\n}"
+      },
+      {
+        "language": "python",
+        "title": "sudoku.py",
+        "source": "def solve(board):                       # 9x9 list of chars, '.' = empty\n    def valid(r, c, ch):\n        for i in range(9):\n            if board[r][i] == ch or board[i][c] == ch:\n                return False\n            if board[3*(r//3) + i//3][3*(c//3) + i%3] == ch:\n                return False\n        return True\n\n    def bt():\n        for r in range(9):\n            for c in range(9):\n                if board[r][c] == '.':\n                    for ch in \"123456789\":\n                        if valid(r, c, ch):\n                            board[r][c] = ch\n                            if bt():\n                                return True\n                            board[r][c] = '.'      # backtrack\n                    return False                   # no digit fits\n        return True                                # board full\n    bt()\n    return board"
+      }
+    ],
     "complexity": {
       "time": "Exponential worst case, fast with pruning",
       "timeReason": "The branching is bounded by candidates per cell; good heuristics keep it tiny in practice.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "An empty cell with candidates {3, 7}",
-    "columns": ["Action", "State", "Outcome"],
+    "columns": [
+      "Action",
+      "State",
+      "Outcome"
+    ],
     "rows": [
-      ["try 3", "place 3, recurse", "later contradiction"],
-      ["erase 3", "backtrack", "try next candidate"],
-      ["try 7", "place 7, recurse", "completes the board"],
-      ["done", "no empties left", "solved"]
+      [
+        "try 3",
+        "place 3, recurse",
+        "later contradiction"
+      ],
+      [
+        "erase 3",
+        "backtrack",
+        "try next candidate"
+      ],
+      [
+        "try 7",
+        "place 7, recurse",
+        "completes the board"
+      ],
+      [
+        "done",
+        "no empties left",
+        "solved"
+      ]
     ],
     "clickMoment": "The first guess (3) cascades into an impossible cell deeper down; backtracking rewinds exactly to this decision and the alternative (7) succeeds. The recursion remembers the choice point for you."
   },
   "problems": [
-    { "id": "sd1", "title": "Sudoku Solver", "difficulty": "Hard", "statement": "Fill the board to satisfy Sudoku rules.", "hint": "Backtracking with row/col/box checks.", "tests": "Core constraint backtracking.", "link": "https://leetcode.com/problems/sudoku-solver/" },
-    { "id": "sd2", "title": "Valid Sudoku", "difficulty": "Medium", "statement": "Check whether a board configuration is valid.", "hint": "Single pass with row/col/box sets.", "tests": "Constraint checking only.", "link": "https://leetcode.com/problems/valid-sudoku/" },
-    { "id": "sd3", "title": "N-Queens", "difficulty": "Hard", "statement": "Place non-attacking queens.", "hint": "Same assign/check/backtrack skeleton.", "tests": "Sibling constraint problem.", "link": "https://leetcode.com/problems/n-queens/" },
-    { "id": "sd4", "title": "Word Search II", "difficulty": "Hard", "statement": "Find all dictionary words on a board.", "hint": "Backtracking DFS over a trie of words.", "tests": "Backtracking + pruning with a trie.", "link": "https://leetcode.com/problems/word-search-ii/" },
-    { "id": "sd5", "title": "Graph Coloring (m-coloring)", "difficulty": "Medium", "statement": "Color a graph with m colors, no adjacent clash.", "hint": "Assign colors with constraint checks, backtrack on conflict.", "tests": "General CSP backtracking.", "link": "https://www.geeksforgeeks.org/m-coloring-problem/" }
+    {
+      "id": "sd1",
+      "title": "Sudoku Solver",
+      "difficulty": "Hard",
+      "statement": "Fill the board to satisfy Sudoku rules.",
+      "hint": "Backtracking with row/col/box checks.",
+      "tests": "Core constraint backtracking.",
+      "link": "https://leetcode.com/problems/sudoku-solver/"
+    },
+    {
+      "id": "sd2",
+      "title": "Valid Sudoku",
+      "difficulty": "Medium",
+      "statement": "Check whether a board configuration is valid.",
+      "hint": "Single pass with row/col/box sets.",
+      "tests": "Constraint checking only.",
+      "link": "https://leetcode.com/problems/valid-sudoku/"
+    },
+    {
+      "id": "sd3",
+      "title": "N-Queens",
+      "difficulty": "Hard",
+      "statement": "Place non-attacking queens.",
+      "hint": "Same assign/check/backtrack skeleton.",
+      "tests": "Sibling constraint problem.",
+      "link": "https://leetcode.com/problems/n-queens/"
+    },
+    {
+      "id": "sd4",
+      "title": "Word Search II",
+      "difficulty": "Hard",
+      "statement": "Find all dictionary words on a board.",
+      "hint": "Backtracking DFS over a trie of words.",
+      "tests": "Backtracking + pruning with a trie.",
+      "link": "https://leetcode.com/problems/word-search-ii/"
+    },
+    {
+      "id": "sd5",
+      "title": "Graph Coloring (m-coloring)",
+      "difficulty": "Medium",
+      "statement": "Color a graph with m colors, no adjacent clash.",
+      "hint": "Assign colors with constraint checks, backtrack on conflict.",
+      "tests": "General CSP backtracking.",
+      "link": "https://www.geeksforgeeks.org/m-coloring-problem/"
+    }
   ]
 }

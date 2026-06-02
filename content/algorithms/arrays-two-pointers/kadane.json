@@ -6,8 +6,15 @@
   "tagline": "The maximum-subarray classic — one pass, one decision: extend or restart.",
   "estMinutes": 16,
   "simulator": "kadane",
-  "complexity": { "time": "O(n)", "space": "O(1)" },
-  "tags": ["dp", "max subarray", "greedy"],
+  "complexity": {
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  "tags": [
+    "dp",
+    "max subarray",
+    "greedy"
+  ],
   "intuition": {
     "analogy": "Walking a trail tracking elevation gain, at each step you ask: 'is my journey so far helping me, or is it dead weight?' If your accumulated gain went negative, you mentally restart the count from here — carrying a deficit forward never helps a future stretch.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Initialise", "detail": "cur = best = a[0]. cur is the best sum of a subarray that ends at the current index." },
-      { "title": "Extend or restart", "detail": "For each next element: cur = max(a[i], cur + a[i]). If cur + a[i] < a[i], the old run was net-negative, so we abandon it." },
-      { "title": "Track the global maximum", "detail": "best = max(best, cur) after every step." }
+      {
+        "title": "Initialise",
+        "detail": "cur = best = a[0]. cur is the best sum of a subarray that ends at the current index."
+      },
+      {
+        "title": "Extend or restart",
+        "detail": "For each next element: cur = max(a[i], cur + a[i]). If cur + a[i] < a[i], the old run was net-negative, so we abandon it."
+      },
+      {
+        "title": "Track the global maximum",
+        "detail": "best = max(best, cur) after every step."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "kadane.cpp",
-      "source": "int maxSubArray(vector<int>& a) {\n    int cur = a[0], best = a[0];\n    for (int i = 1; i < (int)a.size(); ++i) {\n        cur = max(a[i], cur + a[i]);\n        best = max(best, cur);\n    }\n    return best;\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "kadane.cpp",
+        "source": "int maxSubArray(vector<int>& a) {\n    int cur = a[0], best = a[0];\n    for (int i = 1; i < (int)a.size(); ++i) {\n        cur = max(a[i], cur + a[i]);\n        best = max(best, cur);\n    }\n    return best;\n}"
+      },
+      {
+        "language": "python",
+        "title": "kadane.py",
+        "source": "def max_subarray(a):\n    cur = best = a[0]\n    for x in a[1:]:\n        cur = max(x, cur + x)      # extend the run, or restart at x\n        best = max(best, cur)\n    return best"
+      }
+    ],
     "complexity": {
       "time": "O(n)",
       "timeReason": "A single pass with O(1) work per element.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "a = [-2, 1, -3, 4, -1, 2, 1, -5, 4]",
-    "columns": ["i, a[i]", "cur = max(a[i], cur+a[i])", "best"],
+    "columns": [
+      "i, a[i]",
+      "cur = max(a[i], cur+a[i])",
+      "best"
+    ],
     "rows": [
-      ["0, -2", "cur = -2", "-2"],
-      ["3, 4", "max(4, -1+4=3) = 4 → restart", "4"],
-      ["5, 2", "max(2, 3+2=5) = 5", "5"],
-      ["6, 1", "max(1, 5+1=6) = 6", "6"]
+      [
+        "0, -2",
+        "cur = -2",
+        "-2"
+      ],
+      [
+        "3, 4",
+        "max(4, -1+4=3) = 4 → restart",
+        "4"
+      ],
+      [
+        "5, 2",
+        "max(2, 3+2=5) = 5",
+        "5"
+      ],
+      [
+        "6, 1",
+        "max(1, 5+1=6) = 6",
+        "6"
+      ]
     ],
     "clickMoment": "At i=3, the running sum was negative, so cur restarts at 4 and discards the bad prefix. From there the run [4,-1,2,1] accumulates to 6 — the answer. The restart decision is the whole algorithm."
   },
   "problems": [
-    { "id": "kd1", "title": "Maximum Subarray", "difficulty": "Medium", "statement": "Find the contiguous subarray with the largest sum.", "hint": "Direct Kadane; initialise with the first element.", "tests": "Core Kadane.", "link": "https://leetcode.com/problems/maximum-subarray/" },
-    { "id": "kd2", "title": "Maximum Product Subarray", "difficulty": "Medium", "statement": "Find the contiguous subarray with the largest product.", "hint": "Track both max and min running products — a negative can flip min into max.", "tests": "Kadane variant with sign handling.", "link": "https://leetcode.com/problems/maximum-product-subarray/" },
-    { "id": "kd3", "title": "Maximum Sum Circular Subarray", "difficulty": "Medium", "statement": "Max subarray sum where the array is circular.", "hint": "Answer = max(normal Kadane, total − minimum subarray). Handle the all-negative edge case.", "tests": "Kadane plus a wrap-around trick.", "link": "https://leetcode.com/problems/maximum-sum-circular-subarray/" },
-    { "id": "kd4", "title": "Best Time to Buy and Sell Stock", "difficulty": "Easy", "statement": "Maximise profit from one buy and one sell.", "hint": "Kadane on consecutive differences, or track the running minimum price.", "tests": "Reframing as max-subarray of deltas.", "link": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/" },
-    { "id": "kd5", "title": "Maximum Sum Rectangle (2D)", "difficulty": "Hard", "statement": "Find the maximum-sum submatrix in a 2D grid.", "hint": "Fix a pair of columns, compress rows to sums, run Kadane over rows.", "tests": "2D extension of Kadane.", "link": "https://www.geeksforgeeks.org/maximum-sum-rectangle-in-a-2d-matrix-dp-27/" }
+    {
+      "id": "kd1",
+      "title": "Maximum Subarray",
+      "difficulty": "Medium",
+      "statement": "Find the contiguous subarray with the largest sum.",
+      "hint": "Direct Kadane; initialise with the first element.",
+      "tests": "Core Kadane.",
+      "link": "https://leetcode.com/problems/maximum-subarray/"
+    },
+    {
+      "id": "kd2",
+      "title": "Maximum Product Subarray",
+      "difficulty": "Medium",
+      "statement": "Find the contiguous subarray with the largest product.",
+      "hint": "Track both max and min running products — a negative can flip min into max.",
+      "tests": "Kadane variant with sign handling.",
+      "link": "https://leetcode.com/problems/maximum-product-subarray/"
+    },
+    {
+      "id": "kd3",
+      "title": "Maximum Sum Circular Subarray",
+      "difficulty": "Medium",
+      "statement": "Max subarray sum where the array is circular.",
+      "hint": "Answer = max(normal Kadane, total − minimum subarray). Handle the all-negative edge case.",
+      "tests": "Kadane plus a wrap-around trick.",
+      "link": "https://leetcode.com/problems/maximum-sum-circular-subarray/"
+    },
+    {
+      "id": "kd4",
+      "title": "Best Time to Buy and Sell Stock",
+      "difficulty": "Easy",
+      "statement": "Maximise profit from one buy and one sell.",
+      "hint": "Kadane on consecutive differences, or track the running minimum price.",
+      "tests": "Reframing as max-subarray of deltas.",
+      "link": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/"
+    },
+    {
+      "id": "kd5",
+      "title": "Maximum Sum Rectangle (2D)",
+      "difficulty": "Hard",
+      "statement": "Find the maximum-sum submatrix in a 2D grid.",
+      "hint": "Fix a pair of columns, compress rows to sums, run Kadane over rows.",
+      "tests": "2D extension of Kadane.",
+      "link": "https://www.geeksforgeeks.org/maximum-sum-rectangle-in-a-2d-matrix-dp-27/"
+    }
   ]
 }

@@ -6,8 +6,15 @@
   "tagline": "Grow the tree one cheapest frontier edge at a time — MST via a priority queue.",
   "estMinutes": 14,
   "simulator": null,
-  "complexity": { "time": "O(E log V)", "space": "O(V)" },
-  "tags": ["mst", "greedy", "priority queue"],
+  "complexity": {
+    "time": "O(E log V)",
+    "space": "O(V)"
+  },
+  "tags": [
+    "mst",
+    "greedy",
+    "priority queue"
+  ],
   "intuition": {
     "analogy": "Growing a tree from a seed: at each step you extend it by the cheapest branch reaching a node not yet in the tree. The tree expands outward like Dijkstra, but you compare single edge weights instead of accumulated distances.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Seed the tree", "detail": "Start from any vertex; push its incident edges into a min-heap." },
-      { "title": "Absorb the cheapest frontier edge", "detail": "Pop the minimum edge. If it leads to a new vertex, add that vertex (and the edge) to the tree." },
-      { "title": "Expand the frontier", "detail": "Push the new vertex's edges to outside nodes. Repeat until all vertices are in the tree." }
+      {
+        "title": "Seed the tree",
+        "detail": "Start from any vertex; push its incident edges into a min-heap."
+      },
+      {
+        "title": "Absorb the cheapest frontier edge",
+        "detail": "Pop the minimum edge. If it leads to a new vertex, add that vertex (and the edge) to the tree."
+      },
+      {
+        "title": "Expand the frontier",
+        "detail": "Push the new vertex's edges to outside nodes. Repeat until all vertices are in the tree."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "prim.cpp",
-      "source": "long long prim(int n, vector<vector<pair<int,int>>>& adj) {\n    vector<bool> inTree(n, false);\n    priority_queue<pair<int,int>, vector<pair<int,int>>, greater<>> pq;\n    pq.push({0, 0}); long long cost = 0;\n    while (!pq.empty()) {\n        auto [w, u] = pq.top(); pq.pop();\n        if (inTree[u]) continue;\n        inTree[u] = true; cost += w;\n        for (auto [v, wt] : adj[u])\n            if (!inTree[v]) pq.push({wt, v});\n    }\n    return cost;\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "prim.cpp",
+        "source": "long long prim(int n, vector<vector<pair<int,int>>>& adj) {\n    vector<bool> inTree(n, false);\n    priority_queue<pair<int,int>, vector<pair<int,int>>, greater<>> pq;\n    pq.push({0, 0}); long long cost = 0;\n    while (!pq.empty()) {\n        auto [w, u] = pq.top(); pq.pop();\n        if (inTree[u]) continue;\n        inTree[u] = true; cost += w;\n        for (auto [v, wt] : adj[u])\n            if (!inTree[v]) pq.push({wt, v});\n    }\n    return cost;\n}"
+      },
+      {
+        "language": "python",
+        "title": "prim.py",
+        "source": "import heapq\n\ndef prim(n, adj):                    # adj[u] = [(v, w), ...]\n    in_tree = [False] * n\n    pq = [(0, 0)]                    # (weight, node)\n    cost = 0\n    while pq:\n        w, u = heapq.heappop(pq)\n        if in_tree[u]:\n            continue\n        in_tree[u] = True\n        cost += w\n        for v, wt in adj[u]:\n            if not in_tree[v]:\n                heapq.heappush(pq, (wt, v))\n    return cost"
+      }
+    ],
     "complexity": {
       "time": "O(E log V)",
       "timeReason": "Each edge may be pushed once; heap ops cost log V.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "Start A; edges A-B(1), A-C(3), B-C(1), C-D(2)",
-    "columns": ["Pop edge", "Adds", "Tree cost"],
+    "columns": [
+      "Pop edge",
+      "Adds",
+      "Tree cost"
+    ],
     "rows": [
-      ["(0,A)", "A", "0"],
-      ["(1,B)", "B", "1"],
-      ["(1,C via B)", "C", "2"],
-      ["(2,D)", "D", "4"]
+      [
+        "(0,A)",
+        "A",
+        "0"
+      ],
+      [
+        "(1,B)",
+        "B",
+        "1"
+      ],
+      [
+        "(1,C via B)",
+        "C",
+        "2"
+      ],
+      [
+        "(2,D)",
+        "D",
+        "4"
+      ]
     ],
     "clickMoment": "C is reached via B at weight 1, beating the direct A-C edge of 3. Prim always grabs the cheapest way to extend the current tree, never the cheapest edge globally."
   },
   "problems": [
-    { "id": "pr1", "title": "Min Cost to Connect All Points", "difficulty": "Medium", "statement": "Minimum total distance to connect all points.", "hint": "Prim is great here since the graph is implicitly complete.", "tests": "Prim on a dense graph.", "link": "https://leetcode.com/problems/min-cost-to-connect-all-points/" },
-    { "id": "pr2", "title": "Connecting Cities With Minimum Cost", "difficulty": "Medium", "statement": "Connect all cities minimally or return -1.", "hint": "Prim/Kruskal; verify all vertices joined.", "tests": "MST + connectivity.", "link": "https://leetcode.com/problems/connecting-cities-with-minimum-cost/" },
-    { "id": "pr3", "title": "Optimize Water Distribution", "difficulty": "Hard", "statement": "Wells + pipes minimum cost.", "hint": "Virtual node for wells, then Prim.", "tests": "MST modeling.", "link": "https://leetcode.com/problems/optimize-water-distribution-in-a-village/" },
-    { "id": "pr4", "title": "Minimum Spanning Tree", "difficulty": "Medium", "statement": "Compute MST weight of a weighted graph.", "hint": "Either Prim or Kruskal.", "tests": "Core MST.", "link": "https://cses.fi/problemset/task/1675" },
-    { "id": "pr5", "title": "Network Build-out Cost", "difficulty": "Medium", "statement": "Cheapest way to make a network fully connected.", "hint": "MST weight is the answer.", "tests": "MST application.", "link": "https://www.spoj.com/problems/MST/" }
+    {
+      "id": "pr1",
+      "title": "Min Cost to Connect All Points",
+      "difficulty": "Medium",
+      "statement": "Minimum total distance to connect all points.",
+      "hint": "Prim is great here since the graph is implicitly complete.",
+      "tests": "Prim on a dense graph.",
+      "link": "https://leetcode.com/problems/min-cost-to-connect-all-points/"
+    },
+    {
+      "id": "pr2",
+      "title": "Connecting Cities With Minimum Cost",
+      "difficulty": "Medium",
+      "statement": "Connect all cities minimally or return -1.",
+      "hint": "Prim/Kruskal; verify all vertices joined.",
+      "tests": "MST + connectivity.",
+      "link": "https://leetcode.com/problems/connecting-cities-with-minimum-cost/"
+    },
+    {
+      "id": "pr3",
+      "title": "Optimize Water Distribution",
+      "difficulty": "Hard",
+      "statement": "Wells + pipes minimum cost.",
+      "hint": "Virtual node for wells, then Prim.",
+      "tests": "MST modeling.",
+      "link": "https://leetcode.com/problems/optimize-water-distribution-in-a-village/"
+    },
+    {
+      "id": "pr4",
+      "title": "Minimum Spanning Tree",
+      "difficulty": "Medium",
+      "statement": "Compute MST weight of a weighted graph.",
+      "hint": "Either Prim or Kruskal.",
+      "tests": "Core MST.",
+      "link": "https://cses.fi/problemset/task/1675"
+    },
+    {
+      "id": "pr5",
+      "title": "Network Build-out Cost",
+      "difficulty": "Medium",
+      "statement": "Cheapest way to make a network fully connected.",
+      "hint": "MST weight is the answer.",
+      "tests": "MST application.",
+      "link": "https://www.spoj.com/problems/MST/"
+    }
   ]
 }

@@ -6,8 +6,15 @@
   "tagline": "Order a DAG so every edge points forward — the backbone of scheduling and build systems.",
   "estMinutes": 16,
   "simulator": null,
-  "complexity": { "time": "O(V + E)", "space": "O(V)" },
-  "tags": ["dag", "ordering", "kahn"],
+  "complexity": {
+    "time": "O(V + E)",
+    "space": "O(V)"
+  },
+  "tags": [
+    "dag",
+    "ordering",
+    "kahn"
+  ],
   "intuition": {
     "analogy": "Getting dressed: socks before shoes, shirt before jacket. A topological order is any sequence that respects all 'must come before' constraints. There can be several valid orders, but never one that violates a dependency.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Compute indegrees", "detail": "Count incoming edges for each node. Enqueue all nodes with indegree 0." },
-      { "title": "Peel zero-indegree nodes", "detail": "Pop a node, append it to the order, and for each neighbour decrement its indegree; enqueue any that hit 0." },
-      { "title": "Cycle check", "detail": "If the output contains all V nodes, success. Otherwise the remaining nodes form a cycle." }
+      {
+        "title": "Compute indegrees",
+        "detail": "Count incoming edges for each node. Enqueue all nodes with indegree 0."
+      },
+      {
+        "title": "Peel zero-indegree nodes",
+        "detail": "Pop a node, append it to the order, and for each neighbour decrement its indegree; enqueue any that hit 0."
+      },
+      {
+        "title": "Cycle check",
+        "detail": "If the output contains all V nodes, success. Otherwise the remaining nodes form a cycle."
+      }
     ],
-    "code": {
-      "language": "python",
-      "title": "kahn.py",
-      "source": "from collections import deque\ndef topo_sort(n, adj):\n    indeg = [0]*n\n    for u in range(n):\n        for v in adj[u]: indeg[v] += 1\n    q = deque(i for i in range(n) if indeg[i] == 0)\n    order = []\n    while q:\n        u = q.popleft(); order.append(u)\n        for v in adj[u]:\n            indeg[v] -= 1\n            if indeg[v] == 0: q.append(v)\n    return order if len(order) == n else []   # [] = cycle"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "kahn.cpp",
+        "source": "// Kahn's algorithm (BFS over in-degrees).\nvector<int> topoSort(int n, vector<vector<int>>& adj) {\n    vector<int> indeg(n, 0), order;\n    for (int u = 0; u < n; ++u)\n        for (int v : adj[u]) indeg[v]++;\n    queue<int> q;\n    for (int i = 0; i < n; ++i) if (indeg[i] == 0) q.push(i);\n    while (!q.empty()) {\n        int u = q.front(); q.pop();\n        order.push_back(u);\n        for (int v : adj[u])\n            if (--indeg[v] == 0) q.push(v);\n    }\n    return (int)order.size() == n ? order : vector<int>{};   // empty = cycle\n}"
+      },
+      {
+        "language": "python",
+        "title": "kahn.py",
+        "source": "from collections import deque\ndef topo_sort(n, adj):\n    indeg = [0]*n\n    for u in range(n):\n        for v in adj[u]: indeg[v] += 1\n    q = deque(i for i in range(n) if indeg[i] == 0)\n    order = []\n    while q:\n        u = q.popleft(); order.append(u)\n        for v in adj[u]:\n            indeg[v] -= 1\n            if indeg[v] == 0: q.append(v)\n    return order if len(order) == n else []   # [] = cycle"
+      }
+    ],
     "complexity": {
       "time": "O(V + E)",
       "timeReason": "Each node and edge is processed once.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "Edges 0→2, 1→2, 2→3",
-    "columns": ["Step", "Zero-indegree", "Order"],
+    "columns": [
+      "Step",
+      "Zero-indegree",
+      "Order"
+    ],
     "rows": [
-      ["init", "0, 1", "—"],
-      ["emit 0", "1", "0"],
-      ["emit 1", "2", "0,1"],
-      ["emit 2,3", "—", "0,1,2,3"]
+      [
+        "init",
+        "0, 1",
+        "—"
+      ],
+      [
+        "emit 0",
+        "1",
+        "0"
+      ],
+      [
+        "emit 1",
+        "2",
+        "0,1"
+      ],
+      [
+        "emit 2,3",
+        "—",
+        "0,1,2,3"
+      ]
     ],
     "clickMoment": "Node 2 only becomes available after BOTH 0 and 1 are emitted (its indegree drops from 2 to 0). The indegree counter is what enforces 'all prerequisites first'."
   },
   "problems": [
-    { "id": "ts1", "title": "Course Schedule II", "difficulty": "Medium", "statement": "Return a valid course order, or empty if impossible.", "hint": "Kahn's algorithm; empty output means a cycle.", "tests": "Core topo sort.", "link": "https://leetcode.com/problems/course-schedule-ii/" },
-    { "id": "ts2", "title": "Alien Dictionary", "difficulty": "Hard", "statement": "Infer letter order from sorted alien words.", "hint": "Build precedence edges from adjacent word comparisons, then topo sort.", "tests": "Building a DAG then ordering.", "link": "https://leetcode.com/problems/alien-dictionary/" },
-    { "id": "ts3", "title": "Parallel Courses", "difficulty": "Medium", "statement": "Minimum semesters to finish all courses.", "hint": "Topo sort by layers; the number of layers is the answer.", "tests": "Layered topo order.", "link": "https://leetcode.com/problems/parallel-courses/" },
-    { "id": "ts4", "title": "Sort Items by Groups", "difficulty": "Hard", "statement": "Order items respecting item and group dependencies.", "hint": "Two-level topological sort (groups, then within groups).", "tests": "Nested topo sorting.", "link": "https://leetcode.com/problems/sort-items-by-groups-respecting-dependencies/" },
-    { "id": "ts5", "title": "Longest Path in a DAG", "difficulty": "Medium", "statement": "Find the longest path in a DAG.", "hint": "DP in topological order.", "tests": "DP over a topo order.", "link": "https://www.geeksforgeeks.org/longest-path-in-a-directed-acyclic-graph/" }
+    {
+      "id": "ts1",
+      "title": "Course Schedule II",
+      "difficulty": "Medium",
+      "statement": "Return a valid course order, or empty if impossible.",
+      "hint": "Kahn's algorithm; empty output means a cycle.",
+      "tests": "Core topo sort.",
+      "link": "https://leetcode.com/problems/course-schedule-ii/"
+    },
+    {
+      "id": "ts2",
+      "title": "Alien Dictionary",
+      "difficulty": "Hard",
+      "statement": "Infer letter order from sorted alien words.",
+      "hint": "Build precedence edges from adjacent word comparisons, then topo sort.",
+      "tests": "Building a DAG then ordering.",
+      "link": "https://leetcode.com/problems/alien-dictionary/"
+    },
+    {
+      "id": "ts3",
+      "title": "Parallel Courses",
+      "difficulty": "Medium",
+      "statement": "Minimum semesters to finish all courses.",
+      "hint": "Topo sort by layers; the number of layers is the answer.",
+      "tests": "Layered topo order.",
+      "link": "https://leetcode.com/problems/parallel-courses/"
+    },
+    {
+      "id": "ts4",
+      "title": "Sort Items by Groups",
+      "difficulty": "Hard",
+      "statement": "Order items respecting item and group dependencies.",
+      "hint": "Two-level topological sort (groups, then within groups).",
+      "tests": "Nested topo sorting.",
+      "link": "https://leetcode.com/problems/sort-items-by-groups-respecting-dependencies/"
+    },
+    {
+      "id": "ts5",
+      "title": "Longest Path in a DAG",
+      "difficulty": "Medium",
+      "statement": "Find the longest path in a DAG.",
+      "hint": "DP in topological order.",
+      "tests": "DP over a topo order.",
+      "link": "https://www.geeksforgeeks.org/longest-path-in-a-directed-acyclic-graph/"
+    }
   ]
 }

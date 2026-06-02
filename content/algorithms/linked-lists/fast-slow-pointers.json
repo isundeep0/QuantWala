@@ -6,8 +6,15 @@
   "tagline": "Two runners at different speeds detect cycles, find midpoints, and locate cycle starts in O(1) space.",
   "estMinutes": 18,
   "simulator": "linked-list-cycle",
-  "complexity": { "time": "O(n)", "space": "O(1)" },
-  "tags": ["floyd", "cycle", "pointers"],
+  "complexity": {
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  "tags": [
+    "floyd",
+    "cycle",
+    "pointers"
+  ],
   "intuition": {
     "analogy": "On a circular running track, a fast runner doing two laps for every one of a slow runner will eventually lap and meet the slow runner. On a straight track with a finish line, the fast runner simply reaches the end first. Whether they ever meet tells you if the track loops.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Advance at two speeds", "detail": "slow = slow.next (one step); fast = fast.next.next (two steps), guarding against fast or fast.next being null." },
-      { "title": "Detect", "detail": "If fast (or fast.next) becomes null, there's no cycle. If slow == fast, they've met inside a cycle." },
-      { "title": "Find the cycle start (optional)", "detail": "After a meeting, reset one pointer to the head and advance both by one step; they meet again exactly at the cycle's entry node (a consequence of the distance math)." }
+      {
+        "title": "Advance at two speeds",
+        "detail": "slow = slow.next (one step); fast = fast.next.next (two steps), guarding against fast or fast.next being null."
+      },
+      {
+        "title": "Detect",
+        "detail": "If fast (or fast.next) becomes null, there's no cycle. If slow == fast, they've met inside a cycle."
+      },
+      {
+        "title": "Find the cycle start (optional)",
+        "detail": "After a meeting, reset one pointer to the head and advance both by one step; they meet again exactly at the cycle's entry node (a consequence of the distance math)."
+      }
     ],
-    "code": {
-      "language": "python",
-      "title": "detect_cycle.py",
-      "source": "def has_cycle(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next\n        fast = fast.next.next\n        if slow is fast:\n            return True\n    return False"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "detect_cycle.cpp",
+        "source": "bool hasCycle(ListNode* head) {\n    ListNode* slow = head; ListNode* fast = head;\n    while (fast && fast->next) {\n        slow = slow->next;          // 1 step\n        fast = fast->next->next;    // 2 steps\n        if (slow == fast) return true;   // meet inside the loop\n    }\n    return false;\n}"
+      },
+      {
+        "language": "python",
+        "title": "detect_cycle.py",
+        "source": "def has_cycle(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next\n        fast = fast.next.next\n        if slow is fast:\n            return True\n    return False"
+      }
+    ],
     "complexity": {
       "time": "O(n)",
       "timeReason": "The slow pointer travels at most the list length before a meeting or termination.",
@@ -42,21 +65,85 @@
   },
   "dryRun": {
     "input": "0→1→2→3→4→5→6, and 6 links back to 2 (cycle)",
-    "columns": ["Step", "slow, fast", "Note"],
+    "columns": [
+      "Step",
+      "slow, fast",
+      "Note"
+    ],
     "rows": [
-      ["1", "1, 2", "slow +1, fast +2"],
-      ["2", "2, 4", "still apart"],
-      ["3", "3, 6", "fast inside the loop"],
-      ["4", "4, 3", "fast wrapped past the loop start"],
-      ["5", "5, 5", "slow == fast → cycle detected"]
+      [
+        "1",
+        "1, 2",
+        "slow +1, fast +2"
+      ],
+      [
+        "2",
+        "2, 4",
+        "still apart"
+      ],
+      [
+        "3",
+        "3, 6",
+        "fast inside the loop"
+      ],
+      [
+        "4",
+        "4, 3",
+        "fast wrapped past the loop start"
+      ],
+      [
+        "5",
+        "5, 5",
+        "slow == fast → cycle detected"
+      ]
     ],
     "clickMoment": "Once both pointers are inside the loop, the fast pointer closes the gap by exactly one node per step. A shrinking integer gap must hit zero — so a meeting is inevitable."
   },
   "problems": [
-    { "id": "fs1", "title": "Linked List Cycle", "difficulty": "Easy", "statement": "Detect whether a linked list has a cycle.", "hint": "Tortoise and hare; meeting means a cycle.", "tests": "Cycle detection.", "link": "https://leetcode.com/problems/linked-list-cycle/" },
-    { "id": "fs2", "title": "Linked List Cycle II", "difficulty": "Medium", "statement": "Return the node where the cycle begins, or null.", "hint": "After meeting, move one pointer to head; advance both by one until they meet again.", "tests": "Cycle-start phase of Floyd's.", "link": "https://leetcode.com/problems/linked-list-cycle-ii/" },
-    { "id": "fs3", "title": "Middle of the Linked List", "difficulty": "Easy", "statement": "Return the middle node of a linked list.", "hint": "When fast reaches the end, slow is at the middle.", "tests": "Midpoint finding.", "link": "https://leetcode.com/problems/middle-of-the-linked-list/" },
-    { "id": "fs4", "title": "Happy Number", "difficulty": "Easy", "statement": "Detect if repeatedly summing squared digits reaches 1.", "hint": "The sequence is a 'linked list' of numbers; use fast/slow to detect the loop.", "tests": "Floyd's on an implicit sequence.", "link": "https://leetcode.com/problems/happy-number/" },
-    { "id": "fs5", "title": "Find the Duplicate Number", "difficulty": "Medium", "statement": "Find the duplicate in n+1 numbers from 1..n without modifying the array.", "hint": "Treat values as next-pointers; the duplicate creates a cycle whose entrance is the answer.", "tests": "Cycle-start trick on an array as a function graph.", "link": "https://leetcode.com/problems/find-the-duplicate-number/" }
+    {
+      "id": "fs1",
+      "title": "Linked List Cycle",
+      "difficulty": "Easy",
+      "statement": "Detect whether a linked list has a cycle.",
+      "hint": "Tortoise and hare; meeting means a cycle.",
+      "tests": "Cycle detection.",
+      "link": "https://leetcode.com/problems/linked-list-cycle/"
+    },
+    {
+      "id": "fs2",
+      "title": "Linked List Cycle II",
+      "difficulty": "Medium",
+      "statement": "Return the node where the cycle begins, or null.",
+      "hint": "After meeting, move one pointer to head; advance both by one until they meet again.",
+      "tests": "Cycle-start phase of Floyd's.",
+      "link": "https://leetcode.com/problems/linked-list-cycle-ii/"
+    },
+    {
+      "id": "fs3",
+      "title": "Middle of the Linked List",
+      "difficulty": "Easy",
+      "statement": "Return the middle node of a linked list.",
+      "hint": "When fast reaches the end, slow is at the middle.",
+      "tests": "Midpoint finding.",
+      "link": "https://leetcode.com/problems/middle-of-the-linked-list/"
+    },
+    {
+      "id": "fs4",
+      "title": "Happy Number",
+      "difficulty": "Easy",
+      "statement": "Detect if repeatedly summing squared digits reaches 1.",
+      "hint": "The sequence is a 'linked list' of numbers; use fast/slow to detect the loop.",
+      "tests": "Floyd's on an implicit sequence.",
+      "link": "https://leetcode.com/problems/happy-number/"
+    },
+    {
+      "id": "fs5",
+      "title": "Find the Duplicate Number",
+      "difficulty": "Medium",
+      "statement": "Find the duplicate in n+1 numbers from 1..n without modifying the array.",
+      "hint": "Treat values as next-pointers; the duplicate creates a cycle whose entrance is the answer.",
+      "tests": "Cycle-start trick on an array as a function graph.",
+      "link": "https://leetcode.com/problems/find-the-duplicate-number/"
+    }
   ]
 }

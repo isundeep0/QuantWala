@@ -6,8 +6,15 @@
   "tagline": "Compute aⁿ (mod m) in O(log n) by squaring — the workhorse of modular math.",
   "estMinutes": 14,
   "simulator": "fast-exponentiation",
-  "complexity": { "time": "O(log n)", "space": "O(1)" },
-  "tags": ["modular", "exponentiation", "bits"],
+  "complexity": {
+    "time": "O(log n)",
+    "space": "O(1)"
+  },
+  "tags": [
+    "modular",
+    "exponentiation",
+    "bits"
+  ],
   "intuition": {
     "analogy": "To compute a¹⁶ you don't multiply a sixteen times. You square: a→a²→a⁴→a⁸→a¹⁶ — just four multiplications. Any exponent is built from these power-of-two squares according to its binary digits.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Initialise", "detail": "result = 1; base = a mod m; exponent = n." },
-      { "title": "Process bits", "detail": "While n > 0: if n is odd, result = result · base mod m; then base = base · base mod m and n >>= 1." },
-      { "title": "Return", "detail": "result holds aⁿ mod m after log n iterations." }
+      {
+        "title": "Initialise",
+        "detail": "result = 1; base = a mod m; exponent = n."
+      },
+      {
+        "title": "Process bits",
+        "detail": "While n > 0: if n is odd, result = result · base mod m; then base = base · base mod m and n >>= 1."
+      },
+      {
+        "title": "Return",
+        "detail": "result holds aⁿ mod m after log n iterations."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "fast_pow.cpp",
-      "source": "long long power(long long a, long long n, long long m) {\n    long long res = 1; a %= m;\n    while (n > 0) {\n        if (n & 1) res = res * a % m;\n        a = a * a % m;\n        n >>= 1;\n    }\n    return res;\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "fast_pow.cpp",
+        "source": "long long power(long long a, long long n, long long m) {\n    long long res = 1; a %= m;\n    while (n > 0) {\n        if (n & 1) res = res * a % m;\n        a = a * a % m;\n        n >>= 1;\n    }\n    return res;\n}"
+      },
+      {
+        "language": "python",
+        "title": "fast_pow.py",
+        "source": "def power(a, n, m):\n    res = 1\n    a %= m\n    while n > 0:\n        if n & 1:\n            res = res * a % m\n        a = a * a % m\n        n >>= 1\n    return res"
+      }
+    ],
     "complexity": {
       "time": "O(log n)",
       "timeReason": "The exponent halves each iteration, so there are ⌊log₂ n⌋ + 1 steps.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "3¹³ mod 1000000007 (13 = 1101₂)",
-    "columns": ["bit", "n odd?", "result · base"],
+    "columns": [
+      "bit",
+      "n odd?",
+      "result · base"
+    ],
     "rows": [
-      ["1", "yes", "res=3, base→9"],
-      ["0", "no", "base→81"],
-      ["1", "yes", "res=3·81=243, base→6561"],
-      ["1", "yes", "res=243·6561=1594323"]
+      [
+        "1",
+        "yes",
+        "res=3, base→9"
+      ],
+      [
+        "0",
+        "no",
+        "base→81"
+      ],
+      [
+        "1",
+        "yes",
+        "res=3·81=243, base→6561"
+      ],
+      [
+        "1",
+        "yes",
+        "res=243·6561=1594323"
+      ]
     ],
     "clickMoment": "The exponent 13 = 8+4+1, exactly its set bits. The result only absorbs the squares at those bit positions (a¹·a⁴·a⁸ = a¹³) — binary made the exponent additive."
   },
   "problems": [
-    { "id": "fp1", "title": "Pow(x, n)", "difficulty": "Medium", "statement": "Implement double power with integer exponent.", "hint": "Binary exponentiation; handle negative n.", "tests": "Core fast power.", "link": "https://leetcode.com/problems/powx-n/" },
-    { "id": "fp2", "title": "Super Pow", "difficulty": "Medium", "statement": "Compute a^b mod 1337 where b is a huge array of digits.", "hint": "Process digits with modular exponentiation.", "tests": "Modular fast power.", "link": "https://leetcode.com/problems/super-pow/" },
-    { "id": "fp3", "title": "Fibonacci via Matrix Power", "difficulty": "Hard", "statement": "Compute the n-th Fibonacci number in O(log n).", "hint": "Raise [[1,1],[1,0]] to the n-th power.", "tests": "Matrix exponentiation.", "link": "https://cses.fi/problemset/task/1722" },
-    { "id": "fp4", "title": "Count Good Numbers", "difficulty": "Medium", "statement": "Count digit strings under modular rules.", "hint": "Closed form with modular fast power.", "tests": "Modular power in counting.", "link": "https://leetcode.com/problems/count-good-numbers/" },
-    { "id": "fp5", "title": "Modular Inverse (Fermat)", "difficulty": "Medium", "statement": "Compute inverses under a prime modulus.", "hint": "a^(p−2) mod p via fast power.", "tests": "Fermat inverse.", "link": "https://cses.fi/problemset/task/1712" }
+    {
+      "id": "fp1",
+      "title": "Pow(x, n)",
+      "difficulty": "Medium",
+      "statement": "Implement double power with integer exponent.",
+      "hint": "Binary exponentiation; handle negative n.",
+      "tests": "Core fast power.",
+      "link": "https://leetcode.com/problems/powx-n/"
+    },
+    {
+      "id": "fp2",
+      "title": "Super Pow",
+      "difficulty": "Medium",
+      "statement": "Compute a^b mod 1337 where b is a huge array of digits.",
+      "hint": "Process digits with modular exponentiation.",
+      "tests": "Modular fast power.",
+      "link": "https://leetcode.com/problems/super-pow/"
+    },
+    {
+      "id": "fp3",
+      "title": "Fibonacci via Matrix Power",
+      "difficulty": "Hard",
+      "statement": "Compute the n-th Fibonacci number in O(log n).",
+      "hint": "Raise [[1,1],[1,0]] to the n-th power.",
+      "tests": "Matrix exponentiation.",
+      "link": "https://cses.fi/problemset/task/1722"
+    },
+    {
+      "id": "fp4",
+      "title": "Count Good Numbers",
+      "difficulty": "Medium",
+      "statement": "Count digit strings under modular rules.",
+      "hint": "Closed form with modular fast power.",
+      "tests": "Modular power in counting.",
+      "link": "https://leetcode.com/problems/count-good-numbers/"
+    },
+    {
+      "id": "fp5",
+      "title": "Modular Inverse (Fermat)",
+      "difficulty": "Medium",
+      "statement": "Compute inverses under a prime modulus.",
+      "hint": "a^(p−2) mod p via fast power.",
+      "tests": "Fermat inverse.",
+      "link": "https://cses.fi/problemset/task/1712"
+    }
   ]
 }

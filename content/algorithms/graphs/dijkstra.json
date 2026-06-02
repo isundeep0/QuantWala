@@ -6,8 +6,15 @@
   "tagline": "Greedy shortest paths from a source on non-negative weighted graphs, via a priority queue.",
   "estMinutes": 22,
   "simulator": "dijkstra",
-  "complexity": { "time": "O((V + E) log V)", "space": "O(V)" },
-  "tags": ["shortest path", "greedy", "priority queue"],
+  "complexity": {
+    "time": "O((V + E) log V)",
+    "space": "O(V)"
+  },
+  "tags": [
+    "shortest path",
+    "greedy",
+    "priority queue"
+  ],
   "intuition": {
     "analogy": "Water flowing from a spring through pipes of different lengths reaches the nearest junctions first. At any moment, the closest not-yet-reached junction's distance is final — nothing can offer it a shorter route later, since all remaining routes are longer.",
     "paragraphs": [
@@ -19,16 +26,35 @@
   },
   "logic": {
     "steps": [
-      { "title": "Initialise", "detail": "dist[src] = 0, all others ∞. Push (0, src) into a min-heap." },
-      { "title": "Pop the closest", "detail": "Extract the smallest-distance node. If it's stale (distance worse than recorded), skip it. Otherwise it's finalised." },
-      { "title": "Relax edges", "detail": "For each neighbour v: if dist[u] + w < dist[v], update dist[v] and push (dist[v], v)." },
-      { "title": "Repeat", "detail": "Continue until the heap is empty; dist now holds all shortest distances." }
+      {
+        "title": "Initialise",
+        "detail": "dist[src] = 0, all others ∞. Push (0, src) into a min-heap."
+      },
+      {
+        "title": "Pop the closest",
+        "detail": "Extract the smallest-distance node. If it's stale (distance worse than recorded), skip it. Otherwise it's finalised."
+      },
+      {
+        "title": "Relax edges",
+        "detail": "For each neighbour v: if dist[u] + w < dist[v], update dist[v] and push (dist[v], v)."
+      },
+      {
+        "title": "Repeat",
+        "detail": "Continue until the heap is empty; dist now holds all shortest distances."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "dijkstra.cpp",
-      "source": "vector<long long> dijkstra(int n, vector<vector<pair<int,int>>>& adj, int src) {\n    vector<long long> dist(n, LLONG_MAX);\n    priority_queue<pair<long long,int>, vector<pair<long long,int>>, greater<>> pq;\n    dist[src] = 0; pq.push({0, src});\n    while (!pq.empty()) {\n        auto [d, u] = pq.top(); pq.pop();\n        if (d > dist[u]) continue;            // stale entry\n        for (auto [v, w] : adj[u])\n            if (dist[u] + w < dist[v]) {\n                dist[v] = dist[u] + w;\n                pq.push({dist[v], v});\n            }\n    }\n    return dist;\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "dijkstra.cpp",
+        "source": "vector<long long> dijkstra(int n, vector<vector<pair<int,int>>>& adj, int src) {\n    vector<long long> dist(n, LLONG_MAX);\n    priority_queue<pair<long long,int>, vector<pair<long long,int>>, greater<>> pq;\n    dist[src] = 0; pq.push({0, src});\n    while (!pq.empty()) {\n        auto [d, u] = pq.top(); pq.pop();\n        if (d > dist[u]) continue;            // stale entry\n        for (auto [v, w] : adj[u])\n            if (dist[u] + w < dist[v]) {\n                dist[v] = dist[u] + w;\n                pq.push({dist[v], v});\n            }\n    }\n    return dist;\n}"
+      },
+      {
+        "language": "python",
+        "title": "dijkstra.py",
+        "source": "import heapq\n\ndef dijkstra(n, adj, src):           # adj[u] = [(v, w), ...]\n    dist = [float('inf')] * n\n    dist[src] = 0\n    pq = [(0, src)]\n    while pq:\n        d, u = heapq.heappop(pq)\n        if d > dist[u]:\n            continue                 # stale entry\n        for v, w in adj[u]:\n            if dist[u] + w < dist[v]:\n                dist[v] = dist[u] + w\n                heapq.heappush(pq, (dist[v], v))\n    return dist"
+      }
+    ],
     "complexity": {
       "time": "O((V + E) log V)",
       "timeReason": "Each edge can trigger a heap push; heap operations cost log V.",
@@ -43,20 +69,80 @@
   },
   "dryRun": {
     "input": "Source A; edges A-C(2), C-B(1), A-B(4), B-D(5), D-E(2), E-F(3)",
-    "columns": ["Pop", "Finalised dist", "Relaxations"],
+    "columns": [
+      "Pop",
+      "Finalised dist",
+      "Relaxations"
+    ],
     "rows": [
-      ["A (0)", "A=0", "C=2, B=4"],
-      ["C (2)", "C=2", "B = min(4, 2+1)=3"],
-      ["B (3)", "B=3", "D=8"],
-      ["D (8)", "D=8", "E=10 → F=13"]
+      [
+        "A (0)",
+        "A=0",
+        "C=2, B=4"
+      ],
+      [
+        "C (2)",
+        "C=2",
+        "B = min(4, 2+1)=3"
+      ],
+      [
+        "B (3)",
+        "B=3",
+        "D=8"
+      ],
+      [
+        "D (8)",
+        "D=8",
+        "E=10 → F=13"
+      ]
     ],
     "clickMoment": "B was tentatively 4 via the direct edge, but popping C first relaxed it to 3 (A→C→B). Because C was closer, its relaxations were trustworthy — the greedy order guarantees correctness."
   },
   "problems": [
-    { "id": "dij1", "title": "Network Delay Time", "difficulty": "Medium", "statement": "Time for a signal to reach all nodes from a source.", "hint": "Dijkstra; answer is the max finalised distance.", "tests": "Single-source shortest paths.", "link": "https://leetcode.com/problems/network-delay-time/" },
-    { "id": "dij2", "title": "Path With Minimum Effort", "difficulty": "Medium", "statement": "Minimise the maximum height difference along a path.", "hint": "Dijkstra where 'distance' is the path's max edge (min-max).", "tests": "Dijkstra with a modified relaxation.", "link": "https://leetcode.com/problems/path-with-minimum-effort/" },
-    { "id": "dij3", "title": "Cheapest Flights Within K Stops", "difficulty": "Medium", "statement": "Cheapest price with at most K stops.", "hint": "Dijkstra with a stop-count state, or Bellman-Ford limited to K+1 relaxations.", "tests": "Shortest path with a constraint.", "link": "https://leetcode.com/problems/cheapest-flights-within-k-stops/" },
-    { "id": "dij4", "title": "Swim in Rising Water", "difficulty": "Hard", "statement": "Least time to swim from corner to corner as water rises.", "hint": "Dijkstra/▢ over the grid minimising the maximum cell value on the path.", "tests": "Min-max path.", "link": "https://leetcode.com/problems/swim-in-rising-water/" },
-    { "id": "dij5", "title": "Number of Ways to Arrive at Destination", "difficulty": "Medium", "statement": "Count shortest paths from 0 to n−1.", "hint": "Dijkstra while accumulating path counts on equal-distance relaxations.", "tests": "Counting shortest paths.", "link": "https://leetcode.com/problems/number-of-ways-to-arrive-at-destination/" }
+    {
+      "id": "dij1",
+      "title": "Network Delay Time",
+      "difficulty": "Medium",
+      "statement": "Time for a signal to reach all nodes from a source.",
+      "hint": "Dijkstra; answer is the max finalised distance.",
+      "tests": "Single-source shortest paths.",
+      "link": "https://leetcode.com/problems/network-delay-time/"
+    },
+    {
+      "id": "dij2",
+      "title": "Path With Minimum Effort",
+      "difficulty": "Medium",
+      "statement": "Minimise the maximum height difference along a path.",
+      "hint": "Dijkstra where 'distance' is the path's max edge (min-max).",
+      "tests": "Dijkstra with a modified relaxation.",
+      "link": "https://leetcode.com/problems/path-with-minimum-effort/"
+    },
+    {
+      "id": "dij3",
+      "title": "Cheapest Flights Within K Stops",
+      "difficulty": "Medium",
+      "statement": "Cheapest price with at most K stops.",
+      "hint": "Dijkstra with a stop-count state, or Bellman-Ford limited to K+1 relaxations.",
+      "tests": "Shortest path with a constraint.",
+      "link": "https://leetcode.com/problems/cheapest-flights-within-k-stops/"
+    },
+    {
+      "id": "dij4",
+      "title": "Swim in Rising Water",
+      "difficulty": "Hard",
+      "statement": "Least time to swim from corner to corner as water rises.",
+      "hint": "Dijkstra/▢ over the grid minimising the maximum cell value on the path.",
+      "tests": "Min-max path.",
+      "link": "https://leetcode.com/problems/swim-in-rising-water/"
+    },
+    {
+      "id": "dij5",
+      "title": "Number of Ways to Arrive at Destination",
+      "difficulty": "Medium",
+      "statement": "Count shortest paths from 0 to n−1.",
+      "hint": "Dijkstra while accumulating path counts on equal-distance relaxations.",
+      "tests": "Counting shortest paths.",
+      "link": "https://leetcode.com/problems/number-of-ways-to-arrive-at-destination/"
+    }
   ]
 }

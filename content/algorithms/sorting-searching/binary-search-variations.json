@@ -6,8 +6,15 @@
   "tagline": "lower_bound, upper_bound, and 'search on the answer' — the patterns interviews actually test.",
   "estMinutes": 25,
   "simulator": "binary-search",
-  "complexity": { "time": "O(log n)", "space": "O(1)" },
-  "tags": ["lower_bound", "predicate", "boundary"],
+  "complexity": {
+    "time": "O(log n)",
+    "space": "O(1)"
+  },
+  "tags": [
+    "lower_bound",
+    "predicate",
+    "boundary"
+  ],
   "intuition": {
     "analogy": "Plain binary search asks 'is X here?'. The variations ask sharper questions: 'where would X fit?', 'what's the first thing ≥ X?', 'what's the smallest value that makes this work?'. Same dictionary, smarter questions.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Frame a monotonic predicate", "detail": "Define check(x) that is false for small x and true for large x (or vice-versa). The array values being sorted is just the simplest such predicate." },
-      { "title": "Search the boundary, keep a half-open window", "detail": "Use lo = 0, hi = n. When check(mid) is true, the answer is mid or earlier → hi = mid. Otherwise lo = mid + 1. The loop runs while lo < hi." },
-      { "title": "lo converges to the boundary", "detail": "When lo == hi, that's the first index where the predicate is true (or n if it never is)." }
+      {
+        "title": "Frame a monotonic predicate",
+        "detail": "Define check(x) that is false for small x and true for large x (or vice-versa). The array values being sorted is just the simplest such predicate."
+      },
+      {
+        "title": "Search the boundary, keep a half-open window",
+        "detail": "Use lo = 0, hi = n. When check(mid) is true, the answer is mid or earlier → hi = mid. Otherwise lo = mid + 1. The loop runs while lo < hi."
+      },
+      {
+        "title": "lo converges to the boundary",
+        "detail": "When lo == hi, that's the first index where the predicate is true (or n if it never is)."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "lower_bound.cpp",
-      "source": "// first index i with a[i] >= target\nint lowerBound(vector<int>& a, int target) {\n    int lo = 0, hi = a.size();\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] >= target) hi = mid;\n        else lo = mid + 1;\n    }\n    return lo;\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "lower_bound.cpp",
+        "source": "// first index i with a[i] >= target\nint lowerBound(vector<int>& a, int target) {\n    int lo = 0, hi = a.size();\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] >= target) hi = mid;\n        else lo = mid + 1;\n    }\n    return lo;\n}"
+      },
+      {
+        "language": "python",
+        "title": "lower_bound.py",
+        "source": "def lower_bound(a, target):          # first index i with a[i] >= target\n    lo, hi = 0, len(a)               # hi is exclusive\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if a[mid] >= target:\n            hi = mid\n        else:\n            lo = mid + 1\n    return lo"
+      }
+    ],
     "complexity": {
       "time": "O(log n) × cost(check)",
       "timeReason": "Same halving, but each step pays the cost of evaluating the predicate (often O(n) for 'search on the answer' problems).",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "a = [2, 4, 4, 4, 7, 9], lower_bound(4)",
-    "columns": ["Step", "lo, hi, mid", "Decision"],
+    "columns": [
+      "Step",
+      "lo, hi, mid",
+      "Decision"
+    ],
     "rows": [
-      ["1", "lo=0 hi=6 mid=3", "a[3]=4 ≥ 4 → hi = 3"],
-      ["2", "lo=0 hi=3 mid=1", "a[1]=4 ≥ 4 → hi = 1"],
-      ["3", "lo=0 hi=1 mid=0", "a[0]=2 < 4 → lo = 1"],
-      ["4", "lo=1 hi=1", "lo == hi → answer is index 1 (first 4)"]
+      [
+        "1",
+        "lo=0 hi=6 mid=3",
+        "a[3]=4 ≥ 4 → hi = 3"
+      ],
+      [
+        "2",
+        "lo=0 hi=3 mid=1",
+        "a[1]=4 ≥ 4 → hi = 1"
+      ],
+      [
+        "3",
+        "lo=0 hi=1 mid=0",
+        "a[0]=2 < 4 → lo = 1"
+      ],
+      [
+        "4",
+        "lo=1 hi=1",
+        "lo == hi → answer is index 1 (first 4)"
+      ]
     ],
     "clickMoment": "lower_bound never short-circuits on equality. By always moving hi on '≥', it keeps sliding left to find the very first match — that's why it returns the leftmost 4, not just any 4."
   },
   "problems": [
-    { "id": "bsv1", "title": "Search Insert Position", "difficulty": "Easy", "statement": "Return the index where target is, or where it would be inserted to keep the array sorted.", "hint": "This is exactly lower_bound.", "tests": "lower_bound template.", "link": "https://leetcode.com/problems/search-insert-position/" },
-    { "id": "bsv2", "title": "First and Last Position", "difficulty": "Medium", "statement": "Find the starting and ending index of a target value in a sorted array.", "hint": "lower_bound(target) gives the start; lower_bound(target+1) - 1 gives the end.", "tests": "lower_bound and upper_bound together.", "link": "https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/" },
-    { "id": "bsv3", "title": "Capacity to Ship Packages", "difficulty": "Medium", "statement": "Find the least ship capacity to deliver all packages within D days.", "hint": "Binary search on capacity; feasible(cap) = can we finish within D days?", "tests": "Binary search on the answer.", "link": "https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/" },
-    { "id": "bsv4", "title": "Split Array Largest Sum", "difficulty": "Hard", "statement": "Split the array into k subarrays minimising the largest subarray sum.", "hint": "Binary search the largest-sum value; greedily count how many pieces it forces.", "tests": "Answer-space search with a greedy predicate.", "link": "https://leetcode.com/problems/split-array-largest-sum/" },
-    { "id": "bsv5", "title": "Find Peak Element", "difficulty": "Medium", "statement": "Find any peak (an element greater than its neighbours) in O(log n).", "hint": "Compare mid with mid+1; move toward the higher side — a peak must exist there.", "tests": "Binary search without a globally sorted array.", "link": "https://leetcode.com/problems/find-peak-element/" }
+    {
+      "id": "bsv1",
+      "title": "Search Insert Position",
+      "difficulty": "Easy",
+      "statement": "Return the index where target is, or where it would be inserted to keep the array sorted.",
+      "hint": "This is exactly lower_bound.",
+      "tests": "lower_bound template.",
+      "link": "https://leetcode.com/problems/search-insert-position/"
+    },
+    {
+      "id": "bsv2",
+      "title": "First and Last Position",
+      "difficulty": "Medium",
+      "statement": "Find the starting and ending index of a target value in a sorted array.",
+      "hint": "lower_bound(target) gives the start; lower_bound(target+1) - 1 gives the end.",
+      "tests": "lower_bound and upper_bound together.",
+      "link": "https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/"
+    },
+    {
+      "id": "bsv3",
+      "title": "Capacity to Ship Packages",
+      "difficulty": "Medium",
+      "statement": "Find the least ship capacity to deliver all packages within D days.",
+      "hint": "Binary search on capacity; feasible(cap) = can we finish within D days?",
+      "tests": "Binary search on the answer.",
+      "link": "https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/"
+    },
+    {
+      "id": "bsv4",
+      "title": "Split Array Largest Sum",
+      "difficulty": "Hard",
+      "statement": "Split the array into k subarrays minimising the largest subarray sum.",
+      "hint": "Binary search the largest-sum value; greedily count how many pieces it forces.",
+      "tests": "Answer-space search with a greedy predicate.",
+      "link": "https://leetcode.com/problems/split-array-largest-sum/"
+    },
+    {
+      "id": "bsv5",
+      "title": "Find Peak Element",
+      "difficulty": "Medium",
+      "statement": "Find any peak (an element greater than its neighbours) in O(log n).",
+      "hint": "Compare mid with mid+1; move toward the higher side — a peak must exist there.",
+      "tests": "Binary search without a globally sorted array.",
+      "link": "https://leetcode.com/problems/find-peak-element/"
+    }
   ]
 }

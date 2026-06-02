@@ -6,8 +6,15 @@
   "tagline": "Compute each node's answer from its children — subtree DP and rerooting.",
   "estMinutes": 20,
   "simulator": null,
-  "complexity": { "time": "O(n)", "space": "O(h)" },
-  "tags": ["dp", "post-order", "rerooting"],
+  "complexity": {
+    "time": "O(n)",
+    "space": "O(h)"
+  },
+  "tags": [
+    "dp",
+    "post-order",
+    "rerooting"
+  ],
   "intuition": {
     "analogy": "A company org chart: each manager's headcount equals the sum of their reports' headcounts plus one. You can only know a manager's total after every report has reported up — bottom-up aggregation.",
     "paragraphs": [
@@ -19,16 +26,35 @@
   },
   "logic": {
     "steps": [
-      { "title": "Define the per-node state", "detail": "Decide what each subtree returns — a single number, or a tuple like (best including node, best excluding node)." },
-      { "title": "Write the combine rule", "detail": "Express the parent's state from its children's states. This recurrence is the crux of every tree-DP problem." },
-      { "title": "Aggregate post-order", "detail": "DFS down, compute children, then combine. Track a global answer if the problem asks for a path/optimum across the tree." },
-      { "title": "Reroot if needed", "detail": "For 'answer for every root' questions, do a second DFS pushing the complement information from parent to each child." }
+      {
+        "title": "Define the per-node state",
+        "detail": "Decide what each subtree returns — a single number, or a tuple like (best including node, best excluding node)."
+      },
+      {
+        "title": "Write the combine rule",
+        "detail": "Express the parent's state from its children's states. This recurrence is the crux of every tree-DP problem."
+      },
+      {
+        "title": "Aggregate post-order",
+        "detail": "DFS down, compute children, then combine. Track a global answer if the problem asks for a path/optimum across the tree."
+      },
+      {
+        "title": "Reroot if needed",
+        "detail": "For 'answer for every root' questions, do a second DFS pushing the complement information from parent to each child."
+      }
     ],
-    "code": {
-      "language": "python",
-      "title": "house_robber_iii.py",
-      "source": "def rob(root):\n    def dfs(node):\n        if not node: return (0, 0)        # (rob, skip)\n        l = dfs(node.left)\n        r = dfs(node.right)\n        rob_here = node.val + l[1] + r[1]  # can't rob children\n        skip_here = max(l) + max(r)        # children free\n        return (rob_here, skip_here)\n    return max(dfs(root))"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "house_robber_iii.cpp",
+        "source": "// House Robber III. dfs returns {rob_this_node, skip_this_node}.\npair<long long,long long> dfs(TreeNode* node) {\n    if (!node) return {0, 0};\n    auto [lr, ls] = dfs(node->left);\n    auto [rr, rs] = dfs(node->right);\n    long long robHere  = node->val + ls + rs;        // children must be skipped\n    long long skipHere = max(lr, ls) + max(rr, rs);  // children free to choose\n    return {robHere, skipHere};\n}\nlong long rob(TreeNode* root) { auto [a, b] = dfs(root); return max(a, b); }"
+      },
+      {
+        "language": "python",
+        "title": "house_robber_iii.py",
+        "source": "def rob(root):\n    def dfs(node):\n        if not node: return (0, 0)        # (rob, skip)\n        l = dfs(node.left)\n        r = dfs(node.right)\n        rob_here = node.val + l[1] + r[1]  # can't rob children\n        skip_here = max(l) + max(r)        # children free\n        return (rob_here, skip_here)\n    return max(dfs(root))"
+      }
+    ],
     "complexity": {
       "time": "O(n)",
       "timeReason": "Each node combines a constant amount of child information once.",
@@ -43,20 +69,80 @@
   },
   "dryRun": {
     "input": "House Robber III on tree 3-(2-(null,3))-(3-(null,1))",
-    "columns": ["Node", "(rob, skip)", "Note"],
+    "columns": [
+      "Node",
+      "(rob, skip)",
+      "Note"
+    ],
     "rows": [
-      ["leaf 3", "(3, 0)", "rob leaf = its value"],
-      ["leaf 1", "(1, 0)", "—"],
-      ["2", "(2+0, 3) = (2,3)", "skip uses child's best"],
-      ["root 3", "(3+3+0, 3+1)=(6,4)", "answer = max(6,4)=7"]
+      [
+        "leaf 3",
+        "(3, 0)",
+        "rob leaf = its value"
+      ],
+      [
+        "leaf 1",
+        "(1, 0)",
+        "—"
+      ],
+      [
+        "2",
+        "(2+0, 3) = (2,3)",
+        "skip uses child's best"
+      ],
+      [
+        "root 3",
+        "(3+3+0, 3+1)=(6,4)",
+        "answer = max(6,4)=7"
+      ]
     ],
     "clickMoment": "Each node keeps two numbers, not one. Carrying both 'include' and 'exclude' lets the parent pick freely — that extra state is what makes tree DP expressive."
   },
   "problems": [
-    { "id": "tdp1", "title": "House Robber III", "difficulty": "Medium", "statement": "Max sum with no two directly-linked nodes chosen.", "hint": "Return (rob, skip) per node.", "tests": "Two-state subtree DP.", "link": "https://leetcode.com/problems/house-robber-iii/" },
-    { "id": "tdp2", "title": "Binary Tree Cameras", "difficulty": "Hard", "statement": "Minimum cameras to monitor all nodes.", "hint": "Three states per node: covered+camera, covered+no-camera, not-covered. Greedy bottom-up.", "tests": "Multi-state tree DP.", "link": "https://leetcode.com/problems/binary-tree-cameras/" },
-    { "id": "tdp3", "title": "Count Good Nodes in Binary Tree", "difficulty": "Medium", "statement": "Count nodes ≥ every ancestor on their path.", "hint": "Carry the running path maximum downward.", "tests": "Top-down accumulation.", "link": "https://leetcode.com/problems/count-good-nodes-in-binary-tree/" },
-    { "id": "tdp4", "title": "Distribute Coins in Binary Tree", "difficulty": "Medium", "statement": "Minimum moves to give each node exactly one coin.", "hint": "Each edge carries |subtree balance|; sum these in post-order.", "tests": "Subtree balance aggregation.", "link": "https://leetcode.com/problems/distribute-coins-in-binary-tree/" },
-    { "id": "tdp5", "title": "Sum of Distances in Tree", "difficulty": "Hard", "statement": "For each node, the sum of distances to all others.", "hint": "Classic rerooting: compute for the root, then adjust per child in a second DFS.", "tests": "Rerooting technique.", "link": "https://leetcode.com/problems/sum-of-distances-in-tree/" }
+    {
+      "id": "tdp1",
+      "title": "House Robber III",
+      "difficulty": "Medium",
+      "statement": "Max sum with no two directly-linked nodes chosen.",
+      "hint": "Return (rob, skip) per node.",
+      "tests": "Two-state subtree DP.",
+      "link": "https://leetcode.com/problems/house-robber-iii/"
+    },
+    {
+      "id": "tdp2",
+      "title": "Binary Tree Cameras",
+      "difficulty": "Hard",
+      "statement": "Minimum cameras to monitor all nodes.",
+      "hint": "Three states per node: covered+camera, covered+no-camera, not-covered. Greedy bottom-up.",
+      "tests": "Multi-state tree DP.",
+      "link": "https://leetcode.com/problems/binary-tree-cameras/"
+    },
+    {
+      "id": "tdp3",
+      "title": "Count Good Nodes in Binary Tree",
+      "difficulty": "Medium",
+      "statement": "Count nodes ≥ every ancestor on their path.",
+      "hint": "Carry the running path maximum downward.",
+      "tests": "Top-down accumulation.",
+      "link": "https://leetcode.com/problems/count-good-nodes-in-binary-tree/"
+    },
+    {
+      "id": "tdp4",
+      "title": "Distribute Coins in Binary Tree",
+      "difficulty": "Medium",
+      "statement": "Minimum moves to give each node exactly one coin.",
+      "hint": "Each edge carries |subtree balance|; sum these in post-order.",
+      "tests": "Subtree balance aggregation.",
+      "link": "https://leetcode.com/problems/distribute-coins-in-binary-tree/"
+    },
+    {
+      "id": "tdp5",
+      "title": "Sum of Distances in Tree",
+      "difficulty": "Hard",
+      "statement": "For each node, the sum of distances to all others.",
+      "hint": "Classic rerooting: compute for the root, then adjust per child in a second DFS.",
+      "tests": "Rerooting technique.",
+      "link": "https://leetcode.com/problems/sum-of-distances-in-tree/"
+    }
   ]
 }

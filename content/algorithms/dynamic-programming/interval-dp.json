@@ -6,8 +6,15 @@
   "tagline": "Solve a range by trying every split point — DP over subintervals [l, r].",
   "estMinutes": 18,
   "simulator": null,
-  "complexity": { "time": "O(n³)", "space": "O(n²)" },
-  "tags": ["dp", "intervals", "splitting"],
+  "complexity": {
+    "time": "O(n³)",
+    "space": "O(n²)"
+  },
+  "tags": [
+    "dp",
+    "intervals",
+    "splitting"
+  ],
   "intuition": {
     "analogy": "Deciding the cheapest way to chain-multiply a row of matrices: you pick where to make the final 'cut', solve each side optimally, and pay for combining them. You try every possible cut and keep the cheapest.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Base case", "detail": "Single elements (l == r) usually cost 0 or a trivial value." },
-      { "title": "Increase interval length", "detail": "For len from 2 to n, for each l, set r = l + len − 1." },
-      { "title": "Try every split", "detail": "dp[l][r] = optimum over k in [l, r) of dp[l][k] + dp[k+1][r] + merge-cost. Sometimes the 'last' element to act is chosen instead of a split (e.g. burst balloons)." }
+      {
+        "title": "Base case",
+        "detail": "Single elements (l == r) usually cost 0 or a trivial value."
+      },
+      {
+        "title": "Increase interval length",
+        "detail": "For len from 2 to n, for each l, set r = l + len − 1."
+      },
+      {
+        "title": "Try every split",
+        "detail": "dp[l][r] = optimum over k in [l, r) of dp[l][k] + dp[k+1][r] + merge-cost. Sometimes the 'last' element to act is chosen instead of a split (e.g. burst balloons)."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "matrix_chain.cpp",
-      "source": "// dp[l][r] = min multiplications for matrices l..r; dims p[0..n]\nfor (int len = 2; len <= n; ++len)\n  for (int l = 1; l + len - 1 <= n; ++l) {\n    int r = l + len - 1; dp[l][r] = INT_MAX;\n    for (int k = l; k < r; ++k)\n      dp[l][r] = min(dp[l][r],\n        dp[l][k] + dp[k+1][r] + p[l-1]*p[k]*p[r]);\n  }"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "matrix_chain.cpp",
+        "source": "// dp[l][r] = min multiplications for matrices l..r; dims p[0..n]\nfor (int len = 2; len <= n; ++len)\n  for (int l = 1; l + len - 1 <= n; ++l) {\n    int r = l + len - 1; dp[l][r] = INT_MAX;\n    for (int k = l; k < r; ++k)\n      dp[l][r] = min(dp[l][r],\n        dp[l][k] + dp[k+1][r] + p[l-1]*p[k]*p[r]);\n  }"
+      },
+      {
+        "language": "python",
+        "title": "matrix_chain.py",
+        "source": "def matrix_chain(p):              # p[0..n]; matrix i has dims p[i-1] x p[i]\n    n = len(p) - 1\n    INF = float('inf')\n    dp = [[0] * (n + 1) for _ in range(n + 1)]\n    for length in range(2, n + 1):\n        for l in range(1, n - length + 2):\n            r = l + length - 1\n            dp[l][r] = INF\n            for k in range(l, r):\n                dp[l][r] = min(dp[l][r],\n                               dp[l][k] + dp[k+1][r] + p[l-1]*p[k]*p[r])\n    return dp[1][n]"
+      }
+    ],
     "complexity": {
       "time": "O(n³)",
       "timeReason": "n² intervals, each trying up to n split points.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "Burst Balloons [3,1,5] (with 1s padded at ends)",
-    "columns": ["Interval", "Last balloon", "Value"],
+    "columns": [
+      "Interval",
+      "Last balloon",
+      "Value"
+    ],
     "rows": [
-      ["[1,1]", "burst 1", "1·3·5 = 15"],
-      ["[0,0]", "burst 3", "1·3·1 = 3"],
-      ["[2,2]", "burst 5", "1·5·1 = 5"],
-      ["whole", "choose last", "max combination = 35"]
+      [
+        "[1,1]",
+        "burst 1",
+        "1·3·5 = 15"
+      ],
+      [
+        "[0,0]",
+        "burst 3",
+        "1·3·1 = 3"
+      ],
+      [
+        "[2,2]",
+        "burst 5",
+        "1·5·1 = 5"
+      ],
+      [
+        "whole",
+        "choose last",
+        "max combination = 35"
+      ]
     ],
     "clickMoment": "Choosing which balloon bursts LAST in a range fixes its neighbours as the range's borders — turning a messy global order into clean independent subintervals."
   },
   "problems": [
-    { "id": "id1", "title": "Burst Balloons", "difficulty": "Hard", "statement": "Max coins from bursting balloons.", "hint": "Pick the last balloon to burst in each interval.", "tests": "Last-action interval DP.", "link": "https://leetcode.com/problems/burst-balloons/" },
-    { "id": "id2", "title": "Matrix Chain (Min Score Triangulation)", "difficulty": "Medium", "statement": "Min triangulation score of a polygon.", "hint": "dp[l][r] over the apex vertex k.", "tests": "Classic interval split.", "link": "https://leetcode.com/problems/minimum-score-triangulation-of-polygon/" },
-    { "id": "id3", "title": "Stone Game / Merge Stones", "difficulty": "Hard", "statement": "Minimum cost to merge stone piles.", "hint": "Interval DP with a merge-cost (prefix sums).", "tests": "Merge-cost interval DP.", "link": "https://leetcode.com/problems/minimum-cost-to-merge-stones/" },
-    { "id": "id4", "title": "Strange Printer", "difficulty": "Hard", "statement": "Min turns to print a string.", "hint": "dp[l][r] with merging equal endpoints.", "tests": "Interval DP with character matching.", "link": "https://leetcode.com/problems/strange-printer/" },
-    { "id": "id5", "title": "Palindrome Partitioning II", "difficulty": "Hard", "statement": "Min cuts to partition into palindromes.", "hint": "Precompute palindrome ranges, then interval/linear DP.", "tests": "Range feasibility + DP.", "link": "https://leetcode.com/problems/palindrome-partitioning-ii/" }
+    {
+      "id": "id1",
+      "title": "Burst Balloons",
+      "difficulty": "Hard",
+      "statement": "Max coins from bursting balloons.",
+      "hint": "Pick the last balloon to burst in each interval.",
+      "tests": "Last-action interval DP.",
+      "link": "https://leetcode.com/problems/burst-balloons/"
+    },
+    {
+      "id": "id2",
+      "title": "Matrix Chain (Min Score Triangulation)",
+      "difficulty": "Medium",
+      "statement": "Min triangulation score of a polygon.",
+      "hint": "dp[l][r] over the apex vertex k.",
+      "tests": "Classic interval split.",
+      "link": "https://leetcode.com/problems/minimum-score-triangulation-of-polygon/"
+    },
+    {
+      "id": "id3",
+      "title": "Stone Game / Merge Stones",
+      "difficulty": "Hard",
+      "statement": "Minimum cost to merge stone piles.",
+      "hint": "Interval DP with a merge-cost (prefix sums).",
+      "tests": "Merge-cost interval DP.",
+      "link": "https://leetcode.com/problems/minimum-cost-to-merge-stones/"
+    },
+    {
+      "id": "id4",
+      "title": "Strange Printer",
+      "difficulty": "Hard",
+      "statement": "Min turns to print a string.",
+      "hint": "dp[l][r] with merging equal endpoints.",
+      "tests": "Interval DP with character matching.",
+      "link": "https://leetcode.com/problems/strange-printer/"
+    },
+    {
+      "id": "id5",
+      "title": "Palindrome Partitioning II",
+      "difficulty": "Hard",
+      "statement": "Min cuts to partition into palindromes.",
+      "hint": "Precompute palindrome ranges, then interval/linear DP.",
+      "tests": "Range feasibility + DP.",
+      "link": "https://leetcode.com/problems/palindrome-partitioning-ii/"
+    }
   ]
 }

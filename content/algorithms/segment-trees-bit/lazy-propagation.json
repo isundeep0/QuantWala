@@ -6,8 +6,15 @@
   "tagline": "Range updates in O(log n) by deferring work until a node is actually visited.",
   "estMinutes": 20,
   "simulator": null,
-  "complexity": { "time": "O(log n) per range op", "space": "O(n)" },
-  "tags": ["segment tree", "range update", "deferred"],
+  "complexity": {
+    "time": "O(log n) per range op",
+    "space": "O(n)"
+  },
+  "tags": [
+    "segment tree",
+    "range update",
+    "deferred"
+  ],
   "intuition": {
     "analogy": "A manager told 'give everyone on your team a raise' doesn't immediately walk to each desk. They note 'pending: +10% for my team' and only push it down when someone actually asks about a specific sub-team.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Add a lazy tag", "detail": "Each node has a pending value (e.g. 'add x to this whole range') not yet pushed to children." },
-      { "title": "Apply on full cover", "detail": "When a range update fully covers a node, adjust its aggregate (e.g. sum += x · rangeLen) and add x to its lazy tag; do not recurse." },
-      { "title": "Push down before descending", "detail": "Before recursing into children (for a partial update or query), apply the node's lazy tag to both children and clear it." }
+      {
+        "title": "Add a lazy tag",
+        "detail": "Each node has a pending value (e.g. 'add x to this whole range') not yet pushed to children."
+      },
+      {
+        "title": "Apply on full cover",
+        "detail": "When a range update fully covers a node, adjust its aggregate (e.g. sum += x · rangeLen) and add x to its lazy tag; do not recurse."
+      },
+      {
+        "title": "Push down before descending",
+        "detail": "Before recursing into children (for a partial update or query), apply the node's lazy tag to both children and clear it."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "lazy_segtree.cpp",
-      "source": "long long seg[4*N], lazy[4*N];\nvoid push(int node, int lo, int hi) {\n    if (!lazy[node]) return;\n    int mid = (lo+hi)/2;\n    for (int ch : {2*node, 2*node+1}) {\n        int len = (ch == 2*node) ? mid - lo + 1 : hi - mid;\n        seg[ch] += lazy[node] * len;\n        lazy[ch] += lazy[node];\n    }\n    lazy[node] = 0;\n}\nvoid update(int node,int lo,int hi,int l,int r,long long v){\n    if (r < lo || hi < l) return;\n    if (l <= lo && hi <= r){ seg[node]+=v*(hi-lo+1); lazy[node]+=v; return; }\n    push(node, lo, hi); int mid=(lo+hi)/2;\n    update(2*node,lo,mid,l,r,v); update(2*node+1,mid+1,hi,l,r,v);\n    seg[node]=seg[2*node]+seg[2*node+1];\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "lazy_segtree.cpp",
+        "source": "long long seg[4*N], lazy[4*N];\nvoid push(int node, int lo, int hi) {\n    if (!lazy[node]) return;\n    int mid = (lo+hi)/2;\n    for (int ch : {2*node, 2*node+1}) {\n        int len = (ch == 2*node) ? mid - lo + 1 : hi - mid;\n        seg[ch] += lazy[node] * len;\n        lazy[ch] += lazy[node];\n    }\n    lazy[node] = 0;\n}\nvoid update(int node,int lo,int hi,int l,int r,long long v){\n    if (r < lo || hi < l) return;\n    if (l <= lo && hi <= r){ seg[node]+=v*(hi-lo+1); lazy[node]+=v; return; }\n    push(node, lo, hi); int mid=(lo+hi)/2;\n    update(2*node,lo,mid,l,r,v); update(2*node+1,mid+1,hi,l,r,v);\n    seg[node]=seg[2*node]+seg[2*node+1];\n}"
+      },
+      {
+        "language": "python",
+        "title": "lazy_segtree.py",
+        "source": "class LazySeg:\n    def __init__(self, n):\n        self.n = n\n        self.seg = [0] * (4 * n)\n        self.lazy = [0] * (4 * n)\n    def _push(self, node, lo, hi):\n        if not self.lazy[node]:\n            return\n        mid = (lo + hi) // 2\n        for ch, length in ((2*node, mid - lo + 1), (2*node+1, hi - mid)):\n            self.seg[ch] += self.lazy[node] * length\n            self.lazy[ch] += self.lazy[node]\n        self.lazy[node] = 0\n    def update(self, node, lo, hi, l, r, v):\n        if r < lo or hi < l:\n            return\n        if l <= lo and hi <= r:\n            self.seg[node] += v * (hi - lo + 1)\n            self.lazy[node] += v\n            return\n        self._push(node, lo, hi)\n        mid = (lo + hi) // 2\n        self.update(2*node, lo, mid, l, r, v)\n        self.update(2*node+1, mid+1, hi, l, r, v)\n        self.seg[node] = self.seg[2*node] + self.seg[2*node+1]"
+      }
+    ],
     "complexity": {
       "time": "O(log n) per range update/query",
       "timeReason": "Full-cover nodes stop recursion; only O(log n) boundary nodes are split.",
@@ -42,19 +65,75 @@
   },
   "dryRun": {
     "input": "Add 5 to range [0,3] on a size-8 array, then query [2,2]",
-    "columns": ["Step", "Node", "Effect"],
+    "columns": [
+      "Step",
+      "Node",
+      "Effect"
+    ],
     "rows": [
-      ["update", "[0,3] fully covered", "sum += 5·4; lazy += 5; stop"],
-      ["query [2,2]", "descend [0,3]", "push down 5 to children first"],
-      ["leaf [2,2]", "value carries +5", "returns original + 5"]
+      [
+        "update",
+        "[0,3] fully covered",
+        "sum += 5·4; lazy += 5; stop"
+      ],
+      [
+        "query [2,2]",
+        "descend [0,3]",
+        "push down 5 to children first"
+      ],
+      [
+        "leaf [2,2]",
+        "value carries +5",
+        "returns original + 5"
+      ]
     ],
     "clickMoment": "The range update never touched the individual leaves — it parked '+5' on node [0,3]. Only the later query forced that +5 to trickle down exactly where it was needed."
   },
   "problems": [
-    { "id": "lp1", "title": "Range Update Range Sum", "difficulty": "Medium", "statement": "Add to a range; query range sums.", "hint": "Lazy segment tree with additive tags.", "tests": "Core lazy propagation.", "link": "https://cses.fi/problemset/task/1735" },
-    { "id": "lp2", "title": "Range Assignment + Sum", "difficulty": "Hard", "statement": "Assign a value to a range; query sums.", "hint": "Lazy tag that overwrites rather than adds.", "tests": "Assignment-style lazy.", "link": "https://cses.fi/problemset/task/1735" },
-    { "id": "lp3", "title": "My Calendar III", "difficulty": "Hard", "statement": "Max overlap of booked intervals.", "hint": "Range +1 with lazy propagation (or a difference array).", "tests": "Range increment + max.", "link": "https://leetcode.com/problems/my-calendar-iii/" },
-    { "id": "lp4", "title": "Range Module", "difficulty": "Hard", "statement": "Track and query covered ranges.", "hint": "Segment tree with range assign + lazy, or interval set.", "tests": "Range assign queries.", "link": "https://leetcode.com/problems/range-module/" },
-    { "id": "lp5", "title": "Number of Flowers in Full Bloom", "difficulty": "Hard", "statement": "Count active intervals at query times.", "hint": "Difference-array/lazy counting over time.", "tests": "Range increment counting.", "link": "https://leetcode.com/problems/number-of-flowers-in-full-bloom/" }
+    {
+      "id": "lp1",
+      "title": "Range Update Range Sum",
+      "difficulty": "Medium",
+      "statement": "Add to a range; query range sums.",
+      "hint": "Lazy segment tree with additive tags.",
+      "tests": "Core lazy propagation.",
+      "link": "https://cses.fi/problemset/task/1735"
+    },
+    {
+      "id": "lp2",
+      "title": "Range Assignment + Sum",
+      "difficulty": "Hard",
+      "statement": "Assign a value to a range; query sums.",
+      "hint": "Lazy tag that overwrites rather than adds.",
+      "tests": "Assignment-style lazy.",
+      "link": "https://cses.fi/problemset/task/1735"
+    },
+    {
+      "id": "lp3",
+      "title": "My Calendar III",
+      "difficulty": "Hard",
+      "statement": "Max overlap of booked intervals.",
+      "hint": "Range +1 with lazy propagation (or a difference array).",
+      "tests": "Range increment + max.",
+      "link": "https://leetcode.com/problems/my-calendar-iii/"
+    },
+    {
+      "id": "lp4",
+      "title": "Range Module",
+      "difficulty": "Hard",
+      "statement": "Track and query covered ranges.",
+      "hint": "Segment tree with range assign + lazy, or interval set.",
+      "tests": "Range assign queries.",
+      "link": "https://leetcode.com/problems/range-module/"
+    },
+    {
+      "id": "lp5",
+      "title": "Number of Flowers in Full Bloom",
+      "difficulty": "Hard",
+      "statement": "Count active intervals at query times.",
+      "hint": "Difference-array/lazy counting over time.",
+      "tests": "Range increment counting.",
+      "link": "https://leetcode.com/problems/number-of-flowers-in-full-bloom/"
+    }
   ]
 }

@@ -6,8 +6,15 @@
   "tagline": "Include-or-exclude each element — the simplest backtracking decision tree.",
   "estMinutes": 14,
   "simulator": "subsets",
-  "complexity": { "time": "O(n · 2^n)", "space": "O(n)" },
-  "tags": ["backtracking", "recursion", "subsets"],
+  "complexity": {
+    "time": "O(n · 2^n)",
+    "space": "O(n)"
+  },
+  "tags": [
+    "backtracking",
+    "recursion",
+    "subsets"
+  ],
   "intuition": {
     "analogy": "Packing for a trip, you go through each item and make one binary choice: pack it or leave it. Every distinct set of choices produces a different packing list — and all together they form every possible packing list.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Define the recursion", "detail": "dfs(i, current): if i == n, record current; else branch." },
-      { "title": "Two branches", "detail": "Exclude: dfs(i+1, current). Include: add a[i], dfs(i+1, current), then remove a[i] (backtrack)." },
-      { "title": "Collect at leaves", "detail": "Each complete path to depth n yields one subset; a copy is stored in the results." }
+      {
+        "title": "Define the recursion",
+        "detail": "dfs(i, current): if i == n, record current; else branch."
+      },
+      {
+        "title": "Two branches",
+        "detail": "Exclude: dfs(i+1, current). Include: add a[i], dfs(i+1, current), then remove a[i] (backtrack)."
+      },
+      {
+        "title": "Collect at leaves",
+        "detail": "Each complete path to depth n yields one subset; a copy is stored in the results."
+      }
     ],
-    "code": {
-      "language": "python",
-      "title": "subsets.py",
-      "source": "def subsets(a):\n    res, cur = [], []\n    def dfs(i):\n        if i == len(a):\n            res.append(cur[:])      # snapshot\n            return\n        dfs(i + 1)                  # exclude a[i]\n        cur.append(a[i])            # include a[i]\n        dfs(i + 1)\n        cur.pop()                   # backtrack\n    dfs(0)\n    return res"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "subsets.cpp",
+        "source": "void dfs(vector<int>& a, int i, vector<int>& cur, vector<vector<int>>& res) {\n    if (i == (int)a.size()) { res.push_back(cur); return; }\n    dfs(a, i + 1, cur, res);          // exclude a[i]\n    cur.push_back(a[i]);              // include a[i]\n    dfs(a, i + 1, cur, res);\n    cur.pop_back();                   // backtrack\n}"
+      },
+      {
+        "language": "python",
+        "title": "subsets.py",
+        "source": "def subsets(a):\n    res, cur = [], []\n    def dfs(i):\n        if i == len(a):\n            res.append(cur[:])      # snapshot\n            return\n        dfs(i + 1)                  # exclude a[i]\n        cur.append(a[i])            # include a[i]\n        dfs(i + 1)\n        cur.pop()                   # backtrack\n    dfs(0)\n    return res"
+      }
+    ],
     "complexity": {
       "time": "O(n · 2^n)",
       "timeReason": "2^n subsets, each costing O(n) to copy into the result.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "a = [1, 2]",
-    "columns": ["Decision path", "current", "Recorded"],
+    "columns": [
+      "Decision path",
+      "current",
+      "Recorded"
+    ],
     "rows": [
-      ["exclude 1, exclude 2", "[]", "{}"],
-      ["exclude 1, include 2", "[2]", "{2}"],
-      ["include 1, exclude 2", "[1]", "{1}"],
-      ["include 1, include 2", "[1,2]", "{1,2}"]
+      [
+        "exclude 1, exclude 2",
+        "[]",
+        "{}"
+      ],
+      [
+        "exclude 1, include 2",
+        "[2]",
+        "{2}"
+      ],
+      [
+        "include 1, exclude 2",
+        "[1]",
+        "{1}"
+      ],
+      [
+        "include 1, include 2",
+        "[1,2]",
+        "{1,2}"
+      ]
     ],
     "clickMoment": "Read the four leaves: they're exactly the binary numbers 00, 01, 10, 11. The decision tree IS the binary counter from 0 to 2^n − 1."
   },
   "problems": [
-    { "id": "su1", "title": "Subsets", "difficulty": "Medium", "statement": "Return all subsets of distinct integers.", "hint": "Include/exclude recursion.", "tests": "Core power set.", "link": "https://leetcode.com/problems/subsets/" },
-    { "id": "su2", "title": "Subsets II", "difficulty": "Medium", "statement": "Power set with duplicates, no repeated subsets.", "hint": "Sort; skip duplicate siblings at each level.", "tests": "Dedup in backtracking.", "link": "https://leetcode.com/problems/subsets-ii/" },
-    { "id": "su3", "title": "Combinations", "difficulty": "Medium", "statement": "All k-length combinations from 1..n.", "hint": "Start index + fixed depth k.", "tests": "Combination variant.", "link": "https://leetcode.com/problems/combinations/" },
-    { "id": "su4", "title": "Combination Sum", "difficulty": "Medium", "statement": "All combinations summing to target (reuse allowed).", "hint": "Backtrack with a running sum; allow reusing the same index.", "tests": "Constrained subsets.", "link": "https://leetcode.com/problems/combination-sum/" },
-    { "id": "su5", "title": "Letter Combinations of a Phone Number", "difficulty": "Medium", "statement": "All letter strings a digit string can map to.", "hint": "Branch over each digit's letters.", "tests": "Cartesian product via backtracking.", "link": "https://leetcode.com/problems/letter-combinations-of-a-phone-number/" }
+    {
+      "id": "su1",
+      "title": "Subsets",
+      "difficulty": "Medium",
+      "statement": "Return all subsets of distinct integers.",
+      "hint": "Include/exclude recursion.",
+      "tests": "Core power set.",
+      "link": "https://leetcode.com/problems/subsets/"
+    },
+    {
+      "id": "su2",
+      "title": "Subsets II",
+      "difficulty": "Medium",
+      "statement": "Power set with duplicates, no repeated subsets.",
+      "hint": "Sort; skip duplicate siblings at each level.",
+      "tests": "Dedup in backtracking.",
+      "link": "https://leetcode.com/problems/subsets-ii/"
+    },
+    {
+      "id": "su3",
+      "title": "Combinations",
+      "difficulty": "Medium",
+      "statement": "All k-length combinations from 1..n.",
+      "hint": "Start index + fixed depth k.",
+      "tests": "Combination variant.",
+      "link": "https://leetcode.com/problems/combinations/"
+    },
+    {
+      "id": "su4",
+      "title": "Combination Sum",
+      "difficulty": "Medium",
+      "statement": "All combinations summing to target (reuse allowed).",
+      "hint": "Backtrack with a running sum; allow reusing the same index.",
+      "tests": "Constrained subsets.",
+      "link": "https://leetcode.com/problems/combination-sum/"
+    },
+    {
+      "id": "su5",
+      "title": "Letter Combinations of a Phone Number",
+      "difficulty": "Medium",
+      "statement": "All letter strings a digit string can map to.",
+      "hint": "Branch over each digit's letters.",
+      "tests": "Cartesian product via backtracking.",
+      "link": "https://leetcode.com/problems/letter-combinations-of-a-phone-number/"
+    }
   ]
 }

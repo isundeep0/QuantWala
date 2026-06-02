@@ -6,8 +6,15 @@
   "tagline": "The Euclidean algorithm computes gcd in O(log min) — plus extended gcd for modular inverses.",
   "estMinutes": 14,
   "simulator": null,
-  "complexity": { "time": "O(log min(a,b))", "space": "O(1)" },
-  "tags": ["number theory", "euclid", "modular inverse"],
+  "complexity": {
+    "time": "O(log min(a,b))",
+    "space": "O(1)"
+  },
+  "tags": [
+    "number theory",
+    "euclid",
+    "modular inverse"
+  ],
   "intuition": {
     "analogy": "Tiling a rectangle with the largest possible square tiles: repeatedly cut the largest square you can off the rectangle, and the leftover strip is a smaller rectangle. The side of the final perfect square is the gcd.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Euclid's recursion", "detail": "gcd(a, b) = b == 0 ? a : gcd(b, a mod b). Each step replaces (a, b) with (b, a mod b)." },
-      { "title": "LCM from GCD", "detail": "lcm(a, b) = a / gcd(a, b) · b. Divide before multiplying to avoid overflow." },
-      { "title": "Extended gcd", "detail": "Track coefficients so a·x + b·y = gcd. The inverse of a modulo m (when gcd=1) is x mod m." }
+      {
+        "title": "Euclid's recursion",
+        "detail": "gcd(a, b) = b == 0 ? a : gcd(b, a mod b). Each step replaces (a, b) with (b, a mod b)."
+      },
+      {
+        "title": "LCM from GCD",
+        "detail": "lcm(a, b) = a / gcd(a, b) · b. Divide before multiplying to avoid overflow."
+      },
+      {
+        "title": "Extended gcd",
+        "detail": "Track coefficients so a·x + b·y = gcd. The inverse of a modulo m (when gcd=1) is x mod m."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "gcd.cpp",
-      "source": "long long gcd(long long a, long long b) {\n    while (b) { a %= b; swap(a, b); }\n    return a;\n}\nlong long lcm(long long a, long long b) {\n    return a / gcd(a, b) * b;\n}\n// extended: returns gcd, sets x,y with a*x + b*y = gcd\nlong long egcd(long long a, long long b, long long& x, long long& y){\n    if (!b){ x=1; y=0; return a; }\n    long long x1,y1, g = egcd(b, a%b, x1, y1);\n    x = y1; y = x1 - (a/b)*y1; return g;\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "gcd.cpp",
+        "source": "long long gcd(long long a, long long b) {\n    while (b) { a %= b; swap(a, b); }\n    return a;\n}\nlong long lcm(long long a, long long b) {\n    return a / gcd(a, b) * b;\n}\n// extended: returns gcd, sets x,y with a*x + b*y = gcd\nlong long egcd(long long a, long long b, long long& x, long long& y){\n    if (!b){ x=1; y=0; return a; }\n    long long x1,y1, g = egcd(b, a%b, x1, y1);\n    x = y1; y = x1 - (a/b)*y1; return g;\n}"
+      },
+      {
+        "language": "python",
+        "title": "gcd.py",
+        "source": "def gcd(a, b):\n    while b:\n        a, b = b, a % b\n    return a\n\ndef lcm(a, b):\n    return a // gcd(a, b) * b\n\ndef egcd(a, b):                # returns (g, x, y) with a*x + b*y = g\n    if b == 0:\n        return (a, 1, 0)\n    g, x1, y1 = egcd(b, a % b)\n    return (g, y1, x1 - (a // b) * y1)"
+      }
+    ],
     "complexity": {
       "time": "O(log min(a, b))",
       "timeReason": "Remainders shrink at least by a factor related to the golden ratio each two steps.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "gcd(48, 18)",
-    "columns": ["a, b", "a mod b", "Next"],
+    "columns": [
+      "a, b",
+      "a mod b",
+      "Next"
+    ],
     "rows": [
-      ["48, 18", "12", "(18, 12)"],
-      ["18, 12", "6", "(12, 6)"],
-      ["12, 6", "0", "(6, 0)"],
-      ["result", "—", "gcd = 6"]
+      [
+        "48, 18",
+        "12",
+        "(18, 12)"
+      ],
+      [
+        "18, 12",
+        "6",
+        "(12, 6)"
+      ],
+      [
+        "12, 6",
+        "0",
+        "(6, 0)"
+      ],
+      [
+        "result",
+        "—",
+        "gcd = 6"
+      ]
     ],
     "clickMoment": "Each line replaces the larger number with a remainder that's strictly smaller — the values plummet (48→18→12→6) in just a few steps, which is why gcd is logarithmic, not linear."
   },
   "problems": [
-    { "id": "gl1", "title": "GCD of Strings", "difficulty": "Easy", "statement": "Largest string dividing both inputs.", "hint": "Apply the Euclidean idea to string repetition.", "tests": "GCD analogy.", "link": "https://leetcode.com/problems/greatest-common-divisor-of-strings/" },
-    { "id": "gl2", "title": "Water and Jug Problem", "difficulty": "Medium", "statement": "Measure a target using two jugs.", "hint": "Solvable iff target is a multiple of gcd(jug1, jug2).", "tests": "GCD reachability (Bézout).", "link": "https://leetcode.com/problems/water-and-jug-problem/" },
-    { "id": "gl3", "title": "Smallest Multiple (LCM)", "difficulty": "Easy", "statement": "LCM of 1..n.", "hint": "Fold lcm across the range.", "tests": "LCM accumulation.", "link": "https://projecteuler.net/problem=5" },
-    { "id": "gl4", "title": "Modular Inverse", "difficulty": "Medium", "statement": "Compute a⁻¹ mod m for coprime a, m.", "hint": "Extended gcd, or Fermat when m is prime.", "tests": "Extended Euclid.", "link": "https://cses.fi/problemset/task/1712" },
-    { "id": "gl5", "title": "Number of Subarrays with GCD = k", "difficulty": "Medium", "statement": "Count subarrays whose gcd equals k.", "hint": "Rolling gcd over subarrays (gcd only decreases).", "tests": "GCD over ranges.", "link": "https://leetcode.com/problems/number-of-subarrays-with-gcd-equal-to-k/" }
+    {
+      "id": "gl1",
+      "title": "GCD of Strings",
+      "difficulty": "Easy",
+      "statement": "Largest string dividing both inputs.",
+      "hint": "Apply the Euclidean idea to string repetition.",
+      "tests": "GCD analogy.",
+      "link": "https://leetcode.com/problems/greatest-common-divisor-of-strings/"
+    },
+    {
+      "id": "gl2",
+      "title": "Water and Jug Problem",
+      "difficulty": "Medium",
+      "statement": "Measure a target using two jugs.",
+      "hint": "Solvable iff target is a multiple of gcd(jug1, jug2).",
+      "tests": "GCD reachability (Bézout).",
+      "link": "https://leetcode.com/problems/water-and-jug-problem/"
+    },
+    {
+      "id": "gl3",
+      "title": "Smallest Multiple (LCM)",
+      "difficulty": "Easy",
+      "statement": "LCM of 1..n.",
+      "hint": "Fold lcm across the range.",
+      "tests": "LCM accumulation.",
+      "link": "https://projecteuler.net/problem=5"
+    },
+    {
+      "id": "gl4",
+      "title": "Modular Inverse",
+      "difficulty": "Medium",
+      "statement": "Compute a⁻¹ mod m for coprime a, m.",
+      "hint": "Extended gcd, or Fermat when m is prime.",
+      "tests": "Extended Euclid.",
+      "link": "https://cses.fi/problemset/task/1712"
+    },
+    {
+      "id": "gl5",
+      "title": "Number of Subarrays with GCD = k",
+      "difficulty": "Medium",
+      "statement": "Count subarrays whose gcd equals k.",
+      "hint": "Rolling gcd over subarrays (gcd only decreases).",
+      "tests": "GCD over ranges.",
+      "link": "https://leetcode.com/problems/number-of-subarrays-with-gcd-equal-to-k/"
+    }
   ]
 }

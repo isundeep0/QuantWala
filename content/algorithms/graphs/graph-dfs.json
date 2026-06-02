@@ -6,8 +6,15 @@
   "tagline": "Dive deep before backtracking — the basis of connectivity, cycles, and topological order.",
   "estMinutes": 16,
   "simulator": "graph-dfs",
-  "complexity": { "time": "O(V + E)", "space": "O(V)" },
-  "tags": ["graph", "recursion", "backtracking"],
+  "complexity": {
+    "time": "O(V + E)",
+    "space": "O(V)"
+  },
+  "tags": [
+    "graph",
+    "recursion",
+    "backtracking"
+  ],
   "intuition": {
     "analogy": "Exploring a cave with a ball of string: you follow one passage as far as it goes, and only when you hit a dead end do you backtrack along the string to the last junction and try another passage.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Visit and mark", "detail": "On entering a node, mark it visited so you never re-enter it." },
-      { "title": "Recurse into neighbours", "detail": "For each unvisited neighbour, recurse. This dives deep before exploring siblings." },
-      { "title": "Backtrack", "detail": "When all neighbours are explored, return to the caller. Post-order (finish) time is recorded here — useful for topo sort and SCC." }
+      {
+        "title": "Visit and mark",
+        "detail": "On entering a node, mark it visited so you never re-enter it."
+      },
+      {
+        "title": "Recurse into neighbours",
+        "detail": "For each unvisited neighbour, recurse. This dives deep before exploring siblings."
+      },
+      {
+        "title": "Backtrack",
+        "detail": "When all neighbours are explored, return to the caller. Post-order (finish) time is recorded here — useful for topo sort and SCC."
+      }
     ],
-    "code": {
-      "language": "python",
-      "title": "dfs.py",
-      "source": "def dfs(adj, u, visited, order):\n    visited.add(u)\n    for v in adj[u]:\n        if v not in visited:\n            dfs(adj, v, visited, order)\n    order.append(u)        # post-order / finish time"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "dfs.cpp",
+        "source": "void dfs(vector<vector<int>>& adj, int u,\n         vector<bool>& visited, vector<int>& order) {\n    visited[u] = true;\n    for (int v : adj[u])\n        if (!visited[v]) dfs(adj, v, visited, order);\n    order.push_back(u);            // post-order / finish time\n}"
+      },
+      {
+        "language": "python",
+        "title": "dfs.py",
+        "source": "def dfs(adj, u, visited, order):\n    visited.add(u)\n    for v in adj[u]:\n        if v not in visited:\n            dfs(adj, v, visited, order)\n    order.append(u)        # post-order / finish time"
+      }
+    ],
     "complexity": {
       "time": "O(V + E)",
       "timeReason": "Each vertex is entered once; each edge is examined once.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "DFS from 0 in 0-1, 0-2, 1-3, 1-4, 2-5, 4-6, 5-6",
-    "columns": ["Action", "Stack/path", "Visited"],
+    "columns": [
+      "Action",
+      "Stack/path",
+      "Visited"
+    ],
     "rows": [
-      ["enter 0", "0", "0"],
-      ["enter 1", "0,1", "0,1"],
-      ["enter 3", "0,1,3", "0,1,3 (dead end → back)"],
-      ["enter 4→6→5", "0,1,4,6,5", "deep dive then backtrack to 2"]
+      [
+        "enter 0",
+        "0",
+        "0"
+      ],
+      [
+        "enter 1",
+        "0,1",
+        "0,1"
+      ],
+      [
+        "enter 3",
+        "0,1,3",
+        "0,1,3 (dead end → back)"
+      ],
+      [
+        "enter 4→6→5",
+        "0,1,4,6,5",
+        "deep dive then backtrack to 2"
+      ]
     ],
     "clickMoment": "DFS commits fully to one branch (0→1→3) before ever touching node 2. The recursion stack IS the current root-to-node path — which is exactly why backtracking algorithms are DFS in disguise."
   },
   "problems": [
-    { "id": "dfs1", "title": "Number of Provinces", "difficulty": "Medium", "statement": "Count connected components in a friendship matrix.", "hint": "DFS/union-find over the adjacency.", "tests": "Connected components.", "link": "https://leetcode.com/problems/number-of-provinces/" },
-    { "id": "dfs2", "title": "Course Schedule", "difficulty": "Medium", "statement": "Detect if prerequisites contain a cycle.", "hint": "DFS with gray/black colouring detects a back edge (cycle).", "tests": "Directed cycle detection.", "link": "https://leetcode.com/problems/course-schedule/" },
-    { "id": "dfs3", "title": "Pacific Atlantic Water Flow", "difficulty": "Medium", "statement": "Cells from which water can reach both oceans.", "hint": "DFS inward from each ocean's border.", "tests": "Multi-start DFS on grids.", "link": "https://leetcode.com/problems/pacific-atlantic-water-flow/" },
-    { "id": "dfs4", "title": "Clone Graph", "difficulty": "Medium", "statement": "Deep-copy a connected undirected graph.", "hint": "DFS with a map from original to clone.", "tests": "DFS with memoised construction.", "link": "https://leetcode.com/problems/clone-graph/" },
-    { "id": "dfs5", "title": "Critical Connections (Bridges)", "difficulty": "Hard", "statement": "Find all bridges in a network.", "hint": "DFS with discovery times and low-link values (Tarjan).", "tests": "DFS timing for bridges.", "link": "https://leetcode.com/problems/critical-connections-in-a-network/" }
+    {
+      "id": "dfs1",
+      "title": "Number of Provinces",
+      "difficulty": "Medium",
+      "statement": "Count connected components in a friendship matrix.",
+      "hint": "DFS/union-find over the adjacency.",
+      "tests": "Connected components.",
+      "link": "https://leetcode.com/problems/number-of-provinces/"
+    },
+    {
+      "id": "dfs2",
+      "title": "Course Schedule",
+      "difficulty": "Medium",
+      "statement": "Detect if prerequisites contain a cycle.",
+      "hint": "DFS with gray/black colouring detects a back edge (cycle).",
+      "tests": "Directed cycle detection.",
+      "link": "https://leetcode.com/problems/course-schedule/"
+    },
+    {
+      "id": "dfs3",
+      "title": "Pacific Atlantic Water Flow",
+      "difficulty": "Medium",
+      "statement": "Cells from which water can reach both oceans.",
+      "hint": "DFS inward from each ocean's border.",
+      "tests": "Multi-start DFS on grids.",
+      "link": "https://leetcode.com/problems/pacific-atlantic-water-flow/"
+    },
+    {
+      "id": "dfs4",
+      "title": "Clone Graph",
+      "difficulty": "Medium",
+      "statement": "Deep-copy a connected undirected graph.",
+      "hint": "DFS with a map from original to clone.",
+      "tests": "DFS with memoised construction.",
+      "link": "https://leetcode.com/problems/clone-graph/"
+    },
+    {
+      "id": "dfs5",
+      "title": "Critical Connections (Bridges)",
+      "difficulty": "Hard",
+      "statement": "Find all bridges in a network.",
+      "hint": "DFS with discovery times and low-link values (Tarjan).",
+      "tests": "DFS timing for bridges.",
+      "link": "https://leetcode.com/problems/critical-connections-in-a-network/"
+    }
   ]
 }

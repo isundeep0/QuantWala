@@ -6,8 +6,15 @@
   "tagline": "Split, sort the halves, then merge — stable O(n log n) sorting and the engine behind inversion counting.",
   "estMinutes": 22,
   "simulator": "merge-sort",
-  "complexity": { "time": "O(n log n)", "space": "O(n)" },
-  "tags": ["divide & conquer", "stable", "merge"],
+  "complexity": {
+    "time": "O(n log n)",
+    "space": "O(n)"
+  },
+  "tags": [
+    "divide & conquer",
+    "stable",
+    "merge"
+  ],
   "intuition": {
     "analogy": "Imagine sorting a huge stack of exam papers with a friend. You split the stack in half, each of you sorts your half (recursively splitting again), then you merge the two sorted piles by repeatedly taking the smaller top sheet. Merging two already-sorted piles is easy and linear.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Divide", "detail": "Split the range [l, r] at the midpoint m. Recurse on [l, m] and [m+1, r] until ranges have one element (already sorted)." },
-      { "title": "Merge", "detail": "Use two pointers over the two sorted halves, always copying the smaller front element into the output. Ties take the left element first to preserve stability." },
-      { "title": "Copy back", "detail": "Write the merged result back into the original positions. A single shared buffer of size n avoids repeated allocations." }
+      {
+        "title": "Divide",
+        "detail": "Split the range [l, r] at the midpoint m. Recurse on [l, m] and [m+1, r] until ranges have one element (already sorted)."
+      },
+      {
+        "title": "Merge",
+        "detail": "Use two pointers over the two sorted halves, always copying the smaller front element into the output. Ties take the left element first to preserve stability."
+      },
+      {
+        "title": "Copy back",
+        "detail": "Write the merged result back into the original positions. A single shared buffer of size n avoids repeated allocations."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "merge_sort.cpp",
-      "source": "void mergeSort(vector<int>& a, int l, int r, vector<int>& buf) {\n    if (l >= r) return;\n    int m = l + (r - l) / 2;\n    mergeSort(a, l, m, buf);\n    mergeSort(a, m + 1, r, buf);\n    int i = l, j = m + 1, k = l;\n    while (i <= m && j <= r)\n        buf[k++] = (a[i] <= a[j]) ? a[i++] : a[j++];\n    while (i <= m) buf[k++] = a[i++];\n    while (j <= r) buf[k++] = a[j++];\n    for (int t = l; t <= r; ++t) a[t] = buf[t];\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "merge_sort.cpp",
+        "source": "void mergeSort(vector<int>& a, int l, int r, vector<int>& buf) {\n    if (l >= r) return;\n    int m = l + (r - l) / 2;\n    mergeSort(a, l, m, buf);\n    mergeSort(a, m + 1, r, buf);\n    int i = l, j = m + 1, k = l;\n    while (i <= m && j <= r)\n        buf[k++] = (a[i] <= a[j]) ? a[i++] : a[j++];\n    while (i <= m) buf[k++] = a[i++];\n    while (j <= r) buf[k++] = a[j++];\n    for (int t = l; t <= r; ++t) a[t] = buf[t];\n}"
+      },
+      {
+        "language": "python",
+        "title": "merge_sort.py",
+        "source": "def merge_sort(a):\n    if len(a) <= 1:\n        return a\n    mid = len(a) // 2\n    left = merge_sort(a[:mid])\n    right = merge_sort(a[mid:])\n    res, i, j = [], 0, 0\n    while i < len(left) and j < len(right):\n        if left[i] <= right[j]:\n            res.append(left[i]); i += 1\n        else:\n            res.append(right[j]); j += 1\n    res.extend(left[i:])\n    res.extend(right[j:])\n    return res"
+      }
+    ],
     "complexity": {
       "time": "O(n log n)",
       "timeReason": "log n levels of recursion, each performing O(n) merge work across all segments.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "a = [5, 2, 8, 1]",
-    "columns": ["Phase", "State", "Note"],
+    "columns": [
+      "Phase",
+      "State",
+      "Note"
+    ],
     "rows": [
-      ["split", "[5,2] [8,1]", "Divide into halves"],
-      ["split", "[5][2] [8][1]", "Down to singletons"],
-      ["merge", "[2,5] [1,8]", "Merge each pair"],
-      ["merge", "[1,2,5,8]", "Merge two sorted halves with two pointers"]
+      [
+        "split",
+        "[5,2] [8,1]",
+        "Divide into halves"
+      ],
+      [
+        "split",
+        "[5][2] [8][1]",
+        "Down to singletons"
+      ],
+      [
+        "merge",
+        "[2,5] [1,8]",
+        "Merge each pair"
+      ],
+      [
+        "merge",
+        "[1,2,5,8]",
+        "Merge two sorted halves with two pointers"
+      ]
     ],
     "clickMoment": "The work happens on the way back up. Singletons are trivially sorted; every merge step combines two already-sorted runs, so you never compare more than necessary."
   },
   "problems": [
-    { "id": "ms1", "title": "Sort an Array", "difficulty": "Medium", "statement": "Sort an integer array without using built-in sort.", "hint": "Implement the merge-sort template directly.", "tests": "Core divide-and-merge.", "link": "https://leetcode.com/problems/sort-an-array/" },
-    { "id": "ms2", "title": "Count of Smaller Numbers After Self", "difficulty": "Hard", "statement": "For each element, count how many elements to its right are smaller.", "hint": "During merge, when you take an element from the right half, every remaining left element is greater — count those crossings.", "tests": "Counting inversions inside the merge step.", "link": "https://leetcode.com/problems/count-of-smaller-numbers-after-self/" },
-    { "id": "ms3", "title": "Reverse Pairs", "difficulty": "Hard", "statement": "Count pairs (i, j) with i < j and a[i] > 2·a[j].", "hint": "Add a counting pass before merging each level, using the two sorted halves.", "tests": "Modified merge for a custom inversion condition.", "link": "https://leetcode.com/problems/reverse-pairs/" },
-    { "id": "ms4", "title": "Merge k Sorted Lists", "difficulty": "Hard", "statement": "Merge k sorted linked lists into one sorted list.", "hint": "Divide and conquer: pair up lists and merge them, halving the count each round.", "tests": "Generalising the merge step to k inputs.", "link": "https://leetcode.com/problems/merge-k-sorted-lists/" },
-    { "id": "ms5", "title": "Sort List", "difficulty": "Medium", "statement": "Sort a linked list in O(n log n) and O(1) extra space (besides recursion).", "hint": "Use fast/slow pointers to split the list, then merge — merge sort is ideal for linked lists.", "tests": "Merge sort adapted to linked lists.", "link": "https://leetcode.com/problems/sort-list/" }
+    {
+      "id": "ms1",
+      "title": "Sort an Array",
+      "difficulty": "Medium",
+      "statement": "Sort an integer array without using built-in sort.",
+      "hint": "Implement the merge-sort template directly.",
+      "tests": "Core divide-and-merge.",
+      "link": "https://leetcode.com/problems/sort-an-array/"
+    },
+    {
+      "id": "ms2",
+      "title": "Count of Smaller Numbers After Self",
+      "difficulty": "Hard",
+      "statement": "For each element, count how many elements to its right are smaller.",
+      "hint": "During merge, when you take an element from the right half, every remaining left element is greater — count those crossings.",
+      "tests": "Counting inversions inside the merge step.",
+      "link": "https://leetcode.com/problems/count-of-smaller-numbers-after-self/"
+    },
+    {
+      "id": "ms3",
+      "title": "Reverse Pairs",
+      "difficulty": "Hard",
+      "statement": "Count pairs (i, j) with i < j and a[i] > 2·a[j].",
+      "hint": "Add a counting pass before merging each level, using the two sorted halves.",
+      "tests": "Modified merge for a custom inversion condition.",
+      "link": "https://leetcode.com/problems/reverse-pairs/"
+    },
+    {
+      "id": "ms4",
+      "title": "Merge k Sorted Lists",
+      "difficulty": "Hard",
+      "statement": "Merge k sorted linked lists into one sorted list.",
+      "hint": "Divide and conquer: pair up lists and merge them, halving the count each round.",
+      "tests": "Generalising the merge step to k inputs.",
+      "link": "https://leetcode.com/problems/merge-k-sorted-lists/"
+    },
+    {
+      "id": "ms5",
+      "title": "Sort List",
+      "difficulty": "Medium",
+      "statement": "Sort a linked list in O(n log n) and O(1) extra space (besides recursion).",
+      "hint": "Use fast/slow pointers to split the list, then merge — merge sort is ideal for linked lists.",
+      "tests": "Merge sort adapted to linked lists.",
+      "link": "https://leetcode.com/problems/sort-list/"
+    }
   ]
 }

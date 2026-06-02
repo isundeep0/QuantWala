@@ -6,8 +6,15 @@
   "tagline": "Take it or leave it — the template behind subset-sum, partition, and budget problems.",
   "estMinutes": 20,
   "simulator": null,
-  "complexity": { "time": "O(n·W)", "space": "O(W)" },
-  "tags": ["dp", "subset", "pseudo-polynomial"],
+  "complexity": {
+    "time": "O(n·W)",
+    "space": "O(W)"
+  },
+  "tags": [
+    "dp",
+    "subset",
+    "pseudo-polynomial"
+  ],
   "intuition": {
     "analogy": "A thief with a weight-limited bag faces each item once: grab it (gain its value, lose its weight capacity) or skip it. The best haul is the better of those two choices, computed for every capacity.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Define the state", "detail": "dp[w] = best value achievable with capacity w using the items processed so far." },
-      { "title": "Process items one by one", "detail": "For each item, update dp[w] for w from W down to wt: dp[w] = max(dp[w], dp[w-wt] + val)." },
-      { "title": "Read the answer", "detail": "dp[W] holds the maximum value within the capacity." }
+      {
+        "title": "Define the state",
+        "detail": "dp[w] = best value achievable with capacity w using the items processed so far."
+      },
+      {
+        "title": "Process items one by one",
+        "detail": "For each item, update dp[w] for w from W down to wt: dp[w] = max(dp[w], dp[w-wt] + val)."
+      },
+      {
+        "title": "Read the answer",
+        "detail": "dp[W] holds the maximum value within the capacity."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "knapsack.cpp",
-      "source": "int knapsack(vector<int>& wt, vector<int>& val, int W) {\n    vector<int> dp(W + 1, 0);\n    for (int i = 0; i < (int)wt.size(); ++i)\n        for (int w = W; w >= wt[i]; --w)        // high -> low for 0/1\n            dp[w] = max(dp[w], dp[w - wt[i]] + val[i]);\n    return dp[W];\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "knapsack.cpp",
+        "source": "int knapsack(vector<int>& wt, vector<int>& val, int W) {\n    vector<int> dp(W + 1, 0);\n    for (int i = 0; i < (int)wt.size(); ++i)\n        for (int w = W; w >= wt[i]; --w)        // high -> low for 0/1\n            dp[w] = max(dp[w], dp[w - wt[i]] + val[i]);\n    return dp[W];\n}"
+      },
+      {
+        "language": "python",
+        "title": "knapsack.py",
+        "source": "def knapsack(wt, val, W):\n    dp = [0] * (W + 1)\n    for i in range(len(wt)):\n        for w in range(W, wt[i] - 1, -1):      # high -> low for 0/1\n            dp[w] = max(dp[w], dp[w - wt[i]] + val[i])\n    return dp[W]"
+      }
+    ],
     "complexity": {
       "time": "O(n·W)",
       "timeReason": "n items times W capacities. 'Pseudo-polynomial' since it depends on the numeric value W, not its bit length.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "wt=[1,3,4], val=[15,20,30], W=4",
-    "columns": ["Item", "dp after (w=0..4)", "Note"],
+    "columns": [
+      "Item",
+      "dp after (w=0..4)",
+      "Note"
+    ],
     "rows": [
-      ["item1 (1,15)", "[0,15,15,15,15]", "take where it fits"],
-      ["item2 (3,20)", "[0,15,15,20,35]", "w=4: 15+20"],
-      ["item3 (4,30)", "[0,15,15,20,35]", "30 < 35, so keep 35"],
-      ["answer", "dp[4]=35", "items 1 + 2"]
+      [
+        "item1 (1,15)",
+        "[0,15,15,15,15]",
+        "take where it fits"
+      ],
+      [
+        "item2 (3,20)",
+        "[0,15,15,20,35]",
+        "w=4: 15+20"
+      ],
+      [
+        "item3 (4,30)",
+        "[0,15,15,20,35]",
+        "30 < 35, so keep 35"
+      ],
+      [
+        "answer",
+        "dp[4]=35",
+        "items 1 + 2"
+      ]
     ],
     "clickMoment": "At w=4 after item 2, dp becomes 35 (items 1+2). Item 3 alone is only 30, so the table correctly keeps the better combination — each cell remembers the best of all decisions so far."
   },
   "problems": [
-    { "id": "ks1", "title": "Partition Equal Subset Sum", "difficulty": "Medium", "statement": "Can the array be split into two equal-sum subsets?", "hint": "Subset-sum knapsack with target = total/2.", "tests": "Boolean knapsack.", "link": "https://leetcode.com/problems/partition-equal-subset-sum/" },
-    { "id": "ks2", "title": "Target Sum", "difficulty": "Medium", "statement": "Count ways to assign +/- to reach a target.", "hint": "Transform to a subset-sum counting knapsack.", "tests": "Counting knapsack.", "link": "https://leetcode.com/problems/target-sum/" },
-    { "id": "ks3", "title": "Last Stone Weight II", "difficulty": "Medium", "statement": "Minimise the leftover stone weight.", "hint": "Partition into two groups as balanced as possible — subset sum.", "tests": "Knapsack minimisation.", "link": "https://leetcode.com/problems/last-stone-weight-ii/" },
-    { "id": "ks4", "title": "Coin Change", "difficulty": "Medium", "statement": "Fewest coins to make an amount.", "hint": "Unbounded knapsack (iterate capacity upward).", "tests": "Unbounded variant.", "link": "https://leetcode.com/problems/coin-change/" },
-    { "id": "ks5", "title": "Profitable Schemes", "difficulty": "Hard", "statement": "Count schemes meeting profit/member constraints.", "hint": "Two-dimensional knapsack (members and profit).", "tests": "Multi-constraint knapsack.", "link": "https://leetcode.com/problems/profitable-schemes/" }
+    {
+      "id": "ks1",
+      "title": "Partition Equal Subset Sum",
+      "difficulty": "Medium",
+      "statement": "Can the array be split into two equal-sum subsets?",
+      "hint": "Subset-sum knapsack with target = total/2.",
+      "tests": "Boolean knapsack.",
+      "link": "https://leetcode.com/problems/partition-equal-subset-sum/"
+    },
+    {
+      "id": "ks2",
+      "title": "Target Sum",
+      "difficulty": "Medium",
+      "statement": "Count ways to assign +/- to reach a target.",
+      "hint": "Transform to a subset-sum counting knapsack.",
+      "tests": "Counting knapsack.",
+      "link": "https://leetcode.com/problems/target-sum/"
+    },
+    {
+      "id": "ks3",
+      "title": "Last Stone Weight II",
+      "difficulty": "Medium",
+      "statement": "Minimise the leftover stone weight.",
+      "hint": "Partition into two groups as balanced as possible — subset sum.",
+      "tests": "Knapsack minimisation.",
+      "link": "https://leetcode.com/problems/last-stone-weight-ii/"
+    },
+    {
+      "id": "ks4",
+      "title": "Coin Change",
+      "difficulty": "Medium",
+      "statement": "Fewest coins to make an amount.",
+      "hint": "Unbounded knapsack (iterate capacity upward).",
+      "tests": "Unbounded variant.",
+      "link": "https://leetcode.com/problems/coin-change/"
+    },
+    {
+      "id": "ks5",
+      "title": "Profitable Schemes",
+      "difficulty": "Hard",
+      "statement": "Count schemes meeting profit/member constraints.",
+      "hint": "Two-dimensional knapsack (members and profit).",
+      "tests": "Multi-constraint knapsack.",
+      "link": "https://leetcode.com/problems/profitable-schemes/"
+    }
   ]
 }

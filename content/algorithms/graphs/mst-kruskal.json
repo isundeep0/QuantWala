@@ -6,8 +6,15 @@
   "tagline": "Sort edges, add the cheapest that doesn't form a cycle — greedy MST with union-find.",
   "estMinutes": 16,
   "simulator": null,
-  "complexity": { "time": "O(E log E)", "space": "O(V)" },
-  "tags": ["mst", "greedy", "dsu"],
+  "complexity": {
+    "time": "O(E log E)",
+    "space": "O(V)"
+  },
+  "tags": [
+    "mst",
+    "greedy",
+    "dsu"
+  ],
   "intuition": {
     "analogy": "Connecting towns with the least total cable: always lay the cheapest remaining cable, but skip any that would loop back to towns already linked (that cable would be wasted).",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Sort edges by weight", "detail": "Ascending order so you always consider the cheapest available edge next." },
-      { "title": "Greedily add safe edges", "detail": "For each edge (u,v,w): if find(u) ≠ find(v), union them and include the edge in the MST." },
-      { "title": "Stop at V−1 edges", "detail": "A spanning tree of V vertices has exactly V−1 edges; finishing early is an optimisation." }
+      {
+        "title": "Sort edges by weight",
+        "detail": "Ascending order so you always consider the cheapest available edge next."
+      },
+      {
+        "title": "Greedily add safe edges",
+        "detail": "For each edge (u,v,w): if find(u) ≠ find(v), union them and include the edge in the MST."
+      },
+      {
+        "title": "Stop at V−1 edges",
+        "detail": "A spanning tree of V vertices has exactly V−1 edges; finishing early is an optimisation."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "kruskal.cpp",
-      "source": "sort(edges.begin(), edges.end());          // by weight\nlong long cost = 0; int used = 0;\nfor (auto [w, u, v] : edges) {\n    if (find(u) != find(v)) {\n        unite(u, v);\n        cost += w; ++used;\n        if (used == n - 1) break;\n    }\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "kruskal.cpp",
+        "source": "sort(edges.begin(), edges.end());          // by weight\nlong long cost = 0; int used = 0;\nfor (auto [w, u, v] : edges) {\n    if (find(u) != find(v)) {\n        unite(u, v);\n        cost += w; ++used;\n        if (used == n - 1) break;\n    }\n}"
+      },
+      {
+        "language": "python",
+        "title": "kruskal.py",
+        "source": "def kruskal(n, edges):               # edges = [(w, u, v), ...]\n    parent = list(range(n))\n    def find(x):\n        while parent[x] != x:\n            parent[x] = parent[parent[x]]\n            x = parent[x]\n        return x\n    edges.sort()                     # by weight\n    cost = used = 0\n    for w, u, v in edges:\n        ru, rv = find(u), find(v)\n        if ru != rv:\n            parent[ru] = rv\n            cost += w; used += 1\n            if used == n - 1:\n                break\n    return cost"
+      }
+    ],
     "complexity": {
       "time": "O(E log E)",
       "timeReason": "Dominated by sorting the edges; DSU operations are near-constant.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "Edges: (1,A,B), (2,A,C), (2,B,C), (3,C,D)",
-    "columns": ["Edge (w,u,v)", "Same comp?", "Action"],
+    "columns": [
+      "Edge (w,u,v)",
+      "Same comp?",
+      "Action"
+    ],
     "rows": [
-      ["(1,A,B)", "no", "add → {A,B}"],
-      ["(2,A,C)", "no", "add → {A,B,C}"],
-      ["(2,B,C)", "yes", "skip (cycle)"],
-      ["(3,C,D)", "no", "add → MST cost 6"]
+      [
+        "(1,A,B)",
+        "no",
+        "add → {A,B}"
+      ],
+      [
+        "(2,A,C)",
+        "no",
+        "add → {A,B,C}"
+      ],
+      [
+        "(2,B,C)",
+        "yes",
+        "skip (cycle)"
+      ],
+      [
+        "(3,C,D)",
+        "no",
+        "add → MST cost 6"
+      ]
     ],
     "clickMoment": "The edge (2,B,C) is rejected purely because B and C already share a component. Union-Find made that O(1) check trivial — that's the marriage of greedy + DSU."
   },
   "problems": [
-    { "id": "kr1", "title": "Min Cost to Connect All Points", "difficulty": "Medium", "statement": "Connect all points with minimum total Manhattan distance.", "hint": "Build edges, Kruskal with DSU (or Prim).", "tests": "Core MST.", "link": "https://leetcode.com/problems/min-cost-to-connect-all-points/" },
-    { "id": "kr2", "title": "Connecting Cities With Minimum Cost", "difficulty": "Medium", "statement": "Minimum cost to connect all cities, or -1.", "hint": "Kruskal; check full connectivity at the end.", "tests": "MST + connectivity check.", "link": "https://leetcode.com/problems/connecting-cities-with-minimum-cost/" },
-    { "id": "kr3", "title": "Optimize Water Distribution", "difficulty": "Hard", "statement": "Minimise cost to supply water via wells or pipes.", "hint": "Model wells as edges to a virtual node, then MST.", "tests": "MST with a virtual source.", "link": "https://leetcode.com/problems/optimize-water-distribution-in-a-village/" },
-    { "id": "kr4", "title": "Find Critical and Pseudo-Critical Edges", "difficulty": "Hard", "statement": "Classify MST edges as critical/pseudo-critical.", "hint": "Compare MST weights with each edge forced in/out.", "tests": "MST sensitivity analysis.", "link": "https://leetcode.com/problems/find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree/" },
-    { "id": "kr5", "title": "Reachability Threshold (MST-like)", "difficulty": "Medium", "statement": "Process edges by weight to answer connectivity queries.", "hint": "Offline DSU by increasing weight (Kruskal-style).", "tests": "Kruskal reconstruction order.", "link": "https://cses.fi/problemset/task/1676" }
+    {
+      "id": "kr1",
+      "title": "Min Cost to Connect All Points",
+      "difficulty": "Medium",
+      "statement": "Connect all points with minimum total Manhattan distance.",
+      "hint": "Build edges, Kruskal with DSU (or Prim).",
+      "tests": "Core MST.",
+      "link": "https://leetcode.com/problems/min-cost-to-connect-all-points/"
+    },
+    {
+      "id": "kr2",
+      "title": "Connecting Cities With Minimum Cost",
+      "difficulty": "Medium",
+      "statement": "Minimum cost to connect all cities, or -1.",
+      "hint": "Kruskal; check full connectivity at the end.",
+      "tests": "MST + connectivity check.",
+      "link": "https://leetcode.com/problems/connecting-cities-with-minimum-cost/"
+    },
+    {
+      "id": "kr3",
+      "title": "Optimize Water Distribution",
+      "difficulty": "Hard",
+      "statement": "Minimise cost to supply water via wells or pipes.",
+      "hint": "Model wells as edges to a virtual node, then MST.",
+      "tests": "MST with a virtual source.",
+      "link": "https://leetcode.com/problems/optimize-water-distribution-in-a-village/"
+    },
+    {
+      "id": "kr4",
+      "title": "Find Critical and Pseudo-Critical Edges",
+      "difficulty": "Hard",
+      "statement": "Classify MST edges as critical/pseudo-critical.",
+      "hint": "Compare MST weights with each edge forced in/out.",
+      "tests": "MST sensitivity analysis.",
+      "link": "https://leetcode.com/problems/find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree/"
+    },
+    {
+      "id": "kr5",
+      "title": "Reachability Threshold (MST-like)",
+      "difficulty": "Medium",
+      "statement": "Process edges by weight to answer connectivity queries.",
+      "hint": "Offline DSU by increasing weight (Kruskal-style).",
+      "tests": "Kruskal reconstruction order.",
+      "link": "https://cses.fi/problemset/task/1676"
+    }
   ]
 }

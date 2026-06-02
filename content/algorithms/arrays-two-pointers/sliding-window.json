@@ -6,8 +6,15 @@
   "tagline": "Reuse the previous window's work — answer subarray/substring questions in one pass.",
   "estMinutes": 20,
   "simulator": "sliding-window",
-  "complexity": { "time": "O(n)", "space": "O(1) – O(k)" },
-  "tags": ["window", "subarray", "substring"],
+  "complexity": {
+    "time": "O(n)",
+    "space": "O(1) – O(k)"
+  },
+  "tags": [
+    "window",
+    "subarray",
+    "substring"
+  ],
   "intuition": {
     "analogy": "Imagine a fixed-width window slid across a long panorama. Instead of re-photographing the whole scene each time you shift, you just see one new strip on the right and lose one strip on the left. The bulk of the view is reused.",
     "paragraphs": [
@@ -19,16 +26,35 @@
   },
   "logic": {
     "steps": [
-      { "title": "Initialise the first window", "detail": "For fixed size k, compute the summary of the first k elements. For variable size, start with an empty window at the left." },
-      { "title": "Slide / expand the right edge", "detail": "Add the new right element to the summary." },
-      { "title": "Shrink the left edge when needed", "detail": "Fixed size: drop the element k positions back. Variable size: while the constraint is violated, remove a[left] and advance left." },
-      { "title": "Record the answer", "detail": "After each valid window, update best (max length, min length, max sum, …)." }
+      {
+        "title": "Initialise the first window",
+        "detail": "For fixed size k, compute the summary of the first k elements. For variable size, start with an empty window at the left."
+      },
+      {
+        "title": "Slide / expand the right edge",
+        "detail": "Add the new right element to the summary."
+      },
+      {
+        "title": "Shrink the left edge when needed",
+        "detail": "Fixed size: drop the element k positions back. Variable size: while the constraint is violated, remove a[left] and advance left."
+      },
+      {
+        "title": "Record the answer",
+        "detail": "After each valid window, update best (max length, min length, max sum, …)."
+      }
     ],
-    "code": {
-      "language": "python",
-      "title": "longest_unique.py",
-      "source": "def longest_unique_substring(s):\n    seen = {}\n    left = best = 0\n    for right, c in enumerate(s):\n        if c in seen and seen[c] >= left:\n            left = seen[c] + 1      # shrink past the duplicate\n        seen[c] = right\n        best = max(best, right - left + 1)\n    return best"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "longest_unique.cpp",
+        "source": "// Longest substring without repeating characters (variable-size window).\nint longestUnique(const string& s) {\n    vector<int> last(256, -1);\n    int left = 0, best = 0;\n    for (int right = 0; right < (int)s.size(); ++right) {\n        unsigned char c = s[right];\n        if (last[c] >= left) left = last[c] + 1;   // shrink past the duplicate\n        last[c] = right;\n        best = max(best, right - left + 1);\n    }\n    return best;\n}"
+      },
+      {
+        "language": "python",
+        "title": "longest_unique.py",
+        "source": "def longest_unique_substring(s):\n    seen = {}\n    left = best = 0\n    for right, c in enumerate(s):\n        if c in seen and seen[c] >= left:\n            left = seen[c] + 1      # shrink past the duplicate\n        seen[c] = right\n        best = max(best, right - left + 1)\n    return best"
+      }
+    ],
     "complexity": {
       "time": "O(n)",
       "timeReason": "Each element enters the window once and leaves at most once, so total pointer movement is ≤ 2n.",
@@ -43,20 +69,80 @@
   },
   "dryRun": {
     "input": "a = [2, 1, 5, 1, 3, 2], k = 3 (max window sum)",
-    "columns": ["Window", "Sum", "Best"],
+    "columns": [
+      "Window",
+      "Sum",
+      "Best"
+    ],
     "rows": [
-      ["[2,1,5]", "8", "8"],
-      ["[1,5,1]", "8-2+1=7", "8"],
-      ["[5,1,3]", "7-1+3=9", "9"],
-      ["[1,3,2]", "9-5+2=6", "9"]
+      [
+        "[2,1,5]",
+        "8",
+        "8"
+      ],
+      [
+        "[1,5,1]",
+        "8-2+1=7",
+        "8"
+      ],
+      [
+        "[5,1,3]",
+        "7-1+3=9",
+        "9"
+      ],
+      [
+        "[1,3,2]",
+        "9-5+2=6",
+        "9"
+      ]
     ],
     "clickMoment": "Look at the Sum column: every step is one add and one subtract — never a full re-sum of three elements. That O(1) update across n positions is what makes it linear."
   },
   "problems": [
-    { "id": "sw1", "title": "Maximum Average Subarray I", "difficulty": "Easy", "statement": "Find the contiguous subarray of length k with the maximum average.", "hint": "Fixed-size window sum; slide and track the max.", "tests": "Fixed-size window.", "link": "https://leetcode.com/problems/maximum-average-subarray-i/" },
-    { "id": "sw2", "title": "Longest Substring Without Repeating Characters", "difficulty": "Medium", "statement": "Length of the longest substring with all distinct characters.", "hint": "Variable window; jump left past the last duplicate position.", "tests": "Variable window with a last-seen map.", "link": "https://leetcode.com/problems/longest-substring-without-repeating-characters/" },
-    { "id": "sw3", "title": "Minimum Size Subarray Sum", "difficulty": "Medium", "statement": "Smallest length of a subarray with sum ≥ target.", "hint": "Expand right to grow the sum; shrink left while sum ≥ target.", "tests": "Shrinking window for a minimum.", "link": "https://leetcode.com/problems/minimum-size-subarray-sum/" },
-    { "id": "sw4", "title": "Permutation in String", "difficulty": "Medium", "statement": "Does s2 contain a permutation of s1 as a substring?", "hint": "Fixed window of size |s1|; compare frequency counts.", "tests": "Fixed window + frequency matching.", "link": "https://leetcode.com/problems/permutation-in-string/" },
-    { "id": "sw5", "title": "Minimum Window Substring", "difficulty": "Hard", "statement": "Smallest window in s containing all characters of t.", "hint": "Expand to satisfy all required counts, then shrink to minimise while still valid.", "tests": "Variable window with a 'need/have' counter.", "link": "https://leetcode.com/problems/minimum-window-substring/" }
+    {
+      "id": "sw1",
+      "title": "Maximum Average Subarray I",
+      "difficulty": "Easy",
+      "statement": "Find the contiguous subarray of length k with the maximum average.",
+      "hint": "Fixed-size window sum; slide and track the max.",
+      "tests": "Fixed-size window.",
+      "link": "https://leetcode.com/problems/maximum-average-subarray-i/"
+    },
+    {
+      "id": "sw2",
+      "title": "Longest Substring Without Repeating Characters",
+      "difficulty": "Medium",
+      "statement": "Length of the longest substring with all distinct characters.",
+      "hint": "Variable window; jump left past the last duplicate position.",
+      "tests": "Variable window with a last-seen map.",
+      "link": "https://leetcode.com/problems/longest-substring-without-repeating-characters/"
+    },
+    {
+      "id": "sw3",
+      "title": "Minimum Size Subarray Sum",
+      "difficulty": "Medium",
+      "statement": "Smallest length of a subarray with sum ≥ target.",
+      "hint": "Expand right to grow the sum; shrink left while sum ≥ target.",
+      "tests": "Shrinking window for a minimum.",
+      "link": "https://leetcode.com/problems/minimum-size-subarray-sum/"
+    },
+    {
+      "id": "sw4",
+      "title": "Permutation in String",
+      "difficulty": "Medium",
+      "statement": "Does s2 contain a permutation of s1 as a substring?",
+      "hint": "Fixed window of size |s1|; compare frequency counts.",
+      "tests": "Fixed window + frequency matching.",
+      "link": "https://leetcode.com/problems/permutation-in-string/"
+    },
+    {
+      "id": "sw5",
+      "title": "Minimum Window Substring",
+      "difficulty": "Hard",
+      "statement": "Smallest window in s containing all characters of t.",
+      "hint": "Expand to satisfy all required counts, then shrink to minimise while still valid.",
+      "tests": "Variable window with a 'need/have' counter.",
+      "link": "https://leetcode.com/problems/minimum-window-substring/"
+    }
   ]
 }

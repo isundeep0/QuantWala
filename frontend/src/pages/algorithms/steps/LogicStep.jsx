@@ -1,8 +1,10 @@
 import { AlertTriangle, Clock, HardDrive } from "lucide-react";
-import CodeBlock from "@/components/CodeBlock.jsx";
+import CodeTabs from "@/components/CodeTabs.jsx";
 
 export default function LogicStep({ data }) {
   if (!data) return <p className="text-muted">Logic breakdown is being written for this lesson.</p>;
+  // Support both the new `codes` array (multi-language) and the legacy single `code`.
+  const codeBlocks = data.codes?.length ? data.codes : data.code ? [data.code] : [];
   return (
     <div className="space-y-6">
       <ol className="space-y-3">
@@ -19,7 +21,7 @@ export default function LogicStep({ data }) {
         ))}
       </ol>
 
-      {data.code && <CodeBlock code={data.code.source} language={data.code.language || "cpp"} title={data.code.title} />}
+      {codeBlocks.length > 0 && <CodeTabs blocks={codeBlocks} />}
 
       {data.complexity && (
         <div className="grid gap-4 sm:grid-cols-2">

@@ -6,8 +6,15 @@
   "tagline": "The deepest node that is an ancestor of both targets — via recursion or binary lifting.",
   "estMinutes": 18,
   "simulator": null,
-  "complexity": { "time": "O(n) one-shot, O(log n) with lifting", "space": "O(n log n)" },
-  "tags": ["tree", "ancestor", "binary lifting"],
+  "complexity": {
+    "time": "O(n) one-shot, O(log n) with lifting",
+    "space": "O(n log n)"
+  },
+  "tags": [
+    "tree",
+    "ancestor",
+    "binary lifting"
+  ],
   "intuition": {
     "analogy": "Two people trace their family trees upward. The first shared ancestor where their lines merge is the lowest common ancestor — the most recent relative they both descend from.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Recursive LCA (single query)", "detail": "lca(node): if node is null or equals p or q, return node. Recurse left and right. If both return non-null, node is the LCA; otherwise propagate the non-null side." },
-      { "title": "Binary lifting setup", "detail": "DFS to record depth and up[v][0] = parent. Fill up[v][k] = up[ up[v][k-1] ][k-1] for all k." },
-      { "title": "Answer a query", "detail": "Lift the deeper node to match depths, then lift both simultaneously by decreasing powers of two while their ancestors differ; the parent of the result is the LCA." }
+      {
+        "title": "Recursive LCA (single query)",
+        "detail": "lca(node): if node is null or equals p or q, return node. Recurse left and right. If both return non-null, node is the LCA; otherwise propagate the non-null side."
+      },
+      {
+        "title": "Binary lifting setup",
+        "detail": "DFS to record depth and up[v][0] = parent. Fill up[v][k] = up[ up[v][k-1] ][k-1] for all k."
+      },
+      {
+        "title": "Answer a query",
+        "detail": "Lift the deeper node to match depths, then lift both simultaneously by decreasing powers of two while their ancestors differ; the parent of the result is the LCA."
+      }
     ],
-    "code": {
-      "language": "python",
-      "title": "lca_recursive.py",
-      "source": "def lca(node, p, q):\n    if not node or node is p or node is q:\n        return node\n    left = lca(node.left, p, q)\n    right = lca(node.right, p, q)\n    if left and right:\n        return node          # split point → LCA\n    return left or right"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "lca_recursive.cpp",
+        "source": "// Lowest common ancestor in a binary tree (no parent pointers).\nTreeNode* lca(TreeNode* node, TreeNode* p, TreeNode* q) {\n    if (!node || node == p || node == q) return node;\n    TreeNode* left  = lca(node->left, p, q);\n    TreeNode* right = lca(node->right, p, q);\n    if (left && right) return node;       // split point -> LCA\n    return left ? left : right;\n}"
+      },
+      {
+        "language": "python",
+        "title": "lca_recursive.py",
+        "source": "def lca(node, p, q):\n    if not node or node is p or node is q:\n        return node\n    left = lca(node.left, p, q)\n    right = lca(node.right, p, q)\n    if left and right:\n        return node          # split point → LCA\n    return left or right"
+      }
+    ],
     "complexity": {
       "time": "O(n) per recursive query; O(n log n) preprocessing + O(log n) per lifted query",
       "timeReason": "Recursion touches each node once; binary lifting answers each query in log n jumps.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "LCA(4, 5) in tree 1-(2-(4,5))-(3)",
-    "columns": ["At node", "Left result", "Right result"],
+    "columns": [
+      "At node",
+      "Left result",
+      "Right result"
+    ],
     "rows": [
-      ["4", "—", "returns 4"],
-      ["5", "—", "returns 5"],
-      ["2", "4", "5 → both found, LCA = 2"],
-      ["1", "2", "null → propagate 2"]
+      [
+        "4",
+        "—",
+        "returns 4"
+      ],
+      [
+        "5",
+        "—",
+        "returns 5"
+      ],
+      [
+        "2",
+        "4",
+        "5 → both found, LCA = 2"
+      ],
+      [
+        "1",
+        "2",
+        "null → propagate 2"
+      ]
     ],
     "clickMoment": "The LCA is the unique node where the searches for p and q come back from different sides. Above it, only one side is ever non-null."
   },
   "problems": [
-    { "id": "lca1", "title": "LCA of a Binary Tree", "difficulty": "Medium", "statement": "Find the LCA of two nodes in a binary tree.", "hint": "The recursive split-point method.", "tests": "Recursive LCA.", "link": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree/" },
-    { "id": "lca2", "title": "LCA of a BST", "difficulty": "Medium", "statement": "Find the LCA in a binary search tree.", "hint": "Walk down: go left if both < node, right if both > node, else you're at the LCA.", "tests": "LCA using BST order.", "link": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/" },
-    { "id": "lca3", "title": "LCA III (with parent pointers)", "difficulty": "Medium", "statement": "Find LCA when nodes have parent pointers.", "hint": "Two-pointer technique like finding the intersection of two linked lists.", "tests": "Ancestor chains as lists.", "link": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree-iii/" },
-    { "id": "lca4", "title": "Distance Between Tree Nodes", "difficulty": "Medium", "statement": "Find the number of edges between two nodes.", "hint": "depth[u] + depth[v] − 2·depth[lca].", "tests": "LCA-based distance.", "link": "https://www.geeksforgeeks.org/find-distance-between-two-nodes-of-a-binary-tree/" },
-    { "id": "lca5", "title": "Kth Ancestor of a Tree Node", "difficulty": "Hard", "statement": "Answer queries for the k-th ancestor of a node.", "hint": "Binary lifting: decompose k into powers of two.", "tests": "Binary lifting table.", "link": "https://leetcode.com/problems/kth-ancestor-of-a-tree-node/" }
+    {
+      "id": "lca1",
+      "title": "LCA of a Binary Tree",
+      "difficulty": "Medium",
+      "statement": "Find the LCA of two nodes in a binary tree.",
+      "hint": "The recursive split-point method.",
+      "tests": "Recursive LCA.",
+      "link": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree/"
+    },
+    {
+      "id": "lca2",
+      "title": "LCA of a BST",
+      "difficulty": "Medium",
+      "statement": "Find the LCA in a binary search tree.",
+      "hint": "Walk down: go left if both < node, right if both > node, else you're at the LCA.",
+      "tests": "LCA using BST order.",
+      "link": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/"
+    },
+    {
+      "id": "lca3",
+      "title": "LCA III (with parent pointers)",
+      "difficulty": "Medium",
+      "statement": "Find LCA when nodes have parent pointers.",
+      "hint": "Two-pointer technique like finding the intersection of two linked lists.",
+      "tests": "Ancestor chains as lists.",
+      "link": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree-iii/"
+    },
+    {
+      "id": "lca4",
+      "title": "Distance Between Tree Nodes",
+      "difficulty": "Medium",
+      "statement": "Find the number of edges between two nodes.",
+      "hint": "depth[u] + depth[v] − 2·depth[lca].",
+      "tests": "LCA-based distance.",
+      "link": "https://www.geeksforgeeks.org/find-distance-between-two-nodes-of-a-binary-tree/"
+    },
+    {
+      "id": "lca5",
+      "title": "Kth Ancestor of a Tree Node",
+      "difficulty": "Hard",
+      "statement": "Answer queries for the k-th ancestor of a node.",
+      "hint": "Binary lifting: decompose k into powers of two.",
+      "tests": "Binary lifting table.",
+      "link": "https://leetcode.com/problems/kth-ancestor-of-a-tree-node/"
+    }
   ]
 }

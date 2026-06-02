@@ -59,10 +59,24 @@
         },
         "code": {
           "type": "object",
+          "description": "DEPRECATED single-language snippet. Prefer `codes` (array). Still rendered for backward compatibility.",
           "properties": {
             "language": { "type": "string", "enum": ["cpp", "python"] },
             "title": { "type": "string" },
             "source": { "type": "string" }
+          }
+        },
+        "codes": {
+          "type": "array",
+          "description": "Multi-language implementations shown in a language switcher. Order C++ first, then Python.",
+          "items": {
+            "type": "object",
+            "required": ["language", "source"],
+            "properties": {
+              "language": { "type": "string", "enum": ["cpp", "python"] },
+              "title": { "type": "string" },
+              "source": { "type": "string" }
+            }
           }
         },
         "complexity": {

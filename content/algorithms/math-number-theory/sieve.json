@@ -6,8 +6,15 @@
   "tagline": "Cross out multiples to find every prime up to N in O(N log log N).",
   "estMinutes": 14,
   "simulator": "sieve",
-  "complexity": { "time": "O(N log log N)", "space": "O(N)" },
-  "tags": ["primes", "number theory", "preprocessing"],
+  "complexity": {
+    "time": "O(N log log N)",
+    "space": "O(N)"
+  },
+  "tags": [
+    "primes",
+    "number theory",
+    "preprocessing"
+  ],
   "intuition": {
     "analogy": "Walk down the number line. The first uncrossed number (2) is prime — now cross out every second number after it. Move to the next uncrossed number (3), cross out every third, and so on. Whatever survives is prime.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Assume all prime", "detail": "isPrime[2..N] = true; 0 and 1 are not prime." },
-      { "title": "Cross out multiples", "detail": "For p from 2 to √N, if isPrime[p], mark p², p²+p, p²+2p, … as composite." },
-      { "title": "Collect", "detail": "Indices still true are primes. Optionally store smallest prime factors for fast factorisation." }
+      {
+        "title": "Assume all prime",
+        "detail": "isPrime[2..N] = true; 0 and 1 are not prime."
+      },
+      {
+        "title": "Cross out multiples",
+        "detail": "For p from 2 to √N, if isPrime[p], mark p², p²+p, p²+2p, … as composite."
+      },
+      {
+        "title": "Collect",
+        "detail": "Indices still true are primes. Optionally store smallest prime factors for fast factorisation."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "sieve.cpp",
-      "source": "vector<bool> sieve(int N) {\n    vector<bool> isPrime(N + 1, true);\n    isPrime[0] = isPrime[1] = false;\n    for (int p = 2; (long long)p * p <= N; ++p)\n        if (isPrime[p])\n            for (int m = p * p; m <= N; m += p)\n                isPrime[m] = false;\n    return isPrime;\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "sieve.cpp",
+        "source": "vector<bool> sieve(int N) {\n    vector<bool> isPrime(N + 1, true);\n    isPrime[0] = isPrime[1] = false;\n    for (int p = 2; (long long)p * p <= N; ++p)\n        if (isPrime[p])\n            for (int m = p * p; m <= N; m += p)\n                isPrime[m] = false;\n    return isPrime;\n}"
+      },
+      {
+        "language": "python",
+        "title": "sieve.py",
+        "source": "def sieve(N):\n    is_prime = [True] * (N + 1)\n    is_prime[0] = is_prime[1] = False\n    p = 2\n    while p * p <= N:\n        if is_prime[p]:\n            for m in range(p * p, N + 1, p):\n                is_prime[m] = False\n        p += 1\n    return is_prime"
+      }
+    ],
     "complexity": {
       "time": "O(N log log N)",
       "timeReason": "Summing N/p over primes p ≤ N gives the near-linear log log bound.",
@@ -42,19 +65,75 @@
   },
   "dryRun": {
     "input": "N = 12",
-    "columns": ["Prime p", "Cross out", "Remaining primes"],
+    "columns": [
+      "Prime p",
+      "Cross out",
+      "Remaining primes"
+    ],
     "rows": [
-      ["2", "4,6,8,10,12", "2,3,5,7,9,11"],
-      ["3", "9 (6,12 already gone)", "2,3,5,7,11"],
-      ["√12<4", "stop", "2,3,5,7,11"]
+      [
+        "2",
+        "4,6,8,10,12",
+        "2,3,5,7,9,11"
+      ],
+      [
+        "3",
+        "9 (6,12 already gone)",
+        "2,3,5,7,11"
+      ],
+      [
+        "√12<4",
+        "stop",
+        "2,3,5,7,11"
+      ]
     ],
     "clickMoment": "When sieving 3, the number 9 = 3² is the first NEW composite it removes — 6 and 12 were already crossed by 2. Starting at p² avoids re-crossing those."
   },
   "problems": [
-    { "id": "sv1", "title": "Count Primes", "difficulty": "Medium", "statement": "Count primes strictly less than n.", "hint": "Sieve then count true entries.", "tests": "Core sieve.", "link": "https://leetcode.com/problems/count-primes/" },
-    { "id": "sv2", "title": "Closest Prime Numbers in Range", "difficulty": "Medium", "statement": "Find the closest pair of primes in [left, right].", "hint": "Sieve the range, scan consecutive primes.", "tests": "Sieve + scan.", "link": "https://leetcode.com/problems/closest-prime-numbers-in-range/" },
-    { "id": "sv3", "title": "Prime Factorization (SPF)", "difficulty": "Medium", "statement": "Factorize many numbers quickly.", "hint": "Sieve storing the smallest prime factor of each number.", "tests": "Smallest-prime-factor sieve.", "link": "https://www.geeksforgeeks.org/smallest-prime-factor-of-numbers-till-n/" },
-    { "id": "sv4", "title": "Distinct Prime Factors Count", "difficulty": "Medium", "statement": "Count distinct primes across a product range.", "hint": "Sieve-based factor counting.", "tests": "Sieve application.", "link": "https://leetcode.com/problems/distinct-prime-factors-of-product-of-array/" },
-    { "id": "sv5", "title": "Ugly Number / Smooth Numbers", "difficulty": "Medium", "statement": "Generate numbers with only small prime factors.", "hint": "Sieve-like multiplicative generation.", "tests": "Multiplicative sieving idea.", "link": "https://leetcode.com/problems/ugly-number-ii/" }
+    {
+      "id": "sv1",
+      "title": "Count Primes",
+      "difficulty": "Medium",
+      "statement": "Count primes strictly less than n.",
+      "hint": "Sieve then count true entries.",
+      "tests": "Core sieve.",
+      "link": "https://leetcode.com/problems/count-primes/"
+    },
+    {
+      "id": "sv2",
+      "title": "Closest Prime Numbers in Range",
+      "difficulty": "Medium",
+      "statement": "Find the closest pair of primes in [left, right].",
+      "hint": "Sieve the range, scan consecutive primes.",
+      "tests": "Sieve + scan.",
+      "link": "https://leetcode.com/problems/closest-prime-numbers-in-range/"
+    },
+    {
+      "id": "sv3",
+      "title": "Prime Factorization (SPF)",
+      "difficulty": "Medium",
+      "statement": "Factorize many numbers quickly.",
+      "hint": "Sieve storing the smallest prime factor of each number.",
+      "tests": "Smallest-prime-factor sieve.",
+      "link": "https://www.geeksforgeeks.org/smallest-prime-factor-of-numbers-till-n/"
+    },
+    {
+      "id": "sv4",
+      "title": "Distinct Prime Factors Count",
+      "difficulty": "Medium",
+      "statement": "Count distinct primes across a product range.",
+      "hint": "Sieve-based factor counting.",
+      "tests": "Sieve application.",
+      "link": "https://leetcode.com/problems/distinct-prime-factors-of-product-of-array/"
+    },
+    {
+      "id": "sv5",
+      "title": "Ugly Number / Smooth Numbers",
+      "difficulty": "Medium",
+      "statement": "Generate numbers with only small prime factors.",
+      "hint": "Sieve-like multiplicative generation.",
+      "tests": "Multiplicative sieving idea.",
+      "link": "https://leetcode.com/problems/ugly-number-ii/"
+    }
   ]
 }

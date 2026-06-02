@@ -6,8 +6,15 @@
   "tagline": "For each position, the length of the longest prefix match — linear-time matching and periodicity.",
   "estMinutes": 18,
   "simulator": null,
-  "complexity": { "time": "O(n)", "space": "O(n)" },
-  "tags": ["string matching", "z-array", "prefix"],
+  "complexity": {
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  "tags": [
+    "string matching",
+    "z-array",
+    "prefix"
+  ],
   "intuition": {
     "analogy": "Standing at each character and asking 'how far from here do I keep agreeing with the very start of the string?'. Crucially, when you're inside a region you've already compared, you can reuse those comparisons instead of redoing them.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Initialise", "detail": "z[0] is conventionally 0 (or n). Keep a window [l, r] of the rightmost match to the prefix, initially empty." },
-      { "title": "Reuse inside the box", "detail": "If i ≤ r, start z[i] = min(r − i + 1, z[i − l]) — mirror the value from the prefix." },
-      { "title": "Extend and update", "detail": "Extend z[i] by direct comparison past r; if i + z[i] − 1 > r, update [l, r] = [i, i + z[i] − 1]." }
+      {
+        "title": "Initialise",
+        "detail": "z[0] is conventionally 0 (or n). Keep a window [l, r] of the rightmost match to the prefix, initially empty."
+      },
+      {
+        "title": "Reuse inside the box",
+        "detail": "If i ≤ r, start z[i] = min(r − i + 1, z[i − l]) — mirror the value from the prefix."
+      },
+      {
+        "title": "Extend and update",
+        "detail": "Extend z[i] by direct comparison past r; if i + z[i] − 1 > r, update [l, r] = [i, i + z[i] − 1]."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "z_algorithm.cpp",
-      "source": "vector<int> zfun(const string& s) {\n    int n = s.size(); vector<int> z(n, 0);\n    int l = 0, r = 0;\n    for (int i = 1; i < n; ++i) {\n        if (i < r) z[i] = min(r - i, z[i - l]);\n        while (i + z[i] < n && s[z[i]] == s[i + z[i]]) ++z[i];\n        if (i + z[i] > r) { l = i; r = i + z[i]; }\n    }\n    return z;\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "z_algorithm.cpp",
+        "source": "vector<int> zfun(const string& s) {\n    int n = s.size(); vector<int> z(n, 0);\n    int l = 0, r = 0;\n    for (int i = 1; i < n; ++i) {\n        if (i < r) z[i] = min(r - i, z[i - l]);\n        while (i + z[i] < n && s[z[i]] == s[i + z[i]]) ++z[i];\n        if (i + z[i] > r) { l = i; r = i + z[i]; }\n    }\n    return z;\n}"
+      },
+      {
+        "language": "python",
+        "title": "z_algorithm.py",
+        "source": "def z_function(s):\n    n = len(s)\n    z = [0] * n\n    l = r = 0\n    for i in range(1, n):\n        if i < r:\n            z[i] = min(r - i, z[i - l])\n        while i + z[i] < n and s[z[i]] == s[i + z[i]]:\n            z[i] += 1\n        if i + z[i] > r:\n            l, r = i, i + z[i]\n    return z"
+      }
+    ],
     "complexity": {
       "time": "O(n)",
       "timeReason": "The right boundary r only moves forward, bounding total comparisons by n.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "s = \"aabxaab\"",
-    "columns": ["i", "match length", "z[i]"],
+    "columns": [
+      "i",
+      "match length",
+      "z[i]"
+    ],
     "rows": [
-      ["1", "'a' matches prefix 'a'", "1"],
-      ["2", "'b' ≠ 'a'", "0"],
-      ["4", "'aab' matches prefix", "3"],
-      ["—", "Z=3 means a repeat", "found period"]
+      [
+        "1",
+        "'a' matches prefix 'a'",
+        "1"
+      ],
+      [
+        "2",
+        "'b' ≠ 'a'",
+        "0"
+      ],
+      [
+        "4",
+        "'aab' matches prefix",
+        "3"
+      ],
+      [
+        "—",
+        "Z=3 means a repeat",
+        "found period"
+      ]
     ],
     "clickMoment": "z[4]=3 reveals that the suffix starting at index 4 re-runs the prefix 'aab'. Detecting that overlap is exactly what powers fast matching and periodicity tests."
   },
   "problems": [
-    { "id": "z1", "title": "Implement strStr()", "difficulty": "Easy", "statement": "Find a needle in a haystack.", "hint": "Z-array of needle + '#' + haystack.", "tests": "Z for matching.", "link": "https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/" },
-    { "id": "z2", "title": "Longest Happy Prefix", "difficulty": "Hard", "statement": "Longest prefix that is also a suffix.", "hint": "Largest i with i + z[i] == n.", "tests": "Z for borders.", "link": "https://leetcode.com/problems/longest-happy-prefix/" },
-    { "id": "z3", "title": "Sum of Scores of Built Strings", "difficulty": "Hard", "statement": "Sum of prefix-match scores for all suffixes.", "hint": "Directly sum the Z-array (+ n).", "tests": "Z-array aggregation.", "link": "https://leetcode.com/problems/sum-of-scores-of-built-strings/" },
-    { "id": "z4", "title": "Distinct Echo Substrings", "difficulty": "Hard", "statement": "Count substrings of form t+t.", "hint": "Z-function / hashing to detect repeats.", "tests": "Repeat detection.", "link": "https://leetcode.com/problems/distinct-echo-substrings/" },
-    { "id": "z5", "title": "String Matching in an Array", "difficulty": "Easy", "statement": "Which words are substrings of others.", "hint": "Z-algorithm or simple matching.", "tests": "Substring checks.", "link": "https://leetcode.com/problems/string-matching-in-an-array/" }
+    {
+      "id": "z1",
+      "title": "Implement strStr()",
+      "difficulty": "Easy",
+      "statement": "Find a needle in a haystack.",
+      "hint": "Z-array of needle + '#' + haystack.",
+      "tests": "Z for matching.",
+      "link": "https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/"
+    },
+    {
+      "id": "z2",
+      "title": "Longest Happy Prefix",
+      "difficulty": "Hard",
+      "statement": "Longest prefix that is also a suffix.",
+      "hint": "Largest i with i + z[i] == n.",
+      "tests": "Z for borders.",
+      "link": "https://leetcode.com/problems/longest-happy-prefix/"
+    },
+    {
+      "id": "z3",
+      "title": "Sum of Scores of Built Strings",
+      "difficulty": "Hard",
+      "statement": "Sum of prefix-match scores for all suffixes.",
+      "hint": "Directly sum the Z-array (+ n).",
+      "tests": "Z-array aggregation.",
+      "link": "https://leetcode.com/problems/sum-of-scores-of-built-strings/"
+    },
+    {
+      "id": "z4",
+      "title": "Distinct Echo Substrings",
+      "difficulty": "Hard",
+      "statement": "Count substrings of form t+t.",
+      "hint": "Z-function / hashing to detect repeats.",
+      "tests": "Repeat detection.",
+      "link": "https://leetcode.com/problems/distinct-echo-substrings/"
+    },
+    {
+      "id": "z5",
+      "title": "String Matching in an Array",
+      "difficulty": "Easy",
+      "statement": "Which words are substrings of others.",
+      "hint": "Z-algorithm or simple matching.",
+      "tests": "Substring checks.",
+      "link": "https://leetcode.com/problems/string-matching-in-an-array/"
+    }
   ]
 }

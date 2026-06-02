@@ -6,8 +6,15 @@
   "tagline": "No comparisons — just tally each value and pour them out in order. O(n + k).",
   "estMinutes": 16,
   "simulator": "counting-sort",
-  "complexity": { "time": "O(n + k)", "space": "O(n + k)" },
-  "tags": ["non-comparison", "stable", "integer keys"],
+  "complexity": {
+    "time": "O(n + k)",
+    "space": "O(n + k)"
+  },
+  "tags": [
+    "non-comparison",
+    "stable",
+    "integer keys"
+  ],
   "intuition": {
     "analogy": "To sort a deck where every card is a number from 0–9, you don't compare cards — you make ten piles, drop each card on its pile, then stack the piles 0,1,2,…,9. The order falls out automatically.",
     "paragraphs": [
@@ -19,16 +26,35 @@
   },
   "logic": {
     "steps": [
-      { "title": "Find the range", "detail": "Determine max value M (and optionally min, to shift negatives). Allocate count[0..M]." },
-      { "title": "Tally", "detail": "For each element v, increment count[v]. Now count[v] is how many times v occurs." },
-      { "title": "Prefix sum (for stability)", "detail": "Convert counts to positions: count[v] += count[v-1] gives the index where the last v should go, enabling a stable placement." },
-      { "title": "Place", "detail": "Walk the input from right to left, placing each element at its counted position and decrementing the count — preserving original order among equal keys." }
+      {
+        "title": "Find the range",
+        "detail": "Determine max value M (and optionally min, to shift negatives). Allocate count[0..M]."
+      },
+      {
+        "title": "Tally",
+        "detail": "For each element v, increment count[v]. Now count[v] is how many times v occurs."
+      },
+      {
+        "title": "Prefix sum (for stability)",
+        "detail": "Convert counts to positions: count[v] += count[v-1] gives the index where the last v should go, enabling a stable placement."
+      },
+      {
+        "title": "Place",
+        "detail": "Walk the input from right to left, placing each element at its counted position and decrementing the count — preserving original order among equal keys."
+      }
     ],
-    "code": {
-      "language": "python",
-      "title": "counting_sort.py",
-      "source": "def counting_sort(a):\n    if not a: return a\n    M = max(a)\n    count = [0] * (M + 1)\n    for v in a:\n        count[v] += 1\n    out = []\n    for v in range(M + 1):\n        out.extend([v] * count[v])\n    return out"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "counting_sort.cpp",
+        "source": "vector<int> countingSort(const vector<int>& a) {\n    if (a.empty()) return a;\n    int M = *max_element(a.begin(), a.end());\n    vector<int> count(M + 1, 0);\n    for (int v : a) count[v]++;                  // tally\n    vector<int> out;\n    for (int v = 0; v <= M; ++v)\n        out.insert(out.end(), count[v], v);      // expand in sorted order\n    return out;\n}"
+      },
+      {
+        "language": "python",
+        "title": "counting_sort.py",
+        "source": "def counting_sort(a):\n    if not a: return a\n    M = max(a)\n    count = [0] * (M + 1)\n    for v in a:\n        count[v] += 1\n    out = []\n    for v in range(M + 1):\n        out.extend([v] * count[v])\n    return out"
+      }
+    ],
     "complexity": {
       "time": "O(n + k)",
       "timeReason": "One pass to count (n), one pass over the value range to emit (k).",
@@ -43,20 +69,80 @@
   },
   "dryRun": {
     "input": "a = [2, 5, 3, 0, 2, 3, 0, 3]",
-    "columns": ["Phase", "State", "Note"],
+    "columns": [
+      "Phase",
+      "State",
+      "Note"
+    ],
     "rows": [
-      ["count", "0→2, 2→2, 3→3, 5→1", "Tally occurrences of each value"],
-      ["emit", "0,0", "Two 0s first"],
-      ["emit", "0,0,2,2", "Then two 2s"],
-      ["emit", "0,0,2,2,3,3,3,5", "Then 3s and finally 5"]
+      [
+        "count",
+        "0→2, 2→2, 3→3, 5→1",
+        "Tally occurrences of each value"
+      ],
+      [
+        "emit",
+        "0,0",
+        "Two 0s first"
+      ],
+      [
+        "emit",
+        "0,0,2,2",
+        "Then two 2s"
+      ],
+      [
+        "emit",
+        "0,0,2,2,3,3,3,5",
+        "Then 3s and finally 5"
+      ]
     ],
     "clickMoment": "There was never a single comparison between two elements. Sorting became 'array indexing', which is why it beats the n log n comparison barrier for small integer keys."
   },
   "problems": [
-    { "id": "cs1", "title": "Sort an Array", "difficulty": "Medium", "statement": "Sort integers within a known small range using counting sort.", "hint": "Tally then emit; offset if negatives are present.", "tests": "Basic counting sort.", "link": "https://leetcode.com/problems/sort-an-array/" },
-    { "id": "cs2", "title": "Sort Colors", "difficulty": "Medium", "statement": "Sort an array of 0s, 1s, 2s.", "hint": "Counting sort with k=3 is a clean one-liner; or do it in one pass with three pointers.", "tests": "Counting sort with tiny k.", "link": "https://leetcode.com/problems/sort-colors/" },
-    { "id": "cs3", "title": "Relative Sort Array", "difficulty": "Easy", "statement": "Sort arr1 so elements follow the order in arr2; the rest go ascending at the end.", "hint": "Counting array indexed by value lets you emit in any prescribed order.", "tests": "Counting sort with a custom emission order.", "link": "https://leetcode.com/problems/relative-sort-array/" },
-    { "id": "cs4", "title": "Maximum Gap", "difficulty": "Medium", "statement": "Find the maximum gap between successive elements in sorted order, in linear time.", "hint": "Bucket/counting ideas give linear-time sorting needed here.", "tests": "Linear-time sorting motivation.", "link": "https://leetcode.com/problems/maximum-gap/" },
-    { "id": "cs5", "title": "H-Index", "difficulty": "Medium", "statement": "Compute a researcher's h-index from citation counts.", "hint": "Bucket citations by count (capped at n), then sweep from high to low accumulating.", "tests": "Counting buckets to avoid sorting.", "link": "https://leetcode.com/problems/h-index/" }
+    {
+      "id": "cs1",
+      "title": "Sort an Array",
+      "difficulty": "Medium",
+      "statement": "Sort integers within a known small range using counting sort.",
+      "hint": "Tally then emit; offset if negatives are present.",
+      "tests": "Basic counting sort.",
+      "link": "https://leetcode.com/problems/sort-an-array/"
+    },
+    {
+      "id": "cs2",
+      "title": "Sort Colors",
+      "difficulty": "Medium",
+      "statement": "Sort an array of 0s, 1s, 2s.",
+      "hint": "Counting sort with k=3 is a clean one-liner; or do it in one pass with three pointers.",
+      "tests": "Counting sort with tiny k.",
+      "link": "https://leetcode.com/problems/sort-colors/"
+    },
+    {
+      "id": "cs3",
+      "title": "Relative Sort Array",
+      "difficulty": "Easy",
+      "statement": "Sort arr1 so elements follow the order in arr2; the rest go ascending at the end.",
+      "hint": "Counting array indexed by value lets you emit in any prescribed order.",
+      "tests": "Counting sort with a custom emission order.",
+      "link": "https://leetcode.com/problems/relative-sort-array/"
+    },
+    {
+      "id": "cs4",
+      "title": "Maximum Gap",
+      "difficulty": "Medium",
+      "statement": "Find the maximum gap between successive elements in sorted order, in linear time.",
+      "hint": "Bucket/counting ideas give linear-time sorting needed here.",
+      "tests": "Linear-time sorting motivation.",
+      "link": "https://leetcode.com/problems/maximum-gap/"
+    },
+    {
+      "id": "cs5",
+      "title": "H-Index",
+      "difficulty": "Medium",
+      "statement": "Compute a researcher's h-index from citation counts.",
+      "hint": "Bucket citations by count (capped at n), then sweep from high to low accumulating.",
+      "tests": "Counting buckets to avoid sorting.",
+      "link": "https://leetcode.com/problems/h-index/"
+    }
   ]
 }

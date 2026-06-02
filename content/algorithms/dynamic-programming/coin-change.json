@@ -6,8 +6,15 @@
   "tagline": "The canonical 1D unbounded-knapsack DP — fewest coins, and counting ways.",
   "estMinutes": 16,
   "simulator": null,
-  "complexity": { "time": "O(amount·coins)", "space": "O(amount)" },
-  "tags": ["dp", "1d", "unbounded"],
+  "complexity": {
+    "time": "O(amount·coins)",
+    "space": "O(amount)"
+  },
+  "tags": [
+    "dp",
+    "1d",
+    "unbounded"
+  ],
   "intuition": {
     "analogy": "Making exact change at a till: to give 11 cents, you ask 'what's the fewest coins for 11?' which is 1 + the fewest coins for (11 − somecoin). You build answers for every amount from 0 upward, reusing the small ones.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Base case", "detail": "dp[0] = 0 (zero coins make amount 0); dp[a] = ∞ otherwise." },
-      { "title": "Fill upward", "detail": "For a from 1 to amount, for each coin ≤ a: dp[a] = min(dp[a], dp[a-coin] + 1)." },
-      { "title": "Interpret", "detail": "dp[amount] is the fewest coins, or ∞/−1 if impossible." }
+      {
+        "title": "Base case",
+        "detail": "dp[0] = 0 (zero coins make amount 0); dp[a] = ∞ otherwise."
+      },
+      {
+        "title": "Fill upward",
+        "detail": "For a from 1 to amount, for each coin ≤ a: dp[a] = min(dp[a], dp[a-coin] + 1)."
+      },
+      {
+        "title": "Interpret",
+        "detail": "dp[amount] is the fewest coins, or ∞/−1 if impossible."
+      }
     ],
-    "code": {
-      "language": "python",
-      "title": "coin_change.py",
-      "source": "def coin_change(coins, amount):\n    INF = amount + 1\n    dp = [0] + [INF]*amount\n    for a in range(1, amount+1):\n        for c in coins:\n            if c <= a:\n                dp[a] = min(dp[a], dp[a-c] + 1)\n    return dp[amount] if dp[amount] != INF else -1"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "coin_change.cpp",
+        "source": "int coinChange(vector<int>& coins, int amount) {\n    int INF = amount + 1;\n    vector<int> dp(amount + 1, INF);\n    dp[0] = 0;\n    for (int a = 1; a <= amount; ++a)\n        for (int c : coins)\n            if (c <= a) dp[a] = min(dp[a], dp[a - c] + 1);\n    return dp[amount] == INF ? -1 : dp[amount];\n}"
+      },
+      {
+        "language": "python",
+        "title": "coin_change.py",
+        "source": "def coin_change(coins, amount):\n    INF = amount + 1\n    dp = [0] + [INF]*amount\n    for a in range(1, amount+1):\n        for c in coins:\n            if c <= a:\n                dp[a] = min(dp[a], dp[a-c] + 1)\n    return dp[amount] if dp[amount] != INF else -1"
+      }
+    ],
     "complexity": {
       "time": "O(amount·coins)",
       "timeReason": "Each amount tries every coin.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "coins = [1,2,5], amount = 11",
-    "columns": ["a", "best coin", "dp[a]"],
+    "columns": [
+      "a",
+      "best coin",
+      "dp[a]"
+    ],
     "rows": [
-      ["1", "1", "dp[0]+1 = 1"],
-      ["5", "5", "dp[0]+1 = 1"],
-      ["6", "5", "dp[1]+1 = 2"],
-      ["11", "5", "dp[6]+1 = 3 (5+5+1)"]
+      [
+        "1",
+        "1",
+        "dp[0]+1 = 1"
+      ],
+      [
+        "5",
+        "5",
+        "dp[0]+1 = 1"
+      ],
+      [
+        "6",
+        "5",
+        "dp[1]+1 = 2"
+      ],
+      [
+        "11",
+        "5",
+        "dp[6]+1 = 3 (5+5+1)"
+      ]
     ],
     "clickMoment": "dp[11] reuses dp[6], which reused dp[1]. Each answer is one coin plus a previously solved smaller amount — the optimal substructure made visible."
   },
   "problems": [
-    { "id": "cc1", "title": "Coin Change", "difficulty": "Medium", "statement": "Fewest coins to make an amount.", "hint": "Min 1D DP.", "tests": "Core 1D DP.", "link": "https://leetcode.com/problems/coin-change/" },
-    { "id": "cc2", "title": "Coin Change II", "difficulty": "Medium", "statement": "Number of combinations that make the amount.", "hint": "Count ways; coins loop outside.", "tests": "Counting combinations.", "link": "https://leetcode.com/problems/coin-change-ii/" },
-    { "id": "cc3", "title": "Perfect Squares", "difficulty": "Medium", "statement": "Fewest perfect squares summing to n.", "hint": "Coins are the perfect squares ≤ n.", "tests": "Coin-change reframing.", "link": "https://leetcode.com/problems/perfect-squares/" },
-    { "id": "cc4", "title": "Combination Sum IV", "difficulty": "Medium", "statement": "Count ordered combinations summing to target.", "hint": "Permutations: amounts loop outside.", "tests": "Order-sensitive counting.", "link": "https://leetcode.com/problems/combination-sum-iv/" },
-    { "id": "cc5", "title": "Minimum Cost For Tickets", "difficulty": "Medium", "statement": "Min cost of travel passes covering all travel days.", "hint": "1D DP over days with 1/7/30-day choices.", "tests": "1D DP with multiple transitions.", "link": "https://leetcode.com/problems/minimum-cost-for-tickets/" }
+    {
+      "id": "cc1",
+      "title": "Coin Change",
+      "difficulty": "Medium",
+      "statement": "Fewest coins to make an amount.",
+      "hint": "Min 1D DP.",
+      "tests": "Core 1D DP.",
+      "link": "https://leetcode.com/problems/coin-change/"
+    },
+    {
+      "id": "cc2",
+      "title": "Coin Change II",
+      "difficulty": "Medium",
+      "statement": "Number of combinations that make the amount.",
+      "hint": "Count ways; coins loop outside.",
+      "tests": "Counting combinations.",
+      "link": "https://leetcode.com/problems/coin-change-ii/"
+    },
+    {
+      "id": "cc3",
+      "title": "Perfect Squares",
+      "difficulty": "Medium",
+      "statement": "Fewest perfect squares summing to n.",
+      "hint": "Coins are the perfect squares ≤ n.",
+      "tests": "Coin-change reframing.",
+      "link": "https://leetcode.com/problems/perfect-squares/"
+    },
+    {
+      "id": "cc4",
+      "title": "Combination Sum IV",
+      "difficulty": "Medium",
+      "statement": "Count ordered combinations summing to target.",
+      "hint": "Permutations: amounts loop outside.",
+      "tests": "Order-sensitive counting.",
+      "link": "https://leetcode.com/problems/combination-sum-iv/"
+    },
+    {
+      "id": "cc5",
+      "title": "Minimum Cost For Tickets",
+      "difficulty": "Medium",
+      "statement": "Min cost of travel passes covering all travel days.",
+      "hint": "1D DP over days with 1/7/30-day choices.",
+      "tests": "1D DP with multiple transitions.",
+      "link": "https://leetcode.com/problems/minimum-cost-for-tickets/"
+    }
   ]
 }

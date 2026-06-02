@@ -6,8 +6,15 @@
   "tagline": "Place queens row by row, pruning attacked squares — backtracking with constraint checks.",
   "estMinutes": 18,
   "simulator": "n-queens",
-  "complexity": { "time": "O(n!)", "space": "O(n)" },
-  "tags": ["backtracking", "constraints", "pruning"],
+  "complexity": {
+    "time": "O(n!)",
+    "space": "O(n)"
+  },
+  "tags": [
+    "backtracking",
+    "constraints",
+    "pruning"
+  ],
   "intuition": {
     "analogy": "Seating n rival monarchs so none can attack another. You seat one per row, and before each placement you check that no earlier queen shares the column or a diagonal. If you get stuck, you un-seat the last queen and try the next square.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Recurse by row", "detail": "solve(row): if row == n, a full board is found. Otherwise try each column in this row." },
-      { "title": "Check safety in O(1)", "detail": "A column c is safe if c, row−c, and row+c are all unused. These capture column and both diagonals." },
-      { "title": "Place, recurse, undo", "detail": "Mark the three sets, recurse to the next row, then unmark (backtrack) to explore other columns." }
+      {
+        "title": "Recurse by row",
+        "detail": "solve(row): if row == n, a full board is found. Otherwise try each column in this row."
+      },
+      {
+        "title": "Check safety in O(1)",
+        "detail": "A column c is safe if c, row−c, and row+c are all unused. These capture column and both diagonals."
+      },
+      {
+        "title": "Place, recurse, undo",
+        "detail": "Mark the three sets, recurse to the next row, then unmark (backtrack) to explore other columns."
+      }
     ],
-    "code": {
-      "language": "python",
-      "title": "n_queens.py",
-      "source": "def total_n_queens(n):\n    cols, diag, anti = set(), set(), set()\n    def solve(row):\n        if row == n: return 1\n        count = 0\n        for c in range(n):\n            if c in cols or (row-c) in diag or (row+c) in anti:\n                continue\n            cols.add(c); diag.add(row-c); anti.add(row+c)\n            count += solve(row + 1)\n            cols.remove(c); diag.remove(row-c); anti.remove(row+c)\n        return count\n    return solve(0)"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "n_queens.cpp",
+        "source": "int n;\nvector<bool> cols, diag, anti;        // diag idx: r-c+n, anti idx: r+c\n\nint solve(int row) {\n    if (row == n) return 1;\n    int count = 0;\n    for (int c = 0; c < n; ++c) {\n        if (cols[c] || diag[row - c + n] || anti[row + c]) continue;\n        cols[c] = diag[row - c + n] = anti[row + c] = true;\n        count += solve(row + 1);\n        cols[c] = diag[row - c + n] = anti[row + c] = false;   // backtrack\n    }\n    return count;\n}"
+      },
+      {
+        "language": "python",
+        "title": "n_queens.py",
+        "source": "def total_n_queens(n):\n    cols, diag, anti = set(), set(), set()\n    def solve(row):\n        if row == n: return 1\n        count = 0\n        for c in range(n):\n            if c in cols or (row-c) in diag or (row+c) in anti:\n                continue\n            cols.add(c); diag.add(row-c); anti.add(row+c)\n            count += solve(row + 1)\n            cols.remove(c); diag.remove(row-c); anti.remove(row+c)\n        return count\n    return solve(0)"
+      }
+    ],
     "complexity": {
       "time": "O(n!) (heavily pruned in practice)",
       "timeReason": "Worst case explores a factorial number of placements, but constraint pruning cuts most branches early.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "n = 4, building row by row",
-    "columns": ["Row", "Try", "Result"],
+    "columns": [
+      "Row",
+      "Try",
+      "Result"
+    ],
     "rows": [
-      ["0", "col 0", "place"],
-      ["1", "col 0,1 attacked; col 2", "place"],
-      ["2", "all attacked", "dead end → backtrack"],
-      ["…", "retry row 0 col 1", "leads to a valid board"]
+      [
+        "0",
+        "col 0",
+        "place"
+      ],
+      [
+        "1",
+        "col 0,1 attacked; col 2",
+        "place"
+      ],
+      [
+        "2",
+        "all attacked",
+        "dead end → backtrack"
+      ],
+      [
+        "…",
+        "retry row 0 col 1",
+        "leads to a valid board"
+      ]
     ],
     "clickMoment": "When row 2 has no safe column, the search abandons that whole subtree instantly and un-places the row-1 queen. That early pruning is why backtracking beats brute force enumeration."
   },
   "problems": [
-    { "id": "nq1", "title": "N-Queens", "difficulty": "Hard", "statement": "Return all distinct solutions to the n-queens puzzle.", "hint": "Row recursion + diagonal sets.", "tests": "Core constraint backtracking.", "link": "https://leetcode.com/problems/n-queens/" },
-    { "id": "nq2", "title": "N-Queens II", "difficulty": "Hard", "statement": "Count the number of solutions.", "hint": "Same recursion, return a count.", "tests": "Counting variant.", "link": "https://leetcode.com/problems/n-queens-ii/" },
-    { "id": "nq3", "title": "Sudoku Solver", "difficulty": "Hard", "statement": "Fill a 9×9 Sudoku.", "hint": "Backtrack over empty cells with row/col/box constraints.", "tests": "Constraint backtracking sibling.", "link": "https://leetcode.com/problems/sudoku-solver/" },
-    { "id": "nq4", "title": "Word Search", "difficulty": "Medium", "statement": "Find a word path in a grid.", "hint": "DFS backtracking with a visited mark restored on return.", "tests": "Grid backtracking.", "link": "https://leetcode.com/problems/word-search/" },
-    { "id": "nq5", "title": "Partition to K Equal Sum Subsets", "difficulty": "Medium", "statement": "Partition into k equal-sum groups.", "hint": "Backtrack assigning numbers to buckets with pruning.", "tests": "Assignment backtracking.", "link": "https://leetcode.com/problems/partition-to-k-equal-sum-subsets/" }
+    {
+      "id": "nq1",
+      "title": "N-Queens",
+      "difficulty": "Hard",
+      "statement": "Return all distinct solutions to the n-queens puzzle.",
+      "hint": "Row recursion + diagonal sets.",
+      "tests": "Core constraint backtracking.",
+      "link": "https://leetcode.com/problems/n-queens/"
+    },
+    {
+      "id": "nq2",
+      "title": "N-Queens II",
+      "difficulty": "Hard",
+      "statement": "Count the number of solutions.",
+      "hint": "Same recursion, return a count.",
+      "tests": "Counting variant.",
+      "link": "https://leetcode.com/problems/n-queens-ii/"
+    },
+    {
+      "id": "nq3",
+      "title": "Sudoku Solver",
+      "difficulty": "Hard",
+      "statement": "Fill a 9×9 Sudoku.",
+      "hint": "Backtrack over empty cells with row/col/box constraints.",
+      "tests": "Constraint backtracking sibling.",
+      "link": "https://leetcode.com/problems/sudoku-solver/"
+    },
+    {
+      "id": "nq4",
+      "title": "Word Search",
+      "difficulty": "Medium",
+      "statement": "Find a word path in a grid.",
+      "hint": "DFS backtracking with a visited mark restored on return.",
+      "tests": "Grid backtracking.",
+      "link": "https://leetcode.com/problems/word-search/"
+    },
+    {
+      "id": "nq5",
+      "title": "Partition to K Equal Sum Subsets",
+      "difficulty": "Medium",
+      "statement": "Partition into k equal-sum groups.",
+      "hint": "Backtrack assigning numbers to buckets with pruning.",
+      "tests": "Assignment backtracking.",
+      "link": "https://leetcode.com/problems/partition-to-k-equal-sum-subsets/"
+    }
   ]
 }

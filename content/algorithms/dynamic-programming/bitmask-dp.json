@@ -6,8 +6,15 @@
   "tagline": "Encode a subset as the bits of an integer — DP over states of small sets.",
   "estMinutes": 20,
   "simulator": null,
-  "complexity": { "time": "O(2^n · n)", "space": "O(2^n)" },
-  "tags": ["dp", "subsets", "exponential"],
+  "complexity": {
+    "time": "O(2^n · n)",
+    "space": "O(2^n)"
+  },
+  "tags": [
+    "dp",
+    "subsets",
+    "exponential"
+  ],
   "intuition": {
     "analogy": "Tracking which of n chores are done with a row of light switches. The on/off pattern is a binary number, so 'which subset is finished' becomes a single integer you can use as a DP index.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Encode the state", "detail": "mask = which elements are chosen/visited. Add extra dimensions (like current node) as needed." },
-      { "title": "Order by increasing mask", "detail": "A mask depends on masks with fewer bits, so iterating masks in increasing numeric order respects dependencies." },
-      { "title": "Transition with bit ops", "detail": "Extend the state by setting an unset bit: new = mask | (1<<j), updating dp[new] from dp[mask]." }
+      {
+        "title": "Encode the state",
+        "detail": "mask = which elements are chosen/visited. Add extra dimensions (like current node) as needed."
+      },
+      {
+        "title": "Order by increasing mask",
+        "detail": "A mask depends on masks with fewer bits, so iterating masks in increasing numeric order respects dependencies."
+      },
+      {
+        "title": "Transition with bit ops",
+        "detail": "Extend the state by setting an unset bit: new = mask | (1<<j), updating dp[new] from dp[mask]."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "tsp_bitmask.cpp",
-      "source": "// dp[mask][i] = min cost to visit set 'mask', ending at city i\nvector<vector<int>> dp(1<<n, vector<int>(n, INF));\ndp[1][0] = 0;                                   // start at city 0\nfor (int mask = 1; mask < (1<<n); ++mask)\n  for (int i = 0; i < n; ++i) if (dp[mask][i] < INF)\n    for (int j = 0; j < n; ++j) if (!(mask & (1<<j)))\n      dp[mask | (1<<j)][j] = min(dp[mask | (1<<j)][j], dp[mask][i] + cost[i][j]);"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "tsp_bitmask.cpp",
+        "source": "// dp[mask][i] = min cost to visit set 'mask', ending at city i\nvector<vector<int>> dp(1<<n, vector<int>(n, INF));\ndp[1][0] = 0;                                   // start at city 0\nfor (int mask = 1; mask < (1<<n); ++mask)\n  for (int i = 0; i < n; ++i) if (dp[mask][i] < INF)\n    for (int j = 0; j < n; ++j) if (!(mask & (1<<j)))\n      dp[mask | (1<<j)][j] = min(dp[mask | (1<<j)][j], dp[mask][i] + cost[i][j]);"
+      },
+      {
+        "language": "python",
+        "title": "tsp_bitmask.py",
+        "source": "def tsp(cost):\n    n = len(cost)\n    INF = float('inf')\n    dp = [[INF] * n for _ in range(1 << n)]\n    dp[1][0] = 0                                # start at city 0\n    for mask in range(1, 1 << n):\n        for i in range(n):\n            if dp[mask][i] == INF:\n                continue\n            for j in range(n):\n                if not (mask & (1 << j)):\n                    nm = mask | (1 << j)\n                    dp[nm][j] = min(dp[nm][j], dp[mask][i] + cost[i][j])\n    full = (1 << n) - 1\n    return min(dp[full][i] + cost[i][0] for i in range(n))"
+      }
+    ],
     "complexity": {
       "time": "O(2^n · n²) for TSP-like problems",
       "timeReason": "2^n masks × transitions over pairs of cities.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "n=3 cities, start at 0",
-    "columns": ["mask", "meaning", "example dp"],
+    "columns": [
+      "mask",
+      "meaning",
+      "example dp"
+    ],
     "rows": [
-      ["001", "only city 0 visited", "dp=0 at i=0"],
-      ["011", "cities 0,1 visited", "cost[0][1]"],
-      ["111", "all visited", "min over last city"],
-      ["answer", "return to 0", "dp[111][i] + cost[i][0]"]
+      [
+        "001",
+        "only city 0 visited",
+        "dp=0 at i=0"
+      ],
+      [
+        "011",
+        "cities 0,1 visited",
+        "cost[0][1]"
+      ],
+      [
+        "111",
+        "all visited",
+        "min over last city"
+      ],
+      [
+        "answer",
+        "return to 0",
+        "dp[111][i] + cost[i][0]"
+      ]
     ],
     "clickMoment": "The integer 011 literally says 'cities 0 and 1 done'. Subsets became array indices, so an exponential set of states fits in one flat DP table."
   },
   "problems": [
-    { "id": "bm1", "title": "Partition to K Equal Sum Subsets", "difficulty": "Medium", "statement": "Split into k equal-sum subsets.", "hint": "DP over used-element mask.", "tests": "Subset-mask DP.", "link": "https://leetcode.com/problems/partition-to-k-equal-sum-subsets/" },
-    { "id": "bm2", "title": "Shortest Path Visiting All Nodes", "difficulty": "Hard", "statement": "Shortest walk visiting every node.", "hint": "BFS over (node, visited-mask) states.", "tests": "Bitmask + BFS.", "link": "https://leetcode.com/problems/shortest-path-visiting-all-nodes/" },
-    { "id": "bm3", "title": "Number of Ways to Wear Different Hats", "difficulty": "Hard", "statement": "Count assignments of hats to people.", "hint": "DP over a mask of assigned people.", "tests": "Assignment bitmask DP.", "link": "https://leetcode.com/problems/number-of-ways-to-wear-different-hats-to-each-other/" },
-    { "id": "bm4", "title": "Maximum Students Taking Exam", "difficulty": "Hard", "statement": "Seat max students with no cheating adjacency.", "hint": "Row-by-row DP over seat masks; validate against the previous row.", "tests": "Profile/broken-profile DP.", "link": "https://leetcode.com/problems/maximum-students-taking-exam/" },
-    { "id": "bm5", "title": "Travelling Salesman (Hamiltonian)", "difficulty": "Hard", "statement": "Minimum cost Hamiltonian tour.", "hint": "Classic dp[mask][i] Held-Karp.", "tests": "Held-Karp bitmask DP.", "link": "https://cses.fi/problemset/task/1690" }
+    {
+      "id": "bm1",
+      "title": "Partition to K Equal Sum Subsets",
+      "difficulty": "Medium",
+      "statement": "Split into k equal-sum subsets.",
+      "hint": "DP over used-element mask.",
+      "tests": "Subset-mask DP.",
+      "link": "https://leetcode.com/problems/partition-to-k-equal-sum-subsets/"
+    },
+    {
+      "id": "bm2",
+      "title": "Shortest Path Visiting All Nodes",
+      "difficulty": "Hard",
+      "statement": "Shortest walk visiting every node.",
+      "hint": "BFS over (node, visited-mask) states.",
+      "tests": "Bitmask + BFS.",
+      "link": "https://leetcode.com/problems/shortest-path-visiting-all-nodes/"
+    },
+    {
+      "id": "bm3",
+      "title": "Number of Ways to Wear Different Hats",
+      "difficulty": "Hard",
+      "statement": "Count assignments of hats to people.",
+      "hint": "DP over a mask of assigned people.",
+      "tests": "Assignment bitmask DP.",
+      "link": "https://leetcode.com/problems/number-of-ways-to-wear-different-hats-to-each-other/"
+    },
+    {
+      "id": "bm4",
+      "title": "Maximum Students Taking Exam",
+      "difficulty": "Hard",
+      "statement": "Seat max students with no cheating adjacency.",
+      "hint": "Row-by-row DP over seat masks; validate against the previous row.",
+      "tests": "Profile/broken-profile DP.",
+      "link": "https://leetcode.com/problems/maximum-students-taking-exam/"
+    },
+    {
+      "id": "bm5",
+      "title": "Travelling Salesman (Hamiltonian)",
+      "difficulty": "Hard",
+      "statement": "Minimum cost Hamiltonian tour.",
+      "hint": "Classic dp[mask][i] Held-Karp.",
+      "tests": "Held-Karp bitmask DP.",
+      "link": "https://cses.fi/problemset/task/1690"
+    }
   ]
 }

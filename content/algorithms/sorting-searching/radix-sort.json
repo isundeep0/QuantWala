@@ -6,8 +6,15 @@
   "tagline": "Sort big integers by stacking stable counting sorts, one digit at a time.",
   "estMinutes": 16,
   "simulator": null,
-  "complexity": { "time": "O(d·(n + b))", "space": "O(n + b)" },
-  "tags": ["non-comparison", "digits", "stable"],
+  "complexity": {
+    "time": "O(d·(n + b))",
+    "space": "O(n + b)"
+  },
+  "tags": [
+    "non-comparison",
+    "digits",
+    "stable"
+  ],
   "intuition": {
     "analogy": "Old library card sorters physically passed cards through bins by the last digit, restacked, then by the next digit, and so on. After processing every digit position, the cards came out perfectly ordered.",
     "paragraphs": [
@@ -19,20 +26,36 @@
   },
   "logic": {
     "steps": [
-      { "title": "Pick a base", "detail": "Choose base b (e.g. 10 for decimal digits, 256 for bytes). Larger b means fewer passes but bigger count arrays." },
-      { "title": "Stable counting sort per digit", "detail": "For digit position p (starting at the least significant), extract digit = (x / b^p) % b and stable-counting-sort by it." },
-      { "title": "Repeat for all d positions", "detail": "After the most significant digit pass, the array is fully sorted." }
+      {
+        "title": "Pick a base",
+        "detail": "Choose base b (e.g. 10 for decimal digits, 256 for bytes). Larger b means fewer passes but bigger count arrays."
+      },
+      {
+        "title": "Stable counting sort per digit",
+        "detail": "For digit position p (starting at the least significant), extract digit = (x / b^p) % b and stable-counting-sort by it."
+      },
+      {
+        "title": "Repeat for all d positions",
+        "detail": "After the most significant digit pass, the array is fully sorted."
+      }
     ],
-    "code": {
-      "language": "python",
-      "title": "radix_sort.py",
-      "source": "def radix_sort(a, base=10):\n    if not a: return a\n    mx = max(a)\n    exp = 1\n    while mx // exp > 0:\n        buckets = [[] for _ in range(base)]\n        for x in a:\n            buckets[(x // exp) % base].append(x)   # stable\n        a = [x for b in buckets for x in b]\n        exp *= base\n    return a"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "radix_sort.cpp",
+        "source": "// LSD radix sort for non-negative integers (base 10).\nvoid radixSort(vector<int>& a) {\n    if (a.empty()) return;\n    int mx = *max_element(a.begin(), a.end());\n    for (int exp = 1; mx / exp > 0; exp *= 10) {\n        vector<vector<int>> buckets(10);\n        for (int x : a) buckets[(x / exp) % 10].push_back(x);   // stable\n        a.clear();\n        for (auto& b : buckets)\n            for (int x : b) a.push_back(x);\n    }\n}"
+      },
+      {
+        "language": "python",
+        "title": "radix_sort.py",
+        "source": "def radix_sort(a, base=10):\n    if not a: return a\n    mx = max(a)\n    exp = 1\n    while mx // exp > 0:\n        buckets = [[] for _ in range(base)]\n        for x in a:\n            buckets[(x // exp) % base].append(x)   # stable\n        a = [x for b in buckets for x in b]\n        exp *= base\n    return a"
+      }
+    ],
     "complexity": {
       "time": "O(d·(n + b))",
       "timeReason": "d passes, each a counting sort costing O(n + b).",
       "space": "O(n + b)",
-      "spaceReason": "Buckets/count array plus output." 
+      "spaceReason": "Buckets/count array plus output."
     },
     "pitfalls": [
       "Each digit pass MUST be stable, or the algorithm is wrong.",
@@ -42,19 +65,75 @@
   },
   "dryRun": {
     "input": "a = [170, 45, 75, 90, 2, 802, 24, 66] (base 10)",
-    "columns": ["Pass", "Sort by", "Result"],
+    "columns": [
+      "Pass",
+      "Sort by",
+      "Result"
+    ],
     "rows": [
-      ["1", "units", "170, 90, 2, 802, 24, 45, 75, 66"],
-      ["2", "tens", "2, 802, 24, 45, 66, 170, 75, 90"],
-      ["3", "hundreds", "2, 24, 45, 66, 75, 90, 170, 802"]
+      [
+        "1",
+        "units",
+        "170, 90, 2, 802, 24, 45, 75, 66"
+      ],
+      [
+        "2",
+        "tens",
+        "2, 802, 24, 45, 66, 170, 75, 90"
+      ],
+      [
+        "3",
+        "hundreds",
+        "2, 24, 45, 66, 75, 90, 170, 802"
+      ]
     ],
     "clickMoment": "After the units pass, look at the 4x pair 45 and 75 — once the tens pass runs, their already-correct units order is preserved. Earlier passes silently become tie-breakers."
   },
   "problems": [
-    { "id": "rs1", "title": "Maximum Gap", "difficulty": "Hard", "statement": "Find the largest gap between consecutive sorted elements in linear time.", "hint": "Radix or bucket sort gives the needed linear-time ordering.", "tests": "Linear-time integer sorting.", "link": "https://leetcode.com/problems/maximum-gap/" },
-    { "id": "rs2", "title": "Sort an Array", "difficulty": "Medium", "statement": "Sort integers; try a base-256 radix sort.", "hint": "Mask bytes with shifts; 4 passes for 32-bit ints.", "tests": "Radix sort implementation.", "link": "https://leetcode.com/problems/sort-an-array/" },
-    { "id": "rs3", "title": "Query Kth Smallest Trimmed Number", "difficulty": "Medium", "statement": "Answer kth-smallest queries over numbers trimmed to their rightmost digits.", "hint": "Repeated stable sorting by trailing digits mirrors radix sort.", "tests": "Stable sort by digit suffixes.", "link": "https://leetcode.com/problems/query-kth-smallest-trimmed-number/" },
-    { "id": "rs4", "title": "Sort Integers by Number of 1 Bits", "difficulty": "Easy", "statement": "Sort by popcount, ties by value.", "hint": "A stable sort by primary then secondary key echoes radix layering.", "tests": "Multi-key stable sorting.", "link": "https://leetcode.com/problems/sort-integers-by-the-number-of-1-bits/" },
-    { "id": "rs5", "title": "Largest Number", "difficulty": "Medium", "statement": "Arrange numbers to form the largest concatenation.", "hint": "Custom comparator; understand why a stable, well-defined ordering matters.", "tests": "Ordering semantics.", "link": "https://leetcode.com/problems/largest-number/" }
+    {
+      "id": "rs1",
+      "title": "Maximum Gap",
+      "difficulty": "Hard",
+      "statement": "Find the largest gap between consecutive sorted elements in linear time.",
+      "hint": "Radix or bucket sort gives the needed linear-time ordering.",
+      "tests": "Linear-time integer sorting.",
+      "link": "https://leetcode.com/problems/maximum-gap/"
+    },
+    {
+      "id": "rs2",
+      "title": "Sort an Array",
+      "difficulty": "Medium",
+      "statement": "Sort integers; try a base-256 radix sort.",
+      "hint": "Mask bytes with shifts; 4 passes for 32-bit ints.",
+      "tests": "Radix sort implementation.",
+      "link": "https://leetcode.com/problems/sort-an-array/"
+    },
+    {
+      "id": "rs3",
+      "title": "Query Kth Smallest Trimmed Number",
+      "difficulty": "Medium",
+      "statement": "Answer kth-smallest queries over numbers trimmed to their rightmost digits.",
+      "hint": "Repeated stable sorting by trailing digits mirrors radix sort.",
+      "tests": "Stable sort by digit suffixes.",
+      "link": "https://leetcode.com/problems/query-kth-smallest-trimmed-number/"
+    },
+    {
+      "id": "rs4",
+      "title": "Sort Integers by Number of 1 Bits",
+      "difficulty": "Easy",
+      "statement": "Sort by popcount, ties by value.",
+      "hint": "A stable sort by primary then secondary key echoes radix layering.",
+      "tests": "Multi-key stable sorting.",
+      "link": "https://leetcode.com/problems/sort-integers-by-the-number-of-1-bits/"
+    },
+    {
+      "id": "rs5",
+      "title": "Largest Number",
+      "difficulty": "Medium",
+      "statement": "Arrange numbers to form the largest concatenation.",
+      "hint": "Custom comparator; understand why a stable, well-defined ordering matters.",
+      "tests": "Ordering semantics.",
+      "link": "https://leetcode.com/problems/largest-number/"
+    }
   ]
 }

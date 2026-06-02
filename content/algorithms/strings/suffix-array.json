@@ -6,8 +6,15 @@
   "tagline": "All suffixes sorted — compact substring search and the base for LCP-powered string magic.",
   "estMinutes": 20,
   "simulator": null,
-  "complexity": { "time": "O(n log n)", "space": "O(n)" },
-  "tags": ["suffixes", "sorting", "lcp"],
+  "complexity": {
+    "time": "O(n log n)",
+    "space": "O(n)"
+  },
+  "tags": [
+    "suffixes",
+    "sorting",
+    "lcp"
+  ],
   "intuition": {
     "analogy": "Imagine listing every suffix of a word and sorting them alphabetically, like dictionary entries. Once sorted, finding any substring is a binary search — and neighbouring entries reveal how much consecutive suffixes have in common.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Rank by first character", "detail": "Initial ranks are the characters themselves." },
-      { "title": "Prefix doubling", "detail": "For k = 1, 2, 4, …, sort suffixes by the pair (rank[i], rank[i+k]); recompute ranks from the sorted order." },
-      { "title": "Build LCP (Kasai)", "detail": "Using the inverse permutation, compute adjacent LCPs in O(n) by reusing the previous suffix's overlap minus one." }
+      {
+        "title": "Rank by first character",
+        "detail": "Initial ranks are the characters themselves."
+      },
+      {
+        "title": "Prefix doubling",
+        "detail": "For k = 1, 2, 4, …, sort suffixes by the pair (rank[i], rank[i+k]); recompute ranks from the sorted order."
+      },
+      {
+        "title": "Build LCP (Kasai)",
+        "detail": "Using the inverse permutation, compute adjacent LCPs in O(n) by reusing the previous suffix's overlap minus one."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "suffix_array.cpp",
-      "source": "// O(n log^2 n) prefix doubling\nvector<int> suffixArray(const string& s) {\n    int n = s.size();\n    vector<int> sa(n), rank(n), tmp(n);\n    for (int i = 0; i < n; ++i) { sa[i] = i; rank[i] = s[i]; }\n    for (int k = 1; k < n; k <<= 1) {\n        auto cmp = [&](int a, int b){\n            if (rank[a] != rank[b]) return rank[a] < rank[b];\n            int ra = a+k < n ? rank[a+k] : -1;\n            int rb = b+k < n ? rank[b+k] : -1;\n            return ra < rb;\n        };\n        sort(sa.begin(), sa.end(), cmp);\n        tmp[sa[0]] = 0;\n        for (int i = 1; i < n; ++i)\n            tmp[sa[i]] = tmp[sa[i-1]] + cmp(sa[i-1], sa[i]);\n        rank = tmp;\n    }\n    return sa;\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "suffix_array.cpp",
+        "source": "// O(n log^2 n) prefix doubling\nvector<int> suffixArray(const string& s) {\n    int n = s.size();\n    vector<int> sa(n), rank(n), tmp(n);\n    for (int i = 0; i < n; ++i) { sa[i] = i; rank[i] = s[i]; }\n    for (int k = 1; k < n; k <<= 1) {\n        auto cmp = [&](int a, int b){\n            if (rank[a] != rank[b]) return rank[a] < rank[b];\n            int ra = a+k < n ? rank[a+k] : -1;\n            int rb = b+k < n ? rank[b+k] : -1;\n            return ra < rb;\n        };\n        sort(sa.begin(), sa.end(), cmp);\n        tmp[sa[0]] = 0;\n        for (int i = 1; i < n; ++i)\n            tmp[sa[i]] = tmp[sa[i-1]] + cmp(sa[i-1], sa[i]);\n        rank = tmp;\n    }\n    return sa;\n}"
+      },
+      {
+        "language": "python",
+        "title": "suffix_array.py",
+        "source": "def suffix_array(s):                  # O(n log^2 n) prefix doubling\n    n = len(s)\n    sa = list(range(n))\n    rank = [ord(c) for c in s]\n    tmp = [0] * n\n    k = 1\n    while k < n:\n        def key(i):\n            return (rank[i], rank[i + k] if i + k < n else -1)\n        sa.sort(key=key)\n        tmp[sa[0]] = 0\n        for i in range(1, n):\n            tmp[sa[i]] = tmp[sa[i-1]] + (key(sa[i-1]) < key(sa[i]))\n        rank = tmp[:]\n        k <<= 1\n    return sa"
+      }
+    ],
     "complexity": {
       "time": "O(n log n) to O(n log² n)",
       "timeReason": "log n doubling rounds, each sorting/radix-sorting the suffixes.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "s = \"banana\"",
-    "columns": ["Sorted suffix", "Start index", "Note"],
+    "columns": [
+      "Sorted suffix",
+      "Start index",
+      "Note"
+    ],
     "rows": [
-      ["a", "5", "smallest"],
-      ["ana", "3", "—"],
-      ["anana", "1", "—"],
-      ["banana", "0", "largest prefix 'b'"]
+      [
+        "a",
+        "5",
+        "smallest"
+      ],
+      [
+        "ana",
+        "3",
+        "—"
+      ],
+      [
+        "anana",
+        "1",
+        "—"
+      ],
+      [
+        "banana",
+        "0",
+        "largest prefix 'b'"
+      ]
     ],
     "clickMoment": "The suffixes 'ana' and 'anana' sit next to each other and share the prefix 'ana' — that adjacency in sorted order is what the LCP array measures to find repeats instantly."
   },
   "problems": [
-    { "id": "sa1", "title": "Longest Repeated Substring", "difficulty": "Hard", "statement": "Find the longest substring that appears at least twice.", "hint": "Max value in the LCP array.", "tests": "Suffix array + LCP.", "link": "https://www.spoj.com/problems/SUBST1/" },
-    { "id": "sa2", "title": "Number of Distinct Substrings", "difficulty": "Hard", "statement": "Count distinct substrings of a string.", "hint": "n(n+1)/2 − sum(LCP).", "tests": "LCP aggregation.", "link": "https://cses.fi/problemset/task/2105" },
-    { "id": "sa3", "title": "Longest Duplicate Substring", "difficulty": "Hard", "statement": "Longest substring occurring more than once.", "hint": "Suffix array + LCP (or binary search + hashing).", "tests": "Repeat detection.", "link": "https://leetcode.com/problems/longest-duplicate-substring/" },
-    { "id": "sa4", "title": "Pattern Matching via SA", "difficulty": "Hard", "statement": "Count occurrences of a pattern.", "hint": "Binary search the suffix array for the pattern range.", "tests": "Substring search.", "link": "https://cses.fi/problemset/task/2103" },
-    { "id": "sa5", "title": "Lexicographically Smallest Rotation", "difficulty": "Medium", "statement": "Smallest rotation of a string.", "hint": "Build SA of s+s; first valid suffix gives the rotation.", "tests": "SA on doubled string.", "link": "https://cses.fi/problemset/task/1110" }
+    {
+      "id": "sa1",
+      "title": "Longest Repeated Substring",
+      "difficulty": "Hard",
+      "statement": "Find the longest substring that appears at least twice.",
+      "hint": "Max value in the LCP array.",
+      "tests": "Suffix array + LCP.",
+      "link": "https://www.spoj.com/problems/SUBST1/"
+    },
+    {
+      "id": "sa2",
+      "title": "Number of Distinct Substrings",
+      "difficulty": "Hard",
+      "statement": "Count distinct substrings of a string.",
+      "hint": "n(n+1)/2 − sum(LCP).",
+      "tests": "LCP aggregation.",
+      "link": "https://cses.fi/problemset/task/2105"
+    },
+    {
+      "id": "sa3",
+      "title": "Longest Duplicate Substring",
+      "difficulty": "Hard",
+      "statement": "Longest substring occurring more than once.",
+      "hint": "Suffix array + LCP (or binary search + hashing).",
+      "tests": "Repeat detection.",
+      "link": "https://leetcode.com/problems/longest-duplicate-substring/"
+    },
+    {
+      "id": "sa4",
+      "title": "Pattern Matching via SA",
+      "difficulty": "Hard",
+      "statement": "Count occurrences of a pattern.",
+      "hint": "Binary search the suffix array for the pattern range.",
+      "tests": "Substring search.",
+      "link": "https://cses.fi/problemset/task/2103"
+    },
+    {
+      "id": "sa5",
+      "title": "Lexicographically Smallest Rotation",
+      "difficulty": "Medium",
+      "statement": "Smallest rotation of a string.",
+      "hint": "Build SA of s+s; first valid suffix gives the rotation.",
+      "tests": "SA on doubled string.",
+      "link": "https://cses.fi/problemset/task/1110"
+    }
   ]
 }

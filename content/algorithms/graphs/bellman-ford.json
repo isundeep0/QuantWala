@@ -6,8 +6,15 @@
   "tagline": "Shortest paths that tolerate negative edges — and detect negative cycles.",
   "estMinutes": 16,
   "simulator": null,
-  "complexity": { "time": "O(V·E)", "space": "O(V)" },
-  "tags": ["shortest path", "negative edges", "relaxation"],
+  "complexity": {
+    "time": "O(V·E)",
+    "space": "O(V)"
+  },
+  "tags": [
+    "shortest path",
+    "negative edges",
+    "relaxation"
+  ],
   "intuition": {
     "analogy": "Rumours spreading through an office: after one round everyone one desk away knows; after two rounds, two desks away. After V−1 rounds, the news has had time to travel the longest possible simple path to everyone.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Initialise", "detail": "dist[src] = 0, others ∞." },
-      { "title": "Relax V−1 times", "detail": "Repeat V−1 rounds; in each, for every edge (u,v,w): if dist[u]+w < dist[v], update dist[v]." },
-      { "title": "Detect negative cycles", "detail": "Run one extra round. Any edge that still relaxes proves a reachable negative cycle." }
+      {
+        "title": "Initialise",
+        "detail": "dist[src] = 0, others ∞."
+      },
+      {
+        "title": "Relax V−1 times",
+        "detail": "Repeat V−1 rounds; in each, for every edge (u,v,w): if dist[u]+w < dist[v], update dist[v]."
+      },
+      {
+        "title": "Detect negative cycles",
+        "detail": "Run one extra round. Any edge that still relaxes proves a reachable negative cycle."
+      }
     ],
-    "code": {
-      "language": "python",
-      "title": "bellman_ford.py",
-      "source": "def bellman_ford(n, edges, src):\n    INF = float('inf')\n    dist = [INF]*n; dist[src] = 0\n    for _ in range(n - 1):\n        for u, v, w in edges:\n            if dist[u] != INF and dist[u] + w < dist[v]:\n                dist[v] = dist[u] + w\n    for u, v, w in edges:                 # extra round\n        if dist[u] != INF and dist[u] + w < dist[v]:\n            return None                   # negative cycle\n    return dist"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "bellman_ford.cpp",
+        "source": "// edges hold {u, v, w}. Fills dist; returns false on a negative cycle.\nbool bellmanFord(int n, vector<array<int,3>>& edges, int src,\n                 vector<long long>& dist) {\n    const long long INF = 1e18;\n    dist.assign(n, INF); dist[src] = 0;\n    for (int it = 0; it < n - 1; ++it)              // V-1 relaxation rounds\n        for (auto& e : edges)\n            if (dist[e[0]] != INF && dist[e[0]] + e[2] < dist[e[1]])\n                dist[e[1]] = dist[e[0]] + e[2];\n    for (auto& e : edges)                            // extra round detects cycle\n        if (dist[e[0]] != INF && dist[e[0]] + e[2] < dist[e[1]])\n            return false;\n    return true;\n}"
+      },
+      {
+        "language": "python",
+        "title": "bellman_ford.py",
+        "source": "def bellman_ford(n, edges, src):\n    INF = float('inf')\n    dist = [INF]*n; dist[src] = 0\n    for _ in range(n - 1):\n        for u, v, w in edges:\n            if dist[u] != INF and dist[u] + w < dist[v]:\n                dist[v] = dist[u] + w\n    for u, v, w in edges:                 # extra round\n        if dist[u] != INF and dist[u] + w < dist[v]:\n            return None                   # negative cycle\n    return dist"
+      }
+    ],
     "complexity": {
       "time": "O(V·E)",
       "timeReason": "V−1 rounds, each scanning all E edges.",
@@ -42,19 +65,75 @@
   },
   "dryRun": {
     "input": "Edges A→B(4), A→C(2), C→B(-3), B→D(2)",
-    "columns": ["Round", "Updates", "Distances"],
+    "columns": [
+      "Round",
+      "Updates",
+      "Distances"
+    ],
     "rows": [
-      ["1", "B=4, C=2, then C→B makes B=-1, D=1", "A0 B-1 C2 D1"],
-      ["2", "no further improvement", "stable"],
-      ["check", "no relaxations", "no negative cycle"]
+      [
+        "1",
+        "B=4, C=2, then C→B makes B=-1, D=1",
+        "A0 B-1 C2 D1"
+      ],
+      [
+        "2",
+        "no further improvement",
+        "stable"
+      ],
+      [
+        "check",
+        "no relaxations",
+        "no negative cycle"
+      ]
     ],
     "clickMoment": "The negative edge C→B pulls B's distance below its direct value. Dijkstra would have already finalised B at 4 and missed this — repeated relaxation is what saves Bellman-Ford."
   },
   "problems": [
-    { "id": "bf1", "title": "Cheapest Flights Within K Stops", "difficulty": "Medium", "statement": "Cheapest price with at most K stops.", "hint": "Bellman-Ford limited to K+1 relaxation rounds.", "tests": "Bounded-edge relaxation.", "link": "https://leetcode.com/problems/cheapest-flights-within-k-stops/" },
-    { "id": "bf2", "title": "Network Delay Time", "difficulty": "Medium", "statement": "Time to reach all nodes from a source.", "hint": "Bellman-Ford also solves it (slower than Dijkstra).", "tests": "Single-source shortest path.", "link": "https://leetcode.com/problems/network-delay-time/" },
-    { "id": "bf3", "title": "Detect Negative Cycle", "difficulty": "Medium", "statement": "Determine if a weighted digraph has a negative cycle.", "hint": "Run the extra relaxation round.", "tests": "Negative-cycle detection.", "link": "https://www.spoj.com/problems/NEGCYC/" },
-    { "id": "bf4", "title": "Arbitrage Detection", "difficulty": "Hard", "statement": "Detect profitable currency arbitrage.", "hint": "Use −log(rate) as weights; a negative cycle means arbitrage.", "tests": "Modeling with log weights.", "link": "https://open.kattis.com/problems/arbitrage" },
-    { "id": "bf5", "title": "Shortest Path with Negative Weights", "difficulty": "Medium", "statement": "Single-source shortest paths allowing negatives.", "hint": "Direct Bellman-Ford.", "tests": "General relaxation.", "link": "https://cses.fi/problemset/task/1673" }
+    {
+      "id": "bf1",
+      "title": "Cheapest Flights Within K Stops",
+      "difficulty": "Medium",
+      "statement": "Cheapest price with at most K stops.",
+      "hint": "Bellman-Ford limited to K+1 relaxation rounds.",
+      "tests": "Bounded-edge relaxation.",
+      "link": "https://leetcode.com/problems/cheapest-flights-within-k-stops/"
+    },
+    {
+      "id": "bf2",
+      "title": "Network Delay Time",
+      "difficulty": "Medium",
+      "statement": "Time to reach all nodes from a source.",
+      "hint": "Bellman-Ford also solves it (slower than Dijkstra).",
+      "tests": "Single-source shortest path.",
+      "link": "https://leetcode.com/problems/network-delay-time/"
+    },
+    {
+      "id": "bf3",
+      "title": "Detect Negative Cycle",
+      "difficulty": "Medium",
+      "statement": "Determine if a weighted digraph has a negative cycle.",
+      "hint": "Run the extra relaxation round.",
+      "tests": "Negative-cycle detection.",
+      "link": "https://www.spoj.com/problems/NEGCYC/"
+    },
+    {
+      "id": "bf4",
+      "title": "Arbitrage Detection",
+      "difficulty": "Hard",
+      "statement": "Detect profitable currency arbitrage.",
+      "hint": "Use −log(rate) as weights; a negative cycle means arbitrage.",
+      "tests": "Modeling with log weights.",
+      "link": "https://open.kattis.com/problems/arbitrage"
+    },
+    {
+      "id": "bf5",
+      "title": "Shortest Path with Negative Weights",
+      "difficulty": "Medium",
+      "statement": "Single-source shortest paths allowing negatives.",
+      "hint": "Direct Bellman-Ford.",
+      "tests": "General relaxation.",
+      "link": "https://cses.fi/problemset/task/1673"
+    }
   ]
 }

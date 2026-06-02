@@ -6,8 +6,15 @@
   "tagline": "Count numbers in a range with a digit property by building them digit by digit.",
   "estMinutes": 20,
   "simulator": null,
-  "complexity": { "time": "O(digits · states · 10)", "space": "O(digits · states)" },
-  "tags": ["dp", "counting", "digits"],
+  "complexity": {
+    "time": "O(digits · states · 10)",
+    "space": "O(digits · states)"
+  },
+  "tags": [
+    "dp",
+    "counting",
+    "digits"
+  ],
   "intuition": {
     "analogy": "Filling in a number on a form one box at a time, left to right. As long as your prefix matches the upper bound's prefix, the next digit is capped; the moment you go lower, all remaining boxes are free to be 0–9.",
     "paragraphs": [
@@ -19,15 +26,31 @@
   },
   "logic": {
     "steps": [
-      { "title": "Represent N as digits", "detail": "Store N's digits in an array, most significant first." },
-      { "title": "Recurse position by position", "detail": "solve(pos, state, tight): try each digit d from 0 to (tight ? N[pos] : 9), updating state and tightness (tight && d == N[pos])." },
-      { "title": "Memoise the free states", "detail": "When not tight (and not constrained by leading zeros), the result depends only on (pos, state) — cache it." }
+      {
+        "title": "Represent N as digits",
+        "detail": "Store N's digits in an array, most significant first."
+      },
+      {
+        "title": "Recurse position by position",
+        "detail": "solve(pos, state, tight): try each digit d from 0 to (tight ? N[pos] : 9), updating state and tightness (tight && d == N[pos])."
+      },
+      {
+        "title": "Memoise the free states",
+        "detail": "When not tight (and not constrained by leading zeros), the result depends only on (pos, state) — cache it."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "digit_dp.cpp",
-      "source": "int dp[20][ST];        // memo for non-tight states\nlong long solve(int pos, int state, bool tight) {\n    if (pos == len) return accept(state);\n    if (!tight && dp[pos][state] != -1) return dp[pos][state];\n    int hi = tight ? digits[pos] : 9;\n    long long res = 0;\n    for (int d = 0; d <= hi; ++d)\n        res += solve(pos + 1, next(state, d), tight && d == hi);\n    if (!tight) dp[pos][state] = res;\n    return res;\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "digit_dp.cpp",
+        "source": "int dp[20][ST];        // memo for non-tight states\nlong long solve(int pos, int state, bool tight) {\n    if (pos == len) return accept(state);\n    if (!tight && dp[pos][state] != -1) return dp[pos][state];\n    int hi = tight ? digits[pos] : 9;\n    long long res = 0;\n    for (int d = 0; d <= hi; ++d)\n        res += solve(pos + 1, next(state, d), tight && d == hi);\n    if (!tight) dp[pos][state] = res;\n    return res;\n}"
+      },
+      {
+        "language": "python",
+        "title": "digit_dp.py",
+        "source": "def count(digits, accept, nxt):\n    # digits: most-significant-first list. accept(state)->0/1. nxt(state,d)->state.\n    L = len(digits)\n    memo = {}\n    def solve(pos, state, tight):\n        if pos == L:\n            return accept(state)\n        if not tight and (pos, state) in memo:\n            return memo[(pos, state)]\n        hi = digits[pos] if tight else 9\n        res = 0\n        for d in range(hi + 1):\n            res += solve(pos + 1, nxt(state, d), tight and d == hi)\n        if not tight:\n            memo[(pos, state)] = res\n        return res\n    return solve(0, 0, True)"
+      }
+    ],
     "complexity": {
       "time": "O(L · S · 10)",
       "timeReason": "L digit positions, S accumulator states, 10 digit choices each.",
@@ -42,20 +65,80 @@
   },
   "dryRun": {
     "input": "Count numbers ≤ 23 with no equal adjacent digits",
-    "columns": ["Prefix", "tight?", "Note"],
+    "columns": [
+      "Prefix",
+      "tight?",
+      "Note"
+    ],
     "rows": [
-      ["1_", "no", "tens digit 1 < 2 → units free 0–9 (skip 11)"],
-      ["2_", "yes", "tens digit equals bound → units capped at 3"],
-      ["20..23", "yes", "check adjacency for each"],
-      ["total", "—", "sum of valid counts"]
+      [
+        "1_",
+        "no",
+        "tens digit 1 < 2 → units free 0–9 (skip 11)"
+      ],
+      [
+        "2_",
+        "yes",
+        "tens digit equals bound → units capped at 3"
+      ],
+      [
+        "20..23",
+        "yes",
+        "check adjacency for each"
+      ],
+      [
+        "total",
+        "—",
+        "sum of valid counts"
+      ]
     ],
     "clickMoment": "Once the tens digit is 1 (below the bound's 2), the units digit is completely free — the tight flag flips off and an entire memoised subtree of counts applies at once."
   },
   "problems": [
-    { "id": "dd1", "title": "Count Numbers with Unique Digits", "difficulty": "Medium", "statement": "Count numbers with all distinct digits below 10^n.", "hint": "Digit DP with a used-digit mask (or combinatorics).", "tests": "Digit DP basics.", "link": "https://leetcode.com/problems/count-numbers-with-unique-digits/" },
-    { "id": "dd2", "title": "Numbers At Most N Given Digit Set", "difficulty": "Hard", "statement": "Count numbers ≤ N using only allowed digits.", "hint": "Tight-bound digit DP over the allowed set.", "tests": "Bounded digit counting.", "link": "https://leetcode.com/problems/numbers-at-most-n-given-digit-set/" },
-    { "id": "dd3", "title": "Count of Integers", "difficulty": "Hard", "statement": "Count integers in [low, high] with digit-sum in a range.", "hint": "f(high) − f(low−1) with digit-sum state.", "tests": "Range via prefix counts.", "link": "https://leetcode.com/problems/count-of-integers/" },
-    { "id": "dd4", "title": "Non-negative Integers without Consecutive Ones", "difficulty": "Hard", "statement": "Count numbers ≤ n with no consecutive 1s in binary.", "hint": "Binary digit DP carrying the previous bit.", "tests": "Digit DP in base 2.", "link": "https://leetcode.com/problems/non-negative-integers-without-consecutive-ones/" },
-    { "id": "dd5", "title": "Classy Numbers", "difficulty": "Medium", "statement": "Count numbers in a range with ≤ 3 non-zero digits.", "hint": "State = count of non-zero digits so far.", "tests": "Digit DP with a counter state.", "link": "https://codeforces.com/problemset/problem/1036/C" }
+    {
+      "id": "dd1",
+      "title": "Count Numbers with Unique Digits",
+      "difficulty": "Medium",
+      "statement": "Count numbers with all distinct digits below 10^n.",
+      "hint": "Digit DP with a used-digit mask (or combinatorics).",
+      "tests": "Digit DP basics.",
+      "link": "https://leetcode.com/problems/count-numbers-with-unique-digits/"
+    },
+    {
+      "id": "dd2",
+      "title": "Numbers At Most N Given Digit Set",
+      "difficulty": "Hard",
+      "statement": "Count numbers ≤ N using only allowed digits.",
+      "hint": "Tight-bound digit DP over the allowed set.",
+      "tests": "Bounded digit counting.",
+      "link": "https://leetcode.com/problems/numbers-at-most-n-given-digit-set/"
+    },
+    {
+      "id": "dd3",
+      "title": "Count of Integers",
+      "difficulty": "Hard",
+      "statement": "Count integers in [low, high] with digit-sum in a range.",
+      "hint": "f(high) − f(low−1) with digit-sum state.",
+      "tests": "Range via prefix counts.",
+      "link": "https://leetcode.com/problems/count-of-integers/"
+    },
+    {
+      "id": "dd4",
+      "title": "Non-negative Integers without Consecutive Ones",
+      "difficulty": "Hard",
+      "statement": "Count numbers ≤ n with no consecutive 1s in binary.",
+      "hint": "Binary digit DP carrying the previous bit.",
+      "tests": "Digit DP in base 2.",
+      "link": "https://leetcode.com/problems/non-negative-integers-without-consecutive-ones/"
+    },
+    {
+      "id": "dd5",
+      "title": "Classy Numbers",
+      "difficulty": "Medium",
+      "statement": "Count numbers in a range with ≤ 3 non-zero digits.",
+      "hint": "State = count of non-zero digits so far.",
+      "tests": "Digit DP with a counter state.",
+      "link": "https://codeforces.com/problemset/problem/1036/C"
+    }
   ]
 }

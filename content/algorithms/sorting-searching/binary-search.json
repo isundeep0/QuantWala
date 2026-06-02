@@ -6,8 +6,15 @@
   "tagline": "Halve the search space every step — find anything sorted in O(log n).",
   "estMinutes": 20,
   "simulator": "binary-search",
-  "complexity": { "time": "O(log n)", "space": "O(1)" },
-  "tags": ["divide & conquer", "sorted array", "must-know"],
+  "complexity": {
+    "time": "O(log n)",
+    "space": "O(1)"
+  },
+  "tags": [
+    "divide & conquer",
+    "sorted array",
+    "must-know"
+  ],
   "intuition": {
     "analogy": "Think of looking up a word in a paper dictionary. You don't start at page 1 — you flip to the middle, see whether your word comes before or after, and throw away half the dictionary. Repeat until one page is left. That's binary search.",
     "paragraphs": [
@@ -19,16 +26,35 @@
   },
   "logic": {
     "steps": [
-      { "title": "Maintain a search window [lo, hi]", "detail": "Start with the whole array: lo = 0, hi = n-1. The invariant is: if the target exists, its index is somewhere in [lo, hi]." },
-      { "title": "Probe the middle", "detail": "Compute mid = lo + (hi - lo) / 2. Writing it this way (instead of (lo + hi)/2) avoids integer overflow when lo and hi are large." },
-      { "title": "Compare and discard half", "detail": "If a[mid] == target, you're done. If a[mid] < target, the answer must be to the right, so set lo = mid + 1. Otherwise it's to the left, so set hi = mid - 1." },
-      { "title": "Stop when the window is empty", "detail": "Loop while lo <= hi. When lo > hi the window is empty, meaning the target isn't present — return -1." }
+      {
+        "title": "Maintain a search window [lo, hi]",
+        "detail": "Start with the whole array: lo = 0, hi = n-1. The invariant is: if the target exists, its index is somewhere in [lo, hi]."
+      },
+      {
+        "title": "Probe the middle",
+        "detail": "Compute mid = lo + (hi - lo) / 2. Writing it this way (instead of (lo + hi)/2) avoids integer overflow when lo and hi are large."
+      },
+      {
+        "title": "Compare and discard half",
+        "detail": "If a[mid] == target, you're done. If a[mid] < target, the answer must be to the right, so set lo = mid + 1. Otherwise it's to the left, so set hi = mid - 1."
+      },
+      {
+        "title": "Stop when the window is empty",
+        "detail": "Loop while lo <= hi. When lo > hi the window is empty, meaning the target isn't present — return -1."
+      }
     ],
-    "code": {
-      "language": "cpp",
-      "title": "binary_search.cpp",
-      "source": "int binarySearch(vector<int>& a, int target) {\n    int lo = 0, hi = (int)a.size() - 1;\n    while (lo <= hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] == target) return mid;\n        else if (a[mid] < target) lo = mid + 1;\n        else hi = mid - 1;\n    }\n    return -1;\n}"
-    },
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "binary_search.cpp",
+        "source": "int binarySearch(vector<int>& a, int target) {\n    int lo = 0, hi = (int)a.size() - 1;\n    while (lo <= hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] == target) return mid;\n        else if (a[mid] < target) lo = mid + 1;\n        else hi = mid - 1;\n    }\n    return -1;\n}"
+      },
+      {
+        "language": "python",
+        "title": "binary_search.py",
+        "source": "def binary_search(a, target):\n    lo, hi = 0, len(a) - 1\n    while lo <= hi:\n        mid = lo + (hi - lo) // 2\n        if a[mid] == target:\n            return mid\n        elif a[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1"
+      }
+    ],
     "complexity": {
       "time": "O(log n)",
       "timeReason": "Each iteration discards half the remaining window, so the number of iterations is at most ⌈log₂ n⌉.",
@@ -44,11 +70,27 @@
   },
   "dryRun": {
     "input": "a = [1, 3, 4, 7, 9, 11, 15, 20, 24], target = 11",
-    "columns": ["Step", "lo, hi, mid", "What happens"],
+    "columns": [
+      "Step",
+      "lo, hi, mid",
+      "What happens"
+    ],
     "rows": [
-      ["1", "lo=0 hi=8 mid=4", "a[4]=9 < 11 → go right, lo = 5"],
-      ["2", "lo=5 hi=8 mid=6", "a[6]=15 > 11 → go left, hi = 5"],
-      ["3", "lo=5 hi=5 mid=5", "a[5]=11 == 11 → found at index 5"]
+      [
+        "1",
+        "lo=0 hi=8 mid=4",
+        "a[4]=9 < 11 → go right, lo = 5"
+      ],
+      [
+        "2",
+        "lo=5 hi=8 mid=6",
+        "a[6]=15 > 11 → go left, hi = 5"
+      ],
+      [
+        "3",
+        "lo=5 hi=5 mid=5",
+        "a[5]=11 == 11 → found at index 5"
+      ]
     ],
     "clickMoment": "Notice step 1 instantly removed indices 0–4 from consideration with a single comparison. Three comparisons total located the target in a 9-element array — and it would still be only ~4 comparisons for 16 elements, ~5 for 32. That exponential shrinking is the 'aha'."
   },

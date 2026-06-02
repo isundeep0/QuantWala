@@ -5,7 +5,7 @@
   "title": "Activity Selection (Interval Scheduling)",
   "tagline": "Always pick the earliest-finishing compatible activity — the canonical greedy proof.",
   "estMinutes": 16,
-  "simulator": null,
+  "simulator": "activity-selection",
   "complexity": {
     "time": "O(n log n)",
     "space": "O(1)"
@@ -102,7 +102,29 @@
       "statement": "Min intervals to remove so the rest don't overlap.",
       "hint": "Total − (max non-overlapping by finish time).",
       "tests": "Interval scheduling.",
-      "link": "https://leetcode.com/problems/non-overlapping-intervals/"
+      "link": "https://leetcode.com/problems/non-overlapping-intervals/",
+      "solution": {
+        "approach": [
+          "Keep as many non-overlapping intervals as possible (earliest-finish-first); the rest must be removed.",
+          "Sort by end. Greedily keep an interval if its start >= the last kept end; otherwise count it as a removal."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int eraseOverlapIntervals(vector<vector<int>>& iv) {\n        sort(iv.begin(), iv.end(), [](auto& a, auto& b){ return a[1] < b[1]; });\n        int end = INT_MIN, removed = 0;\n        for (auto& x : iv) {\n            if (x[0] >= end) end = x[1];\n            else removed++;\n        }\n        return removed;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def eraseOverlapIntervals(self, iv: list[list[int]]) -> int:\n        iv.sort(key=lambda x: x[1])\n        end, removed = float('-inf'), 0\n        for s, e in iv:\n            if s >= end:\n                end = e\n            else:\n                removed += 1\n        return removed"
+          }
+        ]
+      }
     },
     {
       "id": "as2",
@@ -111,7 +133,29 @@
       "statement": "Fewest arrows to pop all balloons (intervals).",
       "hint": "Greedy by end coordinate; shoot at each chosen end.",
       "tests": "Interval point-cover greedy.",
-      "link": "https://leetcode.com/problems/minimum-number-of-arrows-to-burst-balloons/"
+      "link": "https://leetcode.com/problems/minimum-number-of-arrows-to-burst-balloons/",
+      "solution": {
+        "approach": [
+          "One arrow at the end of an interval bursts every balloon overlapping that point — the same earliest-finish greedy.",
+          "Sort by end; shoot an arrow at the first end, and only add a new arrow when a balloon starts after the last arrow's position."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int findMinArrowShots(vector<vector<int>>& points) {\n        sort(points.begin(), points.end(), [](auto& a, auto& b){ return a[1] < b[1]; });\n        int arrows = 1; long long pos = points[0][1];\n        for (auto& p : points)\n            if (p[0] > pos) { arrows++; pos = p[1]; }\n        return arrows;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findMinArrowShots(self, points: list[list[int]]) -> int:\n        points.sort(key=lambda p: p[1])\n        arrows, pos = 1, points[0][1]\n        for s, e in points:\n            if s > pos:\n                arrows += 1\n                pos = e\n        return arrows"
+          }
+        ]
+      }
     },
     {
       "id": "as3",
@@ -120,7 +164,29 @@
       "statement": "Minimum meeting rooms needed.",
       "hint": "Sort starts and ends; sweep to find max overlap (a different greedy).",
       "tests": "Resource-counting greedy.",
-      "link": "https://leetcode.com/problems/meeting-rooms-ii/"
+      "link": "https://leetcode.com/problems/meeting-rooms-ii/",
+      "solution": {
+        "approach": [
+          "The number of rooms needed at once is the maximum number of overlapping meetings.",
+          "Keep a min-heap of end times. For each meeting (sorted by start), free any room that ended before it starts, then occupy a room. The heap's peak size is the answer."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int minMeetingRooms(vector<vector<int>>& meetings) {\n        sort(meetings.begin(), meetings.end());\n        priority_queue<int, vector<int>, greater<>> pq;\n        for (auto& m : meetings) {\n            if (!pq.empty() && pq.top() <= m[0]) pq.pop();\n            pq.push(m[1]);\n        }\n        return pq.size();\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def minMeetingRooms(self, meetings: list[list[int]]) -> int:\n        meetings.sort()\n        pq = []\n        for s, e in meetings:\n            if pq and pq[0] <= s:\n                heapq.heappop(pq)\n            heapq.heappush(pq, e)\n        return len(pq)"
+          }
+        ]
+      }
     },
     {
       "id": "as4",
@@ -129,7 +195,29 @@
       "statement": "Longest chain of pairs where each follows the last.",
       "hint": "Sort by second element; greedy select.",
       "tests": "Direct activity selection.",
-      "link": "https://leetcode.com/problems/maximum-length-of-pair-chain/"
+      "link": "https://leetcode.com/problems/maximum-length-of-pair-chain/",
+      "solution": {
+        "approach": [
+          "Longest chain where each next pair starts after the previous ends — earliest-finish greedy again.",
+          "Sort by the second element; greedily extend the chain whenever the next pair's first value exceeds the current tail."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int findLongestChain(vector<vector<int>>& pairs) {\n        sort(pairs.begin(), pairs.end(), [](auto& a, auto& b){ return a[1] < b[1]; });\n        int cur = INT_MIN, len = 0;\n        for (auto& p : pairs)\n            if (p[0] > cur) { cur = p[1]; len++; }\n        return len;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findLongestChain(self, pairs: list[list[int]]) -> int:\n        pairs.sort(key=lambda p: p[1])\n        cur, length = float('-inf'), 0\n        for a, b in pairs:\n            if a > cur:\n                cur = b\n                length += 1\n        return length"
+          }
+        ]
+      }
     },
     {
       "id": "as5",
@@ -138,7 +226,29 @@
       "statement": "Max courses takeable before deadlines.",
       "hint": "Greedy by deadline with a max-heap to drop the longest course when over budget.",
       "tests": "Greedy + heap exchange.",
-      "link": "https://leetcode.com/problems/course-schedule-iii/"
+      "link": "https://leetcode.com/problems/course-schedule-iii/",
+      "solution": {
+        "approach": [
+          "Process courses by deadline. Greedily take each course; keep a max-heap of taken durations.",
+          "If total time exceeds the current deadline, drop the longest course taken so far (heap top) — that frees the most time while losing only one course."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int scheduleCourse(vector<vector<int>>& courses) {\n        sort(courses.begin(), courses.end(), [](auto& a, auto& b){ return a[1] < b[1]; });\n        priority_queue<int> pq; int time = 0;\n        for (auto& c : courses) {\n            time += c[0]; pq.push(c[0]);\n            if (time > c[1]) { time -= pq.top(); pq.pop(); }\n        }\n        return pq.size();\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def scheduleCourse(self, courses: list[list[int]]) -> int:\n        courses.sort(key=lambda c: c[1])\n        pq = []\n        time = 0\n        for dur, end in courses:\n            time += dur\n            heapq.heappush(pq, -dur)\n            if time > end:\n                time += heapq.heappop(pq)\n        return len(pq)"
+          }
+        ]
+      }
     }
   ]
 }

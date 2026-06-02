@@ -5,7 +5,7 @@
   "title": "Coin Change (1D DP)",
   "tagline": "The canonical 1D unbounded-knapsack DP — fewest coins, and counting ways.",
   "estMinutes": 16,
-  "simulator": null,
+  "simulator": "coin-change",
   "complexity": {
     "time": "O(amount·coins)",
     "space": "O(amount)"
@@ -102,7 +102,29 @@
       "statement": "Fewest coins to make an amount.",
       "hint": "Min 1D DP.",
       "tests": "Core 1D DP.",
-      "link": "https://leetcode.com/problems/coin-change/"
+      "link": "https://leetcode.com/problems/coin-change/",
+      "solution": {
+        "approach": [
+          "Unbounded knapsack on amount: dp[a] = fewest coins to make amount a.",
+          "For each coin, relax every amount >= coin: dp[a] = min(dp[a], dp[a-coin]+1). Initialise dp[0]=0 and the rest to infinity; unreachable stays infinity → -1."
+        ],
+        "complexity": {
+          "time": "O(amount · coins)",
+          "space": "O(amount)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int coinChange(vector<int>& coins, int amount) {\n        vector<int> dp(amount + 1, amount + 1); dp[0] = 0;\n        for (int c : coins)\n            for (int a = c; a <= amount; a++)\n                dp[a] = min(dp[a], dp[a - c] + 1);\n        return dp[amount] > amount ? -1 : dp[amount];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def coinChange(self, coins: list[int], amount: int) -> int:\n        dp = [amount + 1] * (amount + 1)\n        dp[0] = 0\n        for c in coins:\n            for a in range(c, amount + 1):\n                dp[a] = min(dp[a], dp[a - c] + 1)\n        return -1 if dp[amount] > amount else dp[amount]"
+          }
+        ]
+      }
     },
     {
       "id": "cc2",
@@ -111,7 +133,29 @@
       "statement": "Number of combinations that make the amount.",
       "hint": "Count ways; coins loop outside.",
       "tests": "Counting combinations.",
-      "link": "https://leetcode.com/problems/coin-change-ii/"
+      "link": "https://leetcode.com/problems/coin-change-ii/",
+      "solution": {
+        "approach": [
+          "Count combinations (order doesn't matter). Iterate coins on the outside so each coin is considered once per amount, avoiding double-counting permutations.",
+          "dp[a] += dp[a-coin]; dp[0]=1 (one way to make 0)."
+        ],
+        "complexity": {
+          "time": "O(amount · coins)",
+          "space": "O(amount)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int change(int amount, vector<int>& coins) {\n        vector<unsigned long long> dp(amount + 1, 0); dp[0] = 1;\n        for (int c : coins)\n            for (int a = c; a <= amount; a++)\n                dp[a] += dp[a - c];\n        return (int)dp[amount];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def change(self, amount: int, coins: list[int]) -> int:\n        dp = [0] * (amount + 1)\n        dp[0] = 1\n        for c in coins:\n            for a in range(c, amount + 1):\n                dp[a] += dp[a - c]\n        return dp[amount]"
+          }
+        ]
+      }
     },
     {
       "id": "cc3",
@@ -120,7 +164,29 @@
       "statement": "Fewest perfect squares summing to n.",
       "hint": "Coins are the perfect squares ≤ n.",
       "tests": "Coin-change reframing.",
-      "link": "https://leetcode.com/problems/perfect-squares/"
+      "link": "https://leetcode.com/problems/perfect-squares/",
+      "solution": {
+        "approach": [
+          "Perfect squares are the 'coins'. dp[i] = fewest squares summing to i.",
+          "For each i, try every square j*j <= i: dp[i] = min(dp[i], dp[i-j*j]+1)."
+        ],
+        "complexity": {
+          "time": "O(n √n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int numSquares(int n) {\n        vector<int> dp(n + 1, INT_MAX); dp[0] = 0;\n        for (int i = 1; i <= n; i++)\n            for (int j = 1; j * j <= i; j++)\n                dp[i] = min(dp[i], dp[i - j * j] + 1);\n        return dp[n];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def numSquares(self, n: int) -> int:\n        dp = [0] + [float('inf')] * n\n        for i in range(1, n + 1):\n            j = 1\n            while j * j <= i:\n                dp[i] = min(dp[i], dp[i - j * j] + 1)\n                j += 1\n        return dp[n]"
+          }
+        ]
+      }
     },
     {
       "id": "cc4",
@@ -129,7 +195,29 @@
       "statement": "Count ordered combinations summing to target.",
       "hint": "Permutations: amounts loop outside.",
       "tests": "Order-sensitive counting.",
-      "link": "https://leetcode.com/problems/combination-sum-iv/"
+      "link": "https://leetcode.com/problems/combination-sum-iv/",
+      "solution": {
+        "approach": [
+          "Here order matters (it counts sequences), so loop amount on the outside and try every number inside.",
+          "dp[t] += dp[t-num] for every num; dp[0]=1. This counts ordered combinations."
+        ],
+        "complexity": {
+          "time": "O(target · n)",
+          "space": "O(target)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int combinationSum4(vector<int>& nums, int target) {\n        vector<unsigned long long> dp(target + 1, 0); dp[0] = 1;\n        for (int t = 1; t <= target; t++)\n            for (int x : nums)\n                if (x <= t) dp[t] += dp[t - x];\n        return (int)dp[target];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def combinationSum4(self, nums: list[int], target: int) -> int:\n        dp = [1] + [0] * target\n        for t in range(1, target + 1):\n            for x in nums:\n                if x <= t:\n                    dp[t] += dp[t - x]\n        return dp[target]"
+          }
+        ]
+      }
     },
     {
       "id": "cc5",
@@ -138,7 +226,29 @@
       "statement": "Min cost of travel passes covering all travel days.",
       "hint": "1D DP over days with 1/7/30-day choices.",
       "tests": "1D DP with multiple transitions.",
-      "link": "https://leetcode.com/problems/minimum-cost-for-tickets/"
+      "link": "https://leetcode.com/problems/minimum-cost-for-tickets/",
+      "solution": {
+        "approach": [
+          "dp[d] = minimum cost to cover all travel up to day d. On non-travel days the cost carries over.",
+          "On a travel day take the cheapest of a 1-day, 7-day, or 30-day pass bought to cover day d: min(dp[d-1]+c1, dp[d-7]+c7, dp[d-30]+c30)."
+        ],
+        "complexity": {
+          "time": "O(maxDay)",
+          "space": "O(maxDay)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int mincostTickets(vector<int>& days, vector<int>& costs) {\n        int last = days.back();\n        vector<int> dp(last + 1, 0);\n        unordered_set<int> travel(days.begin(), days.end());\n        for (int d = 1; d <= last; d++) {\n            if (!travel.count(d)) { dp[d] = dp[d - 1]; continue; }\n            dp[d] = min({dp[d - 1] + costs[0],\n                         dp[max(0, d - 7)] + costs[1],\n                         dp[max(0, d - 30)] + costs[2]});\n        }\n        return dp[last];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def mincostTickets(self, days: list[int], costs: list[int]) -> int:\n        last = days[-1]\n        travel = set(days)\n        dp = [0] * (last + 1)\n        for d in range(1, last + 1):\n            if d not in travel:\n                dp[d] = dp[d - 1]\n            else:\n                dp[d] = min(dp[d - 1] + costs[0],\n                            dp[max(0, d - 7)] + costs[1],\n                            dp[max(0, d - 30)] + costs[2])\n        return dp[last]"
+          }
+        ]
+      }
     }
   ]
 }

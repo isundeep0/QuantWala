@@ -5,7 +5,7 @@
   "title": "Exchange Argument Proofs",
   "tagline": "How to PROVE a greedy choice is optimal — the technique that separates guessing from knowing.",
   "estMinutes": 16,
-  "simulator": null,
+  "simulator": "exchange-argument",
   "complexity": {
     "time": "—",
     "space": "—"
@@ -106,7 +106,29 @@
       "statement": "Rebuild a queue from (height, count) pairs.",
       "hint": "Greedy insertion order justified by an exchange argument.",
       "tests": "Greedy ordering proof.",
-      "link": "https://leetcode.com/problems/queue-reconstruction-by-height/"
+      "link": "https://leetcode.com/problems/queue-reconstruction-by-height/",
+      "solution": {
+        "approach": [
+          "Place taller people first: sort by height descending, breaking ties by k ascending. Then insert each person at index k.",
+          "Because everyone already placed is at least as tall, inserting at position k makes exactly k taller people precede them — the exchange argument justifies this ordering."
+        ],
+        "complexity": {
+          "time": "O(n^2)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<vector<int>> reconstructQueue(vector<vector<int>>& people) {\n        sort(people.begin(), people.end(), [](auto& a, auto& b){ return a[0] != b[0] ? a[0] > b[0] : a[1] < b[1]; });\n        vector<vector<int>> res;\n        for (auto& p : people) res.insert(res.begin() + p[1], p);\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def reconstructQueue(self, people: list[list[int]]) -> list[list[int]]:\n        people.sort(key=lambda p: (-p[0], p[1]))\n        res = []\n        for p in people:\n            res.insert(p[1], p)\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "ea2",
@@ -115,7 +137,29 @@
       "statement": "Min cost to combine sticks (Huffman-like).",
       "hint": "Always merge the two smallest — exchange argument / Huffman.",
       "tests": "Greedy merge optimality.",
-      "link": "https://leetcode.com/problems/minimum-cost-to-connect-sticks/"
+      "link": "https://leetcode.com/problems/minimum-cost-to-connect-sticks/",
+      "solution": {
+        "approach": [
+          "Always combine the two cheapest sticks (Huffman-style). A min-heap yields them in O(log n).",
+          "Pop two, push their sum, accumulate the cost. The exchange argument shows merging small first minimises total cost."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int connectSticks(vector<int>& sticks) {\n        priority_queue<int, vector<int>, greater<>> pq(sticks.begin(), sticks.end());\n        int cost = 0;\n        while (pq.size() > 1) {\n            int a = pq.top(); pq.pop();\n            int b = pq.top(); pq.pop();\n            cost += a + b; pq.push(a + b);\n        }\n        return cost;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def connectSticks(self, sticks: list[int]) -> int:\n        heapq.heapify(sticks)\n        cost = 0\n        while len(sticks) > 1:\n            a = heapq.heappop(sticks)\n            b = heapq.heappop(sticks)\n            cost += a + b\n            heapq.heappush(sticks, a + b)\n        return cost"
+          }
+        ]
+      }
     },
     {
       "id": "ea3",
@@ -124,7 +168,29 @@
       "statement": "Min intervals to run tasks with cooldown.",
       "hint": "Greedy by frequency; argue the most-frequent task sets the skeleton.",
       "tests": "Greedy structure argument.",
-      "link": "https://leetcode.com/problems/task-scheduler/"
+      "link": "https://leetcode.com/problems/task-scheduler/",
+      "solution": {
+        "approach": [
+          "The most frequent task dictates the schedule. With max frequency f occurring c times, build (f-1) gaps of size (n+1) and append the c tail tasks.",
+          "Idle slots only matter when there aren't enough other tasks to fill the gaps, so the answer is max(total tasks, (f-1)·(n+1) + c)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int leastInterval(vector<char>& tasks, int n) {\n        vector<int> cnt(26, 0);\n        for (char c : tasks) cnt[c - 'A']++;\n        int f = *max_element(cnt.begin(), cnt.end());\n        int c = count(cnt.begin(), cnt.end(), f);\n        return max((int)tasks.size(), (f - 1) * (n + 1) + c);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import Counter\nclass Solution:\n    def leastInterval(self, tasks: list[str], n: int) -> int:\n        cnt = Counter(tasks)\n        f = max(cnt.values())\n        c = sum(1 for v in cnt.values() if v == f)\n        return max(len(tasks), (f - 1) * (n + 1) + c)"
+          }
+        ]
+      }
     },
     {
       "id": "ea4",
@@ -133,7 +199,29 @@
       "statement": "Maximise content children with cookies.",
       "hint": "Sort both; greedily match smallest sufficient cookie.",
       "tests": "Sorting + exchange.",
-      "link": "https://leetcode.com/problems/assign-cookies/"
+      "link": "https://leetcode.com/problems/assign-cookies/",
+      "solution": {
+        "approach": [
+          "Sort children's greed and cookie sizes. Give the smallest sufficient cookie to the least greedy child (two pointers).",
+          "Advancing both pointers when a cookie satisfies a child is optimal by the exchange argument — wasting a big cookie on a small child can never help."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int findContentChildren(vector<int>& g, vector<int>& s) {\n        sort(g.begin(), g.end()); sort(s.begin(), s.end());\n        int i = 0, j = 0;\n        while (i < (int)g.size() && j < (int)s.size()) {\n            if (s[j] >= g[i]) i++;\n            j++;\n        }\n        return i;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findContentChildren(self, g: list[int], s: list[int]) -> int:\n        g.sort(); s.sort()\n        i = j = 0\n        while i < len(g) and j < len(s):\n            if s[j] >= g[i]:\n                i += 1\n            j += 1\n        return i"
+          }
+        ]
+      }
     },
     {
       "id": "ea5",
@@ -142,7 +230,29 @@
       "statement": "Min boats with weight limit, two per boat.",
       "hint": "Pair lightest with heaviest; prove via exchange.",
       "tests": "Two-pointer greedy proof.",
-      "link": "https://leetcode.com/problems/boats-to-save-people/"
+      "link": "https://leetcode.com/problems/boats-to-save-people/",
+      "solution": {
+        "approach": [
+          "Sort weights. Pair the lightest remaining person with the heaviest; if they fit together in one boat, take both, else the heaviest goes alone.",
+          "Two pointers from both ends. The exchange argument shows pairing extremes is optimal."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int numRescueBoats(vector<int>& people, int limit) {\n        sort(people.begin(), people.end());\n        int i = 0, j = people.size() - 1, boats = 0;\n        while (i <= j) {\n            if (people[i] + people[j] <= limit) i++;\n            j--; boats++;\n        }\n        return boats;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def numRescueBoats(self, people: list[int], limit: int) -> int:\n        people.sort()\n        i, j, boats = 0, len(people) - 1, 0\n        while i <= j:\n            if people[i] + people[j] <= limit:\n                i += 1\n            j -= 1\n            boats += 1\n        return boats"
+          }
+        ]
+      }
     }
   ]
 }

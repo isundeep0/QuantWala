@@ -5,7 +5,7 @@
   "title": "Tree Diameter",
   "tagline": "The longest path between any two nodes — found in a single post-order pass.",
   "estMinutes": 14,
-  "simulator": null,
+  "simulator": "tree-diameter",
   "complexity": {
     "time": "O(n)",
     "space": "O(h)"
@@ -102,7 +102,29 @@
       "statement": "Return the length of the longest path between two nodes.",
       "hint": "Track height; update best = l + r.",
       "tests": "Core diameter.",
-      "link": "https://leetcode.com/problems/diameter-of-binary-tree/"
+      "link": "https://leetcode.com/problems/diameter-of-binary-tree/",
+      "solution": {
+        "approach": [
+          "The diameter through a node equals leftHeight + rightHeight. Run a post-order that returns each subtree's height while updating a global best.",
+          "Height = 1 + max(childHeights); diameter is measured in edges, so the answer is the largest left+right height seen."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(h)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int best = 0;\n    int height(TreeNode* r) {\n        if (!r) return 0;\n        int L = height(r->left), R = height(r->right);\n        best = max(best, L + R);\n        return 1 + max(L, R);\n    }\npublic:\n    int diameterOfBinaryTree(TreeNode* root) { height(root); return best; }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def diameterOfBinaryTree(self, root) -> int:\n        self.best = 0\n        def height(r):\n            if not r:\n                return 0\n            L, R = height(r.left), height(r.right)\n            self.best = max(self.best, L + R)\n            return 1 + max(L, R)\n        height(root)\n        return self.best"
+          }
+        ]
+      }
     },
     {
       "id": "td2",
@@ -111,7 +133,29 @@
       "statement": "Max path sum where a path is any node-to-node route.",
       "hint": "Like diameter but with values; clamp negative child contributions to 0.",
       "tests": "Through-path with values.",
-      "link": "https://leetcode.com/problems/binary-tree-maximum-path-sum/"
+      "link": "https://leetcode.com/problems/binary-tree-maximum-path-sum/",
+      "solution": {
+        "approach": [
+          "Like diameter, but with values: the best path through a node is node.val + max(0,left gain) + max(0,right gain).",
+          "Each call returns the best downward gain a parent can extend (node.val + max child gain, clamped at 0). Track the global maximum path."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(h)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int best = INT_MIN;\n    int gain(TreeNode* r) {\n        if (!r) return 0;\n        int L = max(0, gain(r->left)), R = max(0, gain(r->right));\n        best = max(best, r->val + L + R);\n        return r->val + max(L, R);\n    }\npublic:\n    int maxPathSum(TreeNode* root) { gain(root); return best; }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def maxPathSum(self, root) -> int:\n        self.best = float('-inf')\n        def gain(r):\n            if not r:\n                return 0\n            L = max(0, gain(r.left))\n            R = max(0, gain(r.right))\n            self.best = max(self.best, r.val + L + R)\n            return r.val + max(L, R)\n        gain(root)\n        return self.best"
+          }
+        ]
+      }
     },
     {
       "id": "td3",
@@ -120,7 +164,29 @@
       "statement": "Longest path where all nodes share the same value.",
       "hint": "Extend a child's length only if its value matches.",
       "tests": "Conditional through-path.",
-      "link": "https://leetcode.com/problems/longest-univalue-path/"
+      "link": "https://leetcode.com/problems/longest-univalue-path/",
+      "solution": {
+        "approach": [
+          "Same shape as diameter, but a child only contributes if its value equals the current node's value.",
+          "Each call returns the longest same-value arm downward; the answer is the largest left arm + right arm in edges."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(h)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int best = 0;\n    int arm(TreeNode* r) {\n        if (!r) return 0;\n        int L = arm(r->left), R = arm(r->right);\n        int la = (r->left && r->left->val == r->val) ? L + 1 : 0;\n        int ra = (r->right && r->right->val == r->val) ? R + 1 : 0;\n        best = max(best, la + ra);\n        return max(la, ra);\n    }\npublic:\n    int longestUnivaluePath(TreeNode* root) { arm(root); return best; }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def longestUnivaluePath(self, root) -> int:\n        self.best = 0\n        def arm(r):\n            if not r:\n                return 0\n            L, R = arm(r.left), arm(r.right)\n            la = L + 1 if r.left and r.left.val == r.val else 0\n            ra = R + 1 if r.right and r.right.val == r.val else 0\n            self.best = max(self.best, la + ra)\n            return max(la, ra)\n        arm(root)\n        return self.best"
+          }
+        ]
+      }
     },
     {
       "id": "td4",
@@ -129,7 +195,29 @@
       "statement": "Diameter of an undirected tree given as edges.",
       "hint": "Two BFS passes: farthest from any node, then farthest from that.",
       "tests": "Two-BFS method.",
-      "link": "https://leetcode.com/problems/tree-diameter/"
+      "link": "https://leetcode.com/problems/tree-diameter/",
+      "solution": {
+        "approach": [
+          "For a general (unrooted) tree, the diameter is found with two BFS/DFS sweeps: from any node find the farthest node u, then from u find the farthest node v.",
+          "The distance u→v is the diameter. Correctness follows because the farthest node from anywhere is always an endpoint of some longest path."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    pair<int,int> bfs(int src, vector<vector<int>>& adj) {\n        int n = adj.size(); vector<int> dist(n, -1); queue<int> q;\n        dist[src] = 0; q.push(src); int far = src;\n        while (!q.empty()) {\n            int u = q.front(); q.pop();\n            if (dist[u] > dist[far]) far = u;\n            for (int v : adj[u]) if (dist[v] == -1) { dist[v] = dist[u] + 1; q.push(v); }\n        }\n        return {far, dist[far]};\n    }\npublic:\n    int treeDiameter(vector<vector<int>>& edges) {\n        int n = edges.size() + 1;\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); }\n        auto [u, _] = bfs(0, adj);\n        auto [v, d] = bfs(u, adj);\n        return d;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def treeDiameter(self, edges: list[list[int]]) -> int:\n        n = len(edges) + 1\n        adj = [[] for _ in range(n)]\n        for a, b in edges:\n            adj[a].append(b); adj[b].append(a)\n        def bfs(src):\n            dist = [-1] * n\n            dist[src] = 0\n            q = deque([src]); far = src\n            while q:\n                u = q.popleft()\n                if dist[u] > dist[far]:\n                    far = u\n                for v in adj[u]:\n                    if dist[v] == -1:\n                        dist[v] = dist[u] + 1; q.append(v)\n            return far, dist[far]\n        u, _ = bfs(0)\n        v, d = bfs(u)\n        return d"
+          }
+        ]
+      }
     },
     {
       "id": "td5",
@@ -138,7 +226,29 @@
       "statement": "Find roots that minimise tree height.",
       "hint": "Peel leaves layer by layer; the last 1–2 nodes are the centroids.",
       "tests": "Related centre/diameter intuition.",
-      "link": "https://leetcode.com/problems/minimum-height-trees/"
+      "link": "https://leetcode.com/problems/minimum-height-trees/",
+      "solution": {
+        "approach": [
+          "The roots that minimise height are the 1 or 2 centroids of the tree. Peel leaves layer by layer (topological trimming).",
+          "Repeatedly remove all current leaves; the last 1–2 nodes remaining are the answer."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> findMinHeightTrees(int n, vector<vector<int>>& edges) {\n        if (n == 1) return {0};\n        vector<vector<int>> adj(n); vector<int> deg(n, 0);\n        for (auto& e : edges) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); deg[e[0]]++; deg[e[1]]++; }\n        queue<int> q;\n        for (int i = 0; i < n; i++) if (deg[i] == 1) q.push(i);\n        int remaining = n;\n        while (remaining > 2) {\n            int sz = q.size(); remaining -= sz;\n            while (sz--) {\n                int u = q.front(); q.pop();\n                for (int v : adj[u]) if (--deg[v] == 1) q.push(v);\n            }\n        }\n        vector<int> res;\n        while (!q.empty()) { res.push_back(q.front()); q.pop(); }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def findMinHeightTrees(self, n: int, edges: list[list[int]]) -> list[int]:\n        if n == 1:\n            return [0]\n        adj = [[] for _ in range(n)]\n        deg = [0] * n\n        for a, b in edges:\n            adj[a].append(b); adj[b].append(a); deg[a] += 1; deg[b] += 1\n        q = deque(i for i in range(n) if deg[i] == 1)\n        remaining = n\n        while remaining > 2:\n            for _ in range(len(q)):\n                u = q.popleft()\n                remaining -= 1\n                for v in adj[u]:\n                    deg[v] -= 1\n                    if deg[v] == 1:\n                        q.append(v)\n        return list(q)"
+          }
+        ]
+      }
     }
   ]
 }

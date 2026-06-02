@@ -5,10 +5,12 @@ top‑company OAs, system‑design interviews, and HFT / low‑latency roles.
 
 Three modules:
 
-- **Module 1 — Algorithms** *(fully implemented)*: 55 lessons across 12 categories,
+- **Module 1 — Algorithms** *(complete, end‑to‑end)*: 55 lessons across 12 categories,
   each with a 5‑step flow (Intuition → Logic → Dry Run → Interactive Simulator →
-  Problem Set), 25 interactive simulators, and `localStorage`‑based progress with a
-  locked/unlocked roadmap.
+  Problem Set). Every lesson ships **both C++ and Python** implementations behind a
+  language switcher, a curated 5‑problem set, and an interactive step‑by‑step
+  simulator — **all 55 lessons have a simulator** (50 simulator components, several
+  parametrised). Progress is `localStorage`‑based with a locked/unlocked roadmap.
 - **Module 2 — System Design** *(UI shell only)*: full navigation and placeholder
   panels (concept, architecture diagram, key points, common questions).
 - **Module 3 — HFT / Low Latency** *(UI shell only)*: full navigation and placeholder
@@ -59,9 +61,9 @@ Gare/
 │       ├── main.jsx  App.jsx     # router + providers
 │       ├── context/              # ThemeContext, ProgressContext (localStorage)
 │       ├── data/                 # categories.js, registry.js (import.meta.glob), module2/3 data
-│       ├── components/           # layout (Navbar/Footer), ui primitives, CodeBlock…
+│       ├── components/           # layout (Navbar/Footer), ui primitives, CodeBlock, CodeTabs…
 │       ├── pages/                # Landing, algorithms/, system-design/, hft/
-│       └── simulators/           # engine (player), views (array/graph/tree/grid), 20 sims
+│       └── simulators/           # engine (player), views (array/graph/tree/grid/segtree), 50 sims
 │
 └── backend/                      # FastAPI (optional)
     ├── requirements.txt
@@ -113,7 +115,10 @@ API:
 
 1. Create `content/algorithms/<categoryId>/<slug>.json` following `content/schema.json`.
 2. Set `order` to position it in the category roadmap.
-3. To attach an interactive simulator, set `"simulator": "<key>"` and register that key in
+3. Provide implementations in the `logic.codes` array (C++ first, then Python); the
+   `LogicStep` renders them in a language switcher (`CodeTabs`). The legacy single
+   `logic.code` object is still rendered for backward compatibility.
+4. To attach an interactive simulator, set `"simulator": "<key>"` and register that key in
    `frontend/src/simulators/registry.jsx`. Leave it `null` for a clean "coming soon" state.
 
 No rebuild config needed — Vite's `import.meta.glob` auto‑discovers new JSON files.
@@ -122,12 +127,11 @@ No rebuild config needed — Vite's `import.meta.glob` auto‑discovers new JSON
 
 ## What to build next
 
-**Module 1 (polish):**
-- Add simulators for the remaining lessons currently set to `null` (radix sort,
-  Bellman‑Ford, Floyd‑Warshall, topological sort, SCC, MST, segment trees w/ lazy
-  propagation, Z‑algorithm, Rabin‑Karp, trie, suffix array, etc.).
-- A few categories are intentionally lean (greedy, stacks/queues) — expand the catalog.
+**Module 1 — done.** Every lesson has dual‑language code, a 5‑problem set, and an
+interactive simulator. Possible future enhancements:
+- Editable inputs on more simulators (several already accept custom input).
 - Per‑problem notes and a spaced‑repetition "review queue".
+- Expand the intentionally lean categories (greedy, stacks/queues) with more lessons.
 
 **Module 2 — System Design (content):**
 - Fill the placeholder panels with real concept text, diagrams (consider an

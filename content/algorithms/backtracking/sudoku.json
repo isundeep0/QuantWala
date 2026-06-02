@@ -5,7 +5,7 @@
   "title": "Sudoku Solver",
   "tagline": "Fill empty cells with constraint-checked guesses, backtracking on contradictions.",
   "estMinutes": 16,
-  "simulator": null,
+  "simulator": "sudoku",
   "complexity": {
     "time": "exponential (pruned)",
     "space": "O(1)"
@@ -102,7 +102,29 @@
       "statement": "Fill the board to satisfy Sudoku rules.",
       "hint": "Backtracking with row/col/box checks.",
       "tests": "Core constraint backtracking.",
-      "link": "https://leetcode.com/problems/sudoku-solver/"
+      "link": "https://leetcode.com/problems/sudoku-solver/",
+      "solution": {
+        "approach": [
+          "Backtracking: scan for an empty cell, try each digit 1–9 that's valid in its row, column, and 3×3 box.",
+          "Recurse after placing; on failure erase and try the next digit. Maintaining row/col/box masks makes validity checks O(1)."
+        ],
+        "complexity": {
+          "time": "O(9^(empty))",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    bool valid(vector<vector<char>>& b, int r, int c, char d) {\n        for (int i = 0; i < 9; i++) {\n            if (b[r][i] == d || b[i][c] == d) return false;\n            if (b[3*(r/3)+i/3][3*(c/3)+i%3] == d) return false;\n        }\n        return true;\n    }\n    bool solve(vector<vector<char>>& b) {\n        for (int r = 0; r < 9; r++)\n            for (int c = 0; c < 9; c++)\n                if (b[r][c] == '.') {\n                    for (char d = '1'; d <= '9'; d++)\n                        if (valid(b, r, c, d)) { b[r][c] = d; if (solve(b)) return true; b[r][c] = '.'; }\n                    return false;\n                }\n        return true;\n    }\npublic:\n    void solveSudoku(vector<vector<char>>& board) { solve(board); }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def solveSudoku(self, board: list[list[str]]) -> None:\n        def valid(r, c, d):\n            for i in range(9):\n                if board[r][i] == d or board[i][c] == d:\n                    return False\n                if board[3*(r//3)+i//3][3*(c//3)+i%3] == d:\n                    return False\n            return True\n        def solve():\n            for r in range(9):\n                for c in range(9):\n                    if board[r][c] == '.':\n                        for d in '123456789':\n                            if valid(r, c, d):\n                                board[r][c] = d\n                                if solve():\n                                    return True\n                                board[r][c] = '.'\n                        return False\n            return True\n        solve()"
+          }
+        ]
+      }
     },
     {
       "id": "sd2",
@@ -111,7 +133,29 @@
       "statement": "Check whether a board configuration is valid.",
       "hint": "Single pass with row/col/box sets.",
       "tests": "Constraint checking only.",
-      "link": "https://leetcode.com/problems/valid-sudoku/"
+      "link": "https://leetcode.com/problems/valid-sudoku/",
+      "solution": {
+        "approach": [
+          "Validity needs no search — just check there are no duplicate filled digits in any row, column, or 3×3 box.",
+          "Use 27 sets (or encoded keys) and scan all cells once."
+        ],
+        "complexity": {
+          "time": "O(81)",
+          "space": "O(81)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    bool isValidSudoku(vector<vector<char>>& b) {\n        unordered_set<string> seen;\n        for (int r = 0; r < 9; r++)\n            for (int c = 0; c < 9; c++) {\n                char d = b[r][c];\n                if (d == '.') continue;\n                if (!seen.insert(\"r\" + to_string(r) + d).second) return false;\n                if (!seen.insert(\"c\" + to_string(c) + d).second) return false;\n                if (!seen.insert(\"b\" + to_string(r/3) + to_string(c/3) + d).second) return false;\n            }\n        return true;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def isValidSudoku(self, board: list[list[str]]) -> bool:\n        seen = set()\n        for r in range(9):\n            for c in range(9):\n                d = board[r][c]\n                if d == '.':\n                    continue\n                keys = ((\"r\", r, d), (\"c\", c, d), (\"b\", r//3, c//3, d))\n                for k in keys:\n                    if k in seen:\n                        return False\n                    seen.add(k)\n        return True"
+          }
+        ]
+      }
     },
     {
       "id": "sd3",
@@ -120,7 +164,29 @@
       "statement": "Place non-attacking queens.",
       "hint": "Same assign/check/backtrack skeleton.",
       "tests": "Sibling constraint problem.",
-      "link": "https://leetcode.com/problems/n-queens/"
+      "link": "https://leetcode.com/problems/n-queens/",
+      "solution": {
+        "approach": [
+          "Same backtracking template as Sudoku, applied to queens: place one per row using column and diagonal markers, counting solutions.",
+          "The two diagonals are identified by r-c and r+c."
+        ],
+        "complexity": {
+          "time": "O(n!)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int n, count = 0; set<int> cols, d1, d2;\n    void solve(int r) {\n        if (r == n) { count++; return; }\n        for (int c = 0; c < n; c++) {\n            if (cols.count(c) || d1.count(r - c) || d2.count(r + c)) continue;\n            cols.insert(c); d1.insert(r - c); d2.insert(r + c);\n            solve(r + 1);\n            cols.erase(c); d1.erase(r - c); d2.erase(r + c);\n        }\n    }\npublic:\n    int totalNQueens(int N) { n = N; solve(0); return count; }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def totalNQueens(self, n: int) -> int:\n        self.count = 0\n        cols, d1, d2 = set(), set(), set()\n        def solve(r):\n            if r == n:\n                self.count += 1; return\n            for c in range(n):\n                if c in cols or (r - c) in d1 or (r + c) in d2:\n                    continue\n                cols.add(c); d1.add(r - c); d2.add(r + c)\n                solve(r + 1)\n                cols.discard(c); d1.discard(r - c); d2.discard(r + c)\n        solve(0)\n        return self.count"
+          }
+        ]
+      }
     },
     {
       "id": "sd4",
@@ -129,7 +195,29 @@
       "statement": "Find all dictionary words on a board.",
       "hint": "Backtracking DFS over a trie of words.",
       "tests": "Backtracking + pruning with a trie.",
-      "link": "https://leetcode.com/problems/word-search-ii/"
+      "link": "https://leetcode.com/problems/word-search-ii/",
+      "solution": {
+        "approach": [
+          "Many words at once: build a trie of the words so a single DFS over the grid can match all of them simultaneously.",
+          "DFS each cell following trie edges; when a node marks the end of a word, collect it. Prune the trie as words are found to speed things up."
+        ],
+        "complexity": {
+          "time": "O(R·C·4^L)",
+          "space": "O(total letters)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    struct Node { Node* ch[26] = {}; string word; };\n    int R, C; vector<string> res;\n    void dfs(vector<vector<char>>& b, int r, int c, Node* node) {\n        if (r < 0 || c < 0 || r >= R || c >= C || b[r][c] == '#') return;\n        char ch = b[r][c]; Node* nxt = node->ch[ch - 'a'];\n        if (!nxt) return;\n        if (!nxt->word.empty()) { res.push_back(nxt->word); nxt->word.clear(); }\n        b[r][c] = '#';\n        dfs(b, r+1, c, nxt); dfs(b, r-1, c, nxt); dfs(b, r, c+1, nxt); dfs(b, r, c-1, nxt);\n        b[r][c] = ch;\n    }\npublic:\n    vector<string> findWords(vector<vector<char>>& board, vector<string>& words) {\n        Node* root = new Node();\n        for (auto& w : words) {\n            Node* cur = root;\n            for (char c : w) { if (!cur->ch[c-'a']) cur->ch[c-'a'] = new Node(); cur = cur->ch[c-'a']; }\n            cur->word = w;\n        }\n        R = board.size(); C = board[0].size();\n        for (int r = 0; r < R; r++) for (int c = 0; c < C; c++) dfs(board, r, c, root);\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findWords(self, board: list[list[str]], words: list[str]) -> list[str]:\n        trie = {}\n        for w in words:\n            node = trie\n            for ch in w:\n                node = node.setdefault(ch, {})\n            node['$'] = w\n        R, C, res = len(board), len(board[0]), []\n        def dfs(r, c, node):\n            ch = board[r][c]\n            if ch not in node:\n                return\n            nxt = node[ch]\n            if '$' in nxt:\n                res.append(nxt['$']); del nxt['$']\n            board[r][c] = '#'\n            for nr, nc in ((r+1,c),(r-1,c),(r,c+1),(r,c-1)):\n                if 0 <= nr < R and 0 <= nc < C and board[nr][nc] != '#':\n                    dfs(nr, nc, nxt)\n            board[r][c] = ch\n        for r in range(R):\n            for c in range(C):\n                dfs(r, c, trie)\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "sd5",
@@ -138,7 +226,29 @@
       "statement": "Color a graph with m colors, no adjacent clash.",
       "hint": "Assign colors with constraint checks, backtrack on conflict.",
       "tests": "General CSP backtracking.",
-      "link": "https://www.geeksforgeeks.org/m-coloring-problem/"
+      "link": "https://www.geeksforgeeks.org/m-coloring-problem/",
+      "solution": {
+        "approach": [
+          "Try to colour each vertex with one of m colours so no edge joins same-coloured vertices — classic backtracking.",
+          "Assign colours vertex by vertex; before colouring, check all already-coloured neighbours. Backtrack when no colour fits."
+        ],
+        "complexity": {
+          "time": "O(m^V)",
+          "space": "O(V)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    bool ok(int v, vector<vector<int>>& g, vector<int>& color, int c) {\n        for (int u = 0; u < (int)g.size(); u++) if (g[v][u] && color[u] == c) return false;\n        return true;\n    }\n    bool solve(int v, vector<vector<int>>& g, int m, vector<int>& color) {\n        if (v == (int)g.size()) return true;\n        for (int c = 1; c <= m; c++)\n            if (ok(v, g, color, c)) { color[v] = c; if (solve(v + 1, g, m, color)) return true; color[v] = 0; }\n        return false;\n    }\npublic:\n    bool graphColoring(vector<vector<int>>& graph, int m) {\n        vector<int> color(graph.size(), 0);\n        return solve(0, graph, m, color);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def graphColoring(self, graph: list[list[int]], m: int) -> bool:\n        n = len(graph)\n        color = [0] * n\n        def ok(v, c):\n            return all(not (graph[v][u] and color[u] == c) for u in range(n))\n        def solve(v):\n            if v == n:\n                return True\n            for c in range(1, m + 1):\n                if ok(v, c):\n                    color[v] = c\n                    if solve(v + 1):\n                        return True\n                    color[v] = 0\n            return False\n        return solve(0)"
+          }
+        ]
+      }
     }
   ]
 }

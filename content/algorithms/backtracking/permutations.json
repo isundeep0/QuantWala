@@ -102,7 +102,29 @@
       "statement": "All permutations of distinct integers.",
       "hint": "used[] + backtracking.",
       "tests": "Core permutations.",
-      "link": "https://leetcode.com/problems/permutations/"
+      "link": "https://leetcode.com/problems/permutations/",
+      "solution": {
+        "approach": [
+          "Build permutations by choosing an unused element for each position. A boolean 'used' array tracks availability.",
+          "Append to the current path, recurse, then undo. There are n! complete arrangements."
+        ],
+        "complexity": {
+          "time": "O(n · n!)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<vector<int>> res; vector<int> path; vector<bool> used;\n    void dfs(vector<int>& a) {\n        if (path.size() == a.size()) { res.push_back(path); return; }\n        for (int i = 0; i < (int)a.size(); i++) {\n            if (used[i]) continue;\n            used[i] = true; path.push_back(a[i]);\n            dfs(a);\n            path.pop_back(); used[i] = false;\n        }\n    }\npublic:\n    vector<vector<int>> permute(vector<int>& a) { used.assign(a.size(), false); dfs(a); return res; }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def permute(self, a: list[int]) -> list[list[int]]:\n        res, path = [], []\n        used = [False] * len(a)\n        def dfs():\n            if len(path) == len(a):\n                res.append(path[:]); return\n            for i in range(len(a)):\n                if used[i]:\n                    continue\n                used[i] = True; path.append(a[i])\n                dfs()\n                path.pop(); used[i] = False\n        dfs()\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "pm2",
@@ -111,7 +133,29 @@
       "statement": "Permutations with duplicates, unique results.",
       "hint": "Sort; skip a duplicate if its identical predecessor is unused.",
       "tests": "Dedup permutations.",
-      "link": "https://leetcode.com/problems/permutations-ii/"
+      "link": "https://leetcode.com/problems/permutations-ii/",
+      "solution": {
+        "approach": [
+          "Sort so duplicates are adjacent. At each position, skip a value equal to its predecessor when that predecessor hasn't been used in this branch — that prevents generating the same permutation twice.",
+          "Otherwise it is the standard used-array backtracking."
+        ],
+        "complexity": {
+          "time": "O(n · n!)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<vector<int>> res; vector<int> path; vector<bool> used;\n    void dfs(vector<int>& a) {\n        if (path.size() == a.size()) { res.push_back(path); return; }\n        for (int i = 0; i < (int)a.size(); i++) {\n            if (used[i]) continue;\n            if (i && a[i] == a[i-1] && !used[i-1]) continue;\n            used[i] = true; path.push_back(a[i]);\n            dfs(a);\n            path.pop_back(); used[i] = false;\n        }\n    }\npublic:\n    vector<vector<int>> permuteUnique(vector<int>& a) {\n        sort(a.begin(), a.end()); used.assign(a.size(), false); dfs(a); return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def permuteUnique(self, a: list[int]) -> list[list[int]]:\n        a.sort()\n        res, path = [], []\n        used = [False] * len(a)\n        def dfs():\n            if len(path) == len(a):\n                res.append(path[:]); return\n            for i in range(len(a)):\n                if used[i]:\n                    continue\n                if i and a[i] == a[i-1] and not used[i-1]:\n                    continue\n                used[i] = True; path.append(a[i])\n                dfs()\n                path.pop(); used[i] = False\n        dfs()\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "pm3",
@@ -120,7 +164,29 @@
       "statement": "Rearrange to the next lexicographic permutation in place.",
       "hint": "Find the pivot, swap with the next larger suffix element, reverse the suffix.",
       "tests": "Permutation ordering (no recursion).",
-      "link": "https://leetcode.com/problems/next-permutation/"
+      "link": "https://leetcode.com/problems/next-permutation/",
+      "solution": {
+        "approach": [
+          "Find the rightmost ascent a[i] < a[i+1]. Swap a[i] with the smallest element to its right that is still larger, then reverse the suffix to make it the smallest arrangement.",
+          "If no ascent exists, the array is the last permutation; reverse the whole thing."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    void nextPermutation(vector<int>& a) {\n        int n = a.size(), i = n - 2;\n        while (i >= 0 && a[i] >= a[i + 1]) i--;\n        if (i >= 0) {\n            int j = n - 1;\n            while (a[j] <= a[i]) j--;\n            swap(a[i], a[j]);\n        }\n        reverse(a.begin() + i + 1, a.end());\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def nextPermutation(self, a: list[int]) -> None:\n        n = len(a)\n        i = n - 2\n        while i >= 0 and a[i] >= a[i + 1]:\n            i -= 1\n        if i >= 0:\n            j = n - 1\n            while a[j] <= a[i]:\n                j -= 1\n            a[i], a[j] = a[j], a[i]\n        a[i + 1:] = reversed(a[i + 1:])"
+          }
+        ]
+      }
     },
     {
       "id": "pm4",
@@ -129,7 +195,29 @@
       "statement": "Count permutations meeting a divisibility rule.",
       "hint": "Backtrack placing positions, pruning invalid choices.",
       "tests": "Constrained permutations.",
-      "link": "https://leetcode.com/problems/beautiful-arrangement/"
+      "link": "https://leetcode.com/problems/beautiful-arrangement/",
+      "solution": {
+        "approach": [
+          "Place numbers 1..n into positions 1..n where position p must hold a value divisible by p or vice-versa.",
+          "Backtrack position by position trying each unused number that satisfies the divisibility rule, counting completed arrangements."
+        ],
+        "complexity": {
+          "time": "O(n!) pruned",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int n, count = 0; vector<bool> used;\n    void dfs(int pos) {\n        if (pos > n) { count++; return; }\n        for (int v = 1; v <= n; v++)\n            if (!used[v] && (v % pos == 0 || pos % v == 0)) {\n                used[v] = true; dfs(pos + 1); used[v] = false;\n            }\n    }\npublic:\n    int countArrangement(int N) { n = N; used.assign(n + 1, false); dfs(1); return count; }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def countArrangement(self, n: int) -> int:\n        used = [False] * (n + 1)\n        self.count = 0\n        def dfs(pos):\n            if pos > n:\n                self.count += 1\n                return\n            for v in range(1, n + 1):\n                if not used[v] and (v % pos == 0 or pos % v == 0):\n                    used[v] = True\n                    dfs(pos + 1)\n                    used[v] = False\n        dfs(1)\n        return self.count"
+          }
+        ]
+      }
     },
     {
       "id": "pm5",
@@ -138,7 +226,29 @@
       "statement": "Count distinct non-empty sequences from tiles.",
       "hint": "Backtrack over counts of each letter.",
       "tests": "Counting arrangements with multiplicity.",
-      "link": "https://leetcode.com/problems/letter-tile-possibilities/"
+      "link": "https://leetcode.com/problems/letter-tile-possibilities/",
+      "solution": {
+        "approach": [
+          "Count distinct non-empty sequences from the tiles. Use a frequency map; at each step pick any letter with remaining count, append it (counts as a sequence), and recurse with one fewer.",
+          "The frequency map automatically dedupes identical letters, so we never double-count."
+        ],
+        "complexity": {
+          "time": "O(sum of P(n,k))",
+          "space": "O(26)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int dfs(vector<int>& cnt) {\n        int total = 0;\n        for (int i = 0; i < 26; i++)\n            if (cnt[i] > 0) {\n                total++; cnt[i]--;\n                total += dfs(cnt);\n                cnt[i]++;\n            }\n        return total;\n    }\npublic:\n    int numTilePossibilities(string tiles) {\n        vector<int> cnt(26, 0);\n        for (char c : tiles) cnt[c - 'A']++;\n        return dfs(cnt);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import Counter\nclass Solution:\n    def numTilePossibilities(self, tiles: str) -> int:\n        cnt = Counter(tiles)\n        def dfs():\n            total = 0\n            for ch in list(cnt):\n                if cnt[ch] > 0:\n                    total += 1\n                    cnt[ch] -= 1\n                    total += dfs()\n                    cnt[ch] += 1\n            return total\n        return dfs()"
+          }
+        ]
+      }
     }
   ]
 }

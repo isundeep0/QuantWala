@@ -5,7 +5,7 @@
   "title": "GCD, LCM & Euclid",
   "tagline": "The Euclidean algorithm computes gcd in O(log min) — plus extended gcd for modular inverses.",
   "estMinutes": 14,
-  "simulator": null,
+  "simulator": "gcd-lcm",
   "complexity": {
     "time": "O(log min(a,b))",
     "space": "O(1)"
@@ -102,7 +102,29 @@
       "statement": "Largest string dividing both inputs.",
       "hint": "Apply the Euclidean idea to string repetition.",
       "tests": "GCD analogy.",
-      "link": "https://leetcode.com/problems/greatest-common-divisor-of-strings/"
+      "link": "https://leetcode.com/problems/greatest-common-divisor-of-strings/",
+      "solution": {
+        "approach": [
+          "A common divisor string d must tile both strings; this can only happen if str1+str2 == str2+str1.",
+          "If so, the answer length is gcd(len1, len2) and the divisor is that prefix."
+        ],
+        "complexity": {
+          "time": "O(n + m)",
+          "space": "O(n + m)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    string gcdOfStrings(string a, string b) {\n        if (a + b != b + a) return \"\";\n        int g = __gcd((int)a.size(), (int)b.size());\n        return a.substr(0, g);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from math import gcd\nclass Solution:\n    def gcdOfStrings(self, a: str, b: str) -> str:\n        if a + b != b + a:\n            return \"\"\n        return a[:gcd(len(a), len(b))]"
+          }
+        ]
+      }
     },
     {
       "id": "gl2",
@@ -111,7 +133,29 @@
       "statement": "Measure a target using two jugs.",
       "hint": "Solvable iff target is a multiple of gcd(jug1, jug2).",
       "tests": "GCD reachability (Bézout).",
-      "link": "https://leetcode.com/problems/water-and-jug-problem/"
+      "link": "https://leetcode.com/problems/water-and-jug-problem/",
+      "solution": {
+        "approach": [
+          "By Bézout's identity, the measurable amounts are exactly the multiples of gcd(jug1, jug2).",
+          "A target is reachable iff target <= jug1 + jug2 and target is divisible by gcd(jug1, jug2) (with the zero edge cases)."
+        ],
+        "complexity": {
+          "time": "O(log)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    bool canMeasureWater(int a, int b, int target) {\n        if (target > a + b) return false;\n        if (a == 0 || b == 0) return target == 0 || target == a + b;\n        return target % __gcd(a, b) == 0;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from math import gcd\nclass Solution:\n    def canMeasureWater(self, a: int, b: int, target: int) -> bool:\n        if target > a + b:\n            return False\n        if a == 0 or b == 0:\n            return target == 0 or target == a + b\n        return target % gcd(a, b) == 0"
+          }
+        ]
+      }
     },
     {
       "id": "gl3",
@@ -120,7 +164,29 @@
       "statement": "LCM of 1..n.",
       "hint": "Fold lcm across the range.",
       "tests": "LCM accumulation.",
-      "link": "https://projecteuler.net/problem=5"
+      "link": "https://projecteuler.net/problem=5",
+      "solution": {
+        "approach": [
+          "The smallest number divisible by all of 1..n is their LCM, built incrementally: lcm(acc, i) = acc / gcd(acc, i) · i.",
+          "Divide before multiplying to limit overflow."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    long long smallestMultiple(int n) {\n        long long acc = 1;\n        for (int i = 2; i <= n; i++) acc = acc / __gcd(acc, (long long)i) * i;\n        return acc;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from math import gcd\nclass Solution:\n    def smallestMultiple(self, n: int) -> int:\n        acc = 1\n        for i in range(2, n + 1):\n            acc = acc // gcd(acc, i) * i\n        return acc"
+          }
+        ]
+      }
     },
     {
       "id": "gl4",
@@ -129,7 +195,29 @@
       "statement": "Compute a⁻¹ mod m for coprime a, m.",
       "hint": "Extended gcd, or Fermat when m is prime.",
       "tests": "Extended Euclid.",
-      "link": "https://cses.fi/problemset/task/1712"
+      "link": "https://cses.fi/problemset/task/1712",
+      "solution": {
+        "approach": [
+          "The extended Euclidean algorithm finds x, y with a·x + m·y = gcd(a, m). When gcd is 1, x mod m is the modular inverse.",
+          "This works for any modulus (not only primes), unlike the Fermat method."
+        ],
+        "complexity": {
+          "time": "O(log m)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    long long ext(long long a, long long b, long long& x, long long& y) {\n        if (!b) { x = 1; y = 0; return a; }\n        long long x1, y1, g = ext(b, a % b, x1, y1);\n        x = y1; y = x1 - (a / b) * y1;\n        return g;\n    }\npublic:\n    long long modInverse(long long a, long long m) {\n        long long x, y, g = ext(a, m, x, y);\n        if (g != 1) return -1;       // no inverse\n        return (x % m + m) % m;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def modInverse(self, a: int, m: int) -> int:\n        def ext(a, b):\n            if b == 0:\n                return a, 1, 0\n            g, x1, y1 = ext(b, a % b)\n            return g, y1, x1 - (a // b) * y1\n        g, x, _ = ext(a, m)\n        if g != 1:\n            return -1\n        return x % m"
+          }
+        ]
+      }
     },
     {
       "id": "gl5",
@@ -138,7 +226,29 @@
       "statement": "Count subarrays whose gcd equals k.",
       "hint": "Rolling gcd over subarrays (gcd only decreases).",
       "tests": "GCD over ranges.",
-      "link": "https://leetcode.com/problems/number-of-subarrays-with-gcd-equal-to-k/"
+      "link": "https://leetcode.com/problems/number-of-subarrays-with-gcd-equal-to-k/",
+      "solution": {
+        "approach": [
+          "For each right endpoint, the gcds of all subarrays ending there take only O(log V) distinct values (each extension can only keep or shrink the gcd).",
+          "Maintain (gcd, count) pairs for subarrays ending at i; carry them forward, fold equal gcds, and add the counts where gcd == k."
+        ],
+        "complexity": {
+          "time": "O(n log V)",
+          "space": "O(log V)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    long long subarrayGCD(vector<int>& nums, int k) {\n        long long ans = 0;\n        vector<pair<int,int>> prev;   // (gcd, count)\n        for (int x : nums) {\n            vector<pair<int,int>> cur;\n            cur.push_back({x, 1});\n            for (auto& [g, c] : prev) {\n                int ng = __gcd(g, x);\n                if (!cur.empty() && cur.back().first == ng) cur.back().second += c;\n                else cur.push_back({ng, c});\n            }\n            prev = cur;\n            for (auto& [g, c] : prev) if (g == k) ans += c;\n        }\n        return ans;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from math import gcd\nclass Solution:\n    def subarrayGCD(self, nums: list[int], k: int) -> int:\n        ans = 0\n        prev = []   # list of [gcd, count]\n        for x in nums:\n            cur = [[x, 1]]\n            for g, c in prev:\n                ng = gcd(g, x)\n                if cur[-1][0] == ng:\n                    cur[-1][1] += c\n                else:\n                    cur.append([ng, c])\n            prev = cur\n            ans += sum(c for g, c in prev if g == k)\n        return ans"
+          }
+        ]
+      }
     }
   ]
 }

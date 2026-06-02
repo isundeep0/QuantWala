@@ -5,7 +5,7 @@
   "title": "Deque Tricks (Sliding Window Max)",
   "tagline": "A double-ended queue keeps a window's maximum available in O(1) amortised.",
   "estMinutes": 16,
-  "simulator": null,
+  "simulator": "deque-tricks",
   "complexity": {
     "time": "O(n)",
     "space": "O(k)"
@@ -107,7 +107,29 @@
       "statement": "Return the max of each length-k window.",
       "hint": "Monotonic decreasing deque of indices.",
       "tests": "Core deque trick.",
-      "link": "https://leetcode.com/problems/sliding-window-maximum/"
+      "link": "https://leetcode.com/problems/sliding-window-maximum/",
+      "solution": {
+        "approach": [
+          "Maintain a deque of indices whose values are strictly decreasing. The front is always the current window's maximum.",
+          "Before recording, pop indices that slid out of the window (front) and pop smaller values from the back when a new element arrives. Each index enters/leaves once → O(n)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(k)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> maxSlidingWindow(vector<int>& a, int k) {\n        deque<int> dq; vector<int> res;\n        for (int i = 0; i < (int)a.size(); i++) {\n            if (!dq.empty() && dq.front() <= i - k) dq.pop_front();\n            while (!dq.empty() && a[dq.back()] <= a[i]) dq.pop_back();\n            dq.push_back(i);\n            if (i >= k - 1) res.push_back(a[dq.front()]);\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def maxSlidingWindow(self, a: list[int], k: int) -> list[int]:\n        dq, res = deque(), []\n        for i, x in enumerate(a):\n            if dq and dq[0] <= i - k:\n                dq.popleft()\n            while dq and a[dq[-1]] <= x:\n                dq.pop()\n            dq.append(i)\n            if i >= k - 1:\n                res.append(a[dq[0]])\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "dq2",
@@ -116,7 +138,29 @@
       "statement": "Shortest subarray with sum ≥ K (negatives allowed).",
       "hint": "Monotonic deque over prefix sums.",
       "tests": "Deque on prefix sums.",
-      "link": "https://leetcode.com/problems/shortest-subarray-with-sum-at-least-k/"
+      "link": "https://leetcode.com/problems/shortest-subarray-with-sum-at-least-k/",
+      "solution": {
+        "approach": [
+          "Work on prefix sums P. A subarray [l+1, r] has sum P[r] - P[l] >= K. For each r we want the largest l (< r) with P[l] <= P[r] - K.",
+          "Keep a deque of candidate indices with increasing prefix sums. Pop the front while it satisfies the condition (recording length), and pop the back while it is not smaller than the current prefix (it can never be a better left end)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int shortestSubarray(vector<int>& a, int K) {\n        int n = a.size();\n        vector<long long> P(n + 1, 0);\n        for (int i = 0; i < n; i++) P[i + 1] = P[i] + a[i];\n        deque<int> dq; int best = n + 1;\n        for (int r = 0; r <= n; r++) {\n            while (!dq.empty() && P[r] - P[dq.front()] >= K) { best = min(best, r - dq.front()); dq.pop_front(); }\n            while (!dq.empty() && P[dq.back()] >= P[r]) dq.pop_back();\n            dq.push_back(r);\n        }\n        return best == n + 1 ? -1 : best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def shortestSubarray(self, a: list[int], K: int) -> int:\n        n = len(a)\n        P = [0] * (n + 1)\n        for i in range(n):\n            P[i + 1] = P[i] + a[i]\n        dq, best = deque(), n + 1\n        for r in range(n + 1):\n            while dq and P[r] - P[dq[0]] >= K:\n                best = min(best, r - dq.popleft())\n            while dq and P[dq[-1]] >= P[r]:\n                dq.pop()\n            dq.append(r)\n        return best if best <= n else -1"
+          }
+        ]
+      }
     },
     {
       "id": "dq3",
@@ -125,7 +169,29 @@
       "statement": "Max subsequence sum where chosen indices are within k of each other.",
       "hint": "DP with a sliding-window-max deque over the dp array.",
       "tests": "Deque to optimise a DP transition.",
-      "link": "https://leetcode.com/problems/constrained-subsequence-sum/"
+      "link": "https://leetcode.com/problems/constrained-subsequence-sum/",
+      "solution": {
+        "approach": [
+          "Let dp[i] be the best subsequence sum ending at i. Then dp[i] = a[i] + max(0, best dp in the window [i-k, i-1]).",
+          "A monotonic deque maintains the maximum dp over the sliding window of size k, giving O(n)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int constrainedSubsetSum(vector<int>& a, int k) {\n        int n = a.size(); vector<long long> dp(n);\n        deque<int> dq; long long best = LLONG_MIN;\n        for (int i = 0; i < n; i++) {\n            if (!dq.empty() && dq.front() < i - k) dq.pop_front();\n            long long take = dq.empty() ? 0 : max(0LL, dp[dq.front()]);\n            dp[i] = a[i] + take;\n            best = max(best, dp[i]);\n            while (!dq.empty() && dp[dq.back()] <= dp[i]) dq.pop_back();\n            dq.push_back(i);\n        }\n        return (int)best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def constrainedSubsetSum(self, a: list[int], k: int) -> int:\n        n = len(a)\n        dp = [0] * n\n        dq = deque()\n        best = float('-inf')\n        for i in range(n):\n            if dq and dq[0] < i - k:\n                dq.popleft()\n            take = max(0, dp[dq[0]]) if dq else 0\n            dp[i] = a[i] + take\n            best = max(best, dp[i])\n            while dq and dp[dq[-1]] <= dp[i]:\n                dq.pop()\n            dq.append(i)\n        return best"
+          }
+        ]
+      }
     },
     {
       "id": "dq4",
@@ -134,7 +200,29 @@
       "statement": "Maximise score jumping up to k steps at a time.",
       "hint": "dp[i] = a[i] + max(dp[i-k..i-1]); maintain that max with a deque.",
       "tests": "Windowed DP maximum.",
-      "link": "https://leetcode.com/problems/jump-game-vi/"
+      "link": "https://leetcode.com/problems/jump-game-vi/",
+      "solution": {
+        "approach": [
+          "dp[i] = a[i] + max(dp[i-k .. i-1]) — the best score to reach index i jumping at most k.",
+          "Slide a monotonic-decreasing deque of dp values over the window so each transition is O(1)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int maxResult(vector<int>& a, int k) {\n        int n = a.size(); vector<long long> dp(n);\n        deque<int> dq; dp[0] = a[0]; dq.push_back(0);\n        for (int i = 1; i < n; i++) {\n            if (dq.front() < i - k) dq.pop_front();\n            dp[i] = a[i] + dp[dq.front()];\n            while (!dq.empty() && dp[dq.back()] <= dp[i]) dq.pop_back();\n            dq.push_back(i);\n        }\n        return (int)dp[n - 1];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def maxResult(self, a: list[int], k: int) -> int:\n        n = len(a)\n        dp = [0] * n\n        dp[0] = a[0]\n        dq = deque([0])\n        for i in range(1, n):\n            if dq[0] < i - k:\n                dq.popleft()\n            dp[i] = a[i] + dp[dq[0]]\n            while dq and dp[dq[-1]] <= dp[i]:\n                dq.pop()\n            dq.append(i)\n        return dp[-1]"
+          }
+        ]
+      }
     },
     {
       "id": "dq5",
@@ -143,7 +231,29 @@
       "statement": "Median of each length-k window.",
       "hint": "Two heaps (or multiset); contrast with the deque approach for max.",
       "tests": "Window aggregate beyond max.",
-      "link": "https://leetcode.com/problems/sliding-window-median/"
+      "link": "https://leetcode.com/problems/sliding-window-median/",
+      "solution": {
+        "approach": [
+          "Maintain the window as an ordered multiset so the median is read from the middle position(s).",
+          "Each slide inserts the entering value and removes the leaving one in O(log k). In C++ a multiset with a mid iterator works; in Python a SortedList gives O(log k) indexing."
+        ],
+        "complexity": {
+          "time": "O(n log k)",
+          "space": "O(k)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<double> medianSlidingWindow(vector<int>& a, int k) {\n        multiset<int> win(a.begin(), a.begin() + k);\n        auto mid = next(win.begin(), (k - 1) / 2);\n        vector<double> res;\n        for (int i = k; ; i++) {\n            res.push_back(((double)*mid + *next(mid, (k + 1) % 2)) * 0.5);\n            if (i == (int)a.size()) return res;\n            win.insert(a[i]);\n            if (a[i] < *mid) mid--;\n            if (a[i - k] <= *mid) mid++;\n            win.erase(win.lower_bound(a[i - k]));\n        }\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from sortedcontainers import SortedList\nclass Solution:\n    def medianSlidingWindow(self, a: list[int], k: int) -> list[float]:\n        sl = SortedList(a[:k])\n        res = []\n        for i in range(k, len(a) + 1):\n            if k % 2:\n                res.append(float(sl[k // 2]))\n            else:\n                res.append((sl[k // 2 - 1] + sl[k // 2]) / 2)\n            if i == len(a):\n                break\n            sl.remove(a[i - k])\n            sl.add(a[i])\n        return res"
+          }
+        ]
+      }
     }
   ]
 }

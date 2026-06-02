@@ -5,7 +5,7 @@
   "title": "Bitmask DP",
   "tagline": "Encode a subset as the bits of an integer — DP over states of small sets.",
   "estMinutes": 20,
-  "simulator": null,
+  "simulator": "bitmask-dp",
   "complexity": {
     "time": "O(2^n · n)",
     "space": "O(2^n)"
@@ -102,7 +102,29 @@
       "statement": "Split into k equal-sum subsets.",
       "hint": "DP over used-element mask.",
       "tests": "Subset-mask DP.",
-      "link": "https://leetcode.com/problems/partition-to-k-equal-sum-subsets/"
+      "link": "https://leetcode.com/problems/partition-to-k-equal-sum-subsets/",
+      "solution": {
+        "approach": [
+          "Each element is either used or not — a subset, encoded as a bitmask. dp[mask] = the amount filled in the current bucket (mod target) when exactly the elements in mask are placed.",
+          "If the total isn't divisible by k, or any element exceeds target, it's impossible. Otherwise add an unused element only if it keeps the current bucket <= target; reaching the full mask with remainder 0 means success."
+        ],
+        "complexity": {
+          "time": "O(2^n · n)",
+          "space": "O(2^n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    bool canPartitionKSubsets(vector<int>& nums, int k) {\n        int total = accumulate(nums.begin(), nums.end(), 0);\n        if (total % k) return false;\n        int target = total / k, n = nums.size();\n        if (*max_element(nums.begin(), nums.end()) > target) return false;\n        vector<int> dp(1 << n, -1); dp[0] = 0;\n        for (int mask = 0; mask < (1 << n); mask++) {\n            if (dp[mask] == -1) continue;\n            for (int i = 0; i < n; i++)\n                if (!(mask & (1 << i)) && dp[mask] + nums[i] <= target)\n                    dp[mask | (1 << i)] = (dp[mask] + nums[i]) % target;\n        }\n        return dp[(1 << n) - 1] == 0;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def canPartitionKSubsets(self, nums: list[int], k: int) -> bool:\n        total = sum(nums)\n        if total % k:\n            return False\n        target, n = total // k, len(nums)\n        if max(nums) > target:\n            return False\n        dp = [-1] * (1 << n)\n        dp[0] = 0\n        for mask in range(1 << n):\n            if dp[mask] == -1:\n                continue\n            for i in range(n):\n                if not (mask >> i & 1) and dp[mask] + nums[i] <= target:\n                    dp[mask | (1 << i)] = (dp[mask] + nums[i]) % target\n        return dp[(1 << n) - 1] == 0"
+          }
+        ]
+      }
     },
     {
       "id": "bm2",
@@ -111,7 +133,29 @@
       "statement": "Shortest walk visiting every node.",
       "hint": "BFS over (node, visited-mask) states.",
       "tests": "Bitmask + BFS.",
-      "link": "https://leetcode.com/problems/shortest-path-visiting-all-nodes/"
+      "link": "https://leetcode.com/problems/shortest-path-visiting-all-nodes/",
+      "solution": {
+        "approach": [
+          "State is (current node, set of visited nodes as a bitmask). We want the shortest walk whose mask becomes all-ones.",
+          "BFS over these states (edges are unweighted) starting from every node with only itself visited; the first time any state reaches the full mask gives the answer."
+        ],
+        "complexity": {
+          "time": "O(2^n · n^2)",
+          "space": "O(2^n · n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int shortestPathLength(vector<vector<int>>& graph) {\n        int n = graph.size(), full = (1 << n) - 1;\n        vector<vector<bool>> seen(n, vector<bool>(1 << n, false));\n        queue<tuple<int,int,int>> q;   // node, mask, dist\n        for (int i = 0; i < n; i++) { q.push({i, 1 << i, 0}); seen[i][1 << i] = true; }\n        while (!q.empty()) {\n            auto [u, mask, d] = q.front(); q.pop();\n            if (mask == full) return d;\n            for (int v : graph[u]) {\n                int nm = mask | (1 << v);\n                if (!seen[v][nm]) { seen[v][nm] = true; q.push({v, nm, d + 1}); }\n            }\n        }\n        return 0;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def shortestPathLength(self, graph):\n        n = len(graph)\n        full = (1 << n) - 1\n        seen = set()\n        q = deque()\n        for i in range(n):\n            q.append((i, 1 << i, 0)); seen.add((i, 1 << i))\n        while q:\n            u, mask, d = q.popleft()\n            if mask == full:\n                return d\n            for v in graph[u]:\n                nm = mask | (1 << v)\n                if (v, nm) not in seen:\n                    seen.add((v, nm)); q.append((v, nm, d + 1))\n        return 0"
+          }
+        ]
+      }
     },
     {
       "id": "bm3",
@@ -120,7 +164,29 @@
       "statement": "Count assignments of hats to people.",
       "hint": "DP over a mask of assigned people.",
       "tests": "Assignment bitmask DP.",
-      "link": "https://leetcode.com/problems/number-of-ways-to-wear-different-hats-to-each-other/"
+      "link": "https://leetcode.com/problems/number-of-ways-to-wear-different-hats-to-each-other/",
+      "solution": {
+        "approach": [
+          "There are at most 10 people but 40 hats, so make people the bitmask (2^10) and iterate over hats.",
+          "dp[mask] = ways to assign hats so the people in mask have hats. For each hat, optionally give it to one person who likes it: dp'[mask | 1<<p] += dp[mask]. Answer is dp[fullPeople]."
+        ],
+        "complexity": {
+          "time": "O(40 · 2^n · n)",
+          "space": "O(2^n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int numberWays(vector<vector<int>>& hats) {\n        const long long MOD = 1e9 + 7;\n        int n = hats.size(), full = (1 << n) - 1;\n        vector<vector<int>> hatToPeople(41);\n        for (int p = 0; p < n; p++) for (int h : hats[p]) hatToPeople[h].push_back(p);\n        vector<long long> dp(1 << n, 0); dp[0] = 1;\n        for (int h = 1; h <= 40; h++) {\n            vector<long long> ndp = dp;\n            for (int mask = 0; mask <= full; mask++) {\n                if (!dp[mask]) continue;\n                for (int p : hatToPeople[h])\n                    if (!(mask & (1 << p))) ndp[mask | (1 << p)] = (ndp[mask | (1 << p)] + dp[mask]) % MOD;\n            }\n            dp = ndp;\n        }\n        return (int)dp[full];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def numberWays(self, hats):\n        MOD = 10**9 + 7\n        n = len(hats)\n        full = (1 << n) - 1\n        hat_to_people = [[] for _ in range(41)]\n        for p in range(n):\n            for h in hats[p]:\n                hat_to_people[h].append(p)\n        dp = [0] * (1 << n)\n        dp[0] = 1\n        for h in range(1, 41):\n            ndp = dp[:]\n            for mask in range(full + 1):\n                if not dp[mask]:\n                    continue\n                for p in hat_to_people[h]:\n                    if not (mask >> p & 1):\n                        ndp[mask | (1 << p)] = (ndp[mask | (1 << p)] + dp[mask]) % MOD\n            dp = ndp\n        return dp[full]"
+          }
+        ]
+      }
     },
     {
       "id": "bm4",
@@ -129,7 +195,29 @@
       "statement": "Seat max students with no cheating adjacency.",
       "hint": "Row-by-row DP over seat masks; validate against the previous row.",
       "tests": "Profile/broken-profile DP.",
-      "link": "https://leetcode.com/problems/maximum-students-taking-exam/"
+      "link": "https://leetcode.com/problems/maximum-students-taking-exam/",
+      "solution": {
+        "approach": [
+          "Process the grid row by row; each row's seating is a bitmask. A valid row mask uses only good seats and has no two horizontally adjacent students.",
+          "A row mask is compatible with the previous row's mask if there are no upper-left/upper-right conflicts: (mask & prev<<1)==0 and (mask & prev>>1)==0. DP keeps the max students over compatible transitions."
+        ],
+        "complexity": {
+          "time": "O(m · 4^n)",
+          "space": "O(2^n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int maxStudents(vector<vector<char>>& seats) {\n        int m = seats.size(), n = seats[0].size();\n        vector<int> good(m, 0);\n        for (int i = 0; i < m; i++)\n            for (int j = 0; j < n; j++)\n                if (seats[i][j] == '.') good[i] |= (1 << j);\n        vector<int> prev(1 << n, -1); prev[0] = 0;\n        for (int i = 0; i < m; i++) {\n            vector<int> cur(1 << n, -1);\n            for (int mask = 0; mask < (1 << n); mask++) {\n                if ((mask & good[i]) != mask) continue;     // only good seats\n                if (mask & (mask << 1)) continue;            // no horizontal neighbour\n                for (int pm = 0; pm < (1 << n); pm++) {\n                    if (prev[pm] == -1) continue;\n                    if ((mask & (pm << 1)) || (mask & (pm >> 1))) continue;\n                    cur[mask] = max(cur[mask], prev[pm] + __builtin_popcount(mask));\n                }\n            }\n            prev = cur;\n        }\n        int best = 0;\n        for (int v : prev) best = max(best, v);\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def maxStudents(self, seats):\n        m, n = len(seats), len(seats[0])\n        good = [0] * m\n        for i in range(m):\n            for j in range(n):\n                if seats[i][j] == '.':\n                    good[i] |= (1 << j)\n        prev = {0: 0}\n        for i in range(m):\n            cur = {}\n            for mask in range(1 << n):\n                if (mask & good[i]) != mask:\n                    continue\n                if mask & (mask << 1):\n                    continue\n                pc = bin(mask).count('1')\n                for pm, val in prev.items():\n                    if (mask & (pm << 1)) or (mask & (pm >> 1)):\n                        continue\n                    cur[mask] = max(cur.get(mask, 0), val + pc)\n            prev = cur if cur else {0: max(prev.values())}\n        return max(prev.values())"
+          }
+        ]
+      }
     },
     {
       "id": "bm5",
@@ -138,7 +226,29 @@
       "statement": "Minimum cost Hamiltonian tour.",
       "hint": "Classic dp[mask][i] Held-Karp.",
       "tests": "Held-Karp bitmask DP.",
-      "link": "https://cses.fi/problemset/task/1690"
+      "link": "https://cses.fi/problemset/task/1690",
+      "solution": {
+        "approach": [
+          "Held-Karp: dp[mask][i] = minimum cost of a path that visits exactly the nodes in mask and ends at i.",
+          "Transition from dp[mask][i] to dp[mask | 1<<j][j] adding dist[i][j]. The answer is the minimum dp[full][i] over all endpoints i (a Hamiltonian path)."
+        ],
+        "complexity": {
+          "time": "O(2^n · n^2)",
+          "space": "O(2^n · n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int tsp(vector<vector<int>>& dist) {\n        int n = dist.size(), full = (1 << n) - 1;\n        const int INF = 1e9;\n        vector<vector<int>> dp(1 << n, vector<int>(n, INF));\n        for (int i = 0; i < n; i++) dp[1 << i][i] = 0;\n        for (int mask = 1; mask <= full; mask++)\n            for (int i = 0; i < n; i++) {\n                if (dp[mask][i] == INF || !(mask & (1 << i))) continue;\n                for (int j = 0; j < n; j++)\n                    if (!(mask & (1 << j)))\n                        dp[mask | (1 << j)][j] = min(dp[mask | (1 << j)][j], dp[mask][i] + dist[i][j]);\n            }\n        int best = INF;\n        for (int i = 0; i < n; i++) best = min(best, dp[full][i]);\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def tsp(self, dist):\n        n = len(dist)\n        full = (1 << n) - 1\n        INF = float('inf')\n        dp = [[INF] * n for _ in range(1 << n)]\n        for i in range(n):\n            dp[1 << i][i] = 0\n        for mask in range(1, full + 1):\n            for i in range(n):\n                if dp[mask][i] == INF or not (mask >> i & 1):\n                    continue\n                for j in range(n):\n                    if not (mask >> j & 1):\n                        nm = mask | (1 << j)\n                        if dp[mask][i] + dist[i][j] < dp[nm][j]:\n                            dp[nm][j] = dp[mask][i] + dist[i][j]\n        return min(dp[full])"
+          }
+        ]
+      }
     }
   ]
 }

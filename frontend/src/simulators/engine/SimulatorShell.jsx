@@ -73,6 +73,12 @@ export default function SimulatorShell({
           </AnimatePresence>
 
           <PlayerControls player={player} accent={accent} />
+
+          <div className="flex items-center justify-center gap-2 text-[11px] text-faint">
+            <span className="kbd">space</span> play/pause
+            <span className="kbd">←</span>
+            <span className="kbd">→</span> step
+          </div>
         </div>
 
         {/* Side rail: pseudocode + legend */}

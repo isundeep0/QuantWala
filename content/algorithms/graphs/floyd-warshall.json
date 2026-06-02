@@ -5,7 +5,7 @@
   "title": "Floyd-Warshall",
   "tagline": "All-pairs shortest paths in three tidy loops — O(V³) dynamic programming.",
   "estMinutes": 14,
-  "simulator": null,
+  "simulator": "floyd-warshall",
   "complexity": {
     "time": "O(V³)",
     "space": "O(V²)"
@@ -97,7 +97,29 @@
       "statement": "City with fewest reachable neighbours within a threshold.",
       "hint": "Floyd-Warshall, then count reachable nodes per city.",
       "tests": "All-pairs distances.",
-      "link": "https://leetcode.com/problems/find-the-city-with-the-smallest-number-of-neighbors-at-a-threshold-distance/"
+      "link": "https://leetcode.com/problems/find-the-city-with-the-smallest-number-of-neighbors-at-a-threshold-distance/",
+      "solution": {
+        "approach": [
+          "All-pairs shortest paths via Floyd-Warshall, then for each city count how many others are within the distance threshold.",
+          "Return the city with the smallest reachable count, breaking ties by the largest index."
+        ],
+        "complexity": {
+          "time": "O(n^3)",
+          "space": "O(n^2)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int findTheCity(int n, vector<vector<int>>& edges, int threshold) {\n        const int INF = 1e9;\n        vector<vector<int>> d(n, vector<int>(n, INF));\n        for (int i = 0; i < n; i++) d[i][i] = 0;\n        for (auto& e : edges) { d[e[0]][e[1]] = e[2]; d[e[1]][e[0]] = e[2]; }\n        for (int k = 0; k < n; k++)\n            for (int i = 0; i < n; i++)\n                for (int j = 0; j < n; j++)\n                    if (d[i][k] + d[k][j] < d[i][j]) d[i][j] = d[i][k] + d[k][j];\n        int best = -1, bestCnt = INT_MAX;\n        for (int i = 0; i < n; i++) {\n            int cnt = 0;\n            for (int j = 0; j < n; j++) if (i != j && d[i][j] <= threshold) cnt++;\n            if (cnt <= bestCnt) { bestCnt = cnt; best = i; }\n        }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findTheCity(self, n, edges, threshold):\n        INF = float('inf')\n        d = [[INF] * n for _ in range(n)]\n        for i in range(n):\n            d[i][i] = 0\n        for u, v, w in edges:\n            d[u][v] = d[v][u] = w\n        for k in range(n):\n            for i in range(n):\n                for j in range(n):\n                    if d[i][k] + d[k][j] < d[i][j]:\n                        d[i][j] = d[i][k] + d[k][j]\n        best, best_cnt = -1, INF\n        for i in range(n):\n            cnt = sum(1 for j in range(n) if i != j and d[i][j] <= threshold)\n            if cnt <= best_cnt:\n                best_cnt, best = cnt, i\n        return best"
+          }
+        ]
+      }
     },
     {
       "id": "fw2",
@@ -106,7 +128,29 @@
       "statement": "Answer reachability (prerequisite) queries.",
       "hint": "Transitive closure via Floyd-Warshall on booleans.",
       "tests": "Transitive closure.",
-      "link": "https://leetcode.com/problems/course-schedule-iv/"
+      "link": "https://leetcode.com/problems/course-schedule-iv/",
+      "solution": {
+        "approach": [
+          "The queries ask about reachability (transitive closure). Floyd-Warshall generalises: reach[i][j] = reach[i][j] or (reach[i][k] and reach[k][j]).",
+          "Build the closure in O(n^3), then answer each prerequisite query in O(1)."
+        ],
+        "complexity": {
+          "time": "O(n^3 + q)",
+          "space": "O(n^2)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<bool> checkIfPrerequisite(int n, vector<vector<int>>& pre, vector<vector<int>>& queries) {\n        vector<vector<bool>> reach(n, vector<bool>(n, false));\n        for (auto& p : pre) reach[p[0]][p[1]] = true;\n        for (int k = 0; k < n; k++)\n            for (int i = 0; i < n; i++)\n                if (reach[i][k])\n                    for (int j = 0; j < n; j++)\n                        if (reach[k][j]) reach[i][j] = true;\n        vector<bool> res;\n        for (auto& q : queries) res.push_back(reach[q[0]][q[1]]);\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def checkIfPrerequisite(self, n, prerequisites, queries):\n        reach = [[False] * n for _ in range(n)]\n        for a, b in prerequisites:\n            reach[a][b] = True\n        for k in range(n):\n            for i in range(n):\n                if reach[i][k]:\n                    for j in range(n):\n                        if reach[k][j]:\n                            reach[i][j] = True\n        return [reach[a][b] for a, b in queries]"
+          }
+        ]
+      }
     },
     {
       "id": "fw3",
@@ -115,7 +159,29 @@
       "statement": "Answer a/b queries from given ratios.",
       "hint": "All-pairs products via a Floyd-Warshall-like propagation.",
       "tests": "Weighted closure.",
-      "link": "https://leetcode.com/problems/evaluate-division/"
+      "link": "https://leetcode.com/problems/evaluate-division/",
+      "solution": {
+        "approach": [
+          "Treat variables as nodes and a/b = value as a directed edge with that ratio (and 1/value back). Path products give other ratios.",
+          "Floyd-Warshall over multiplication: d[i][j] = d[i][k]·d[k][j]. Then each query is a table lookup, or -1 if disconnected."
+        ],
+        "complexity": {
+          "time": "O(V^3 + q)",
+          "space": "O(V^2)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<double> calcEquation(vector<vector<string>>& eq, vector<double>& vals, vector<vector<string>>& queries) {\n        unordered_map<string,int> id; int n = 0;\n        for (auto& e : eq) for (auto& s : e) if (!id.count(s)) id[s] = n++;\n        vector<vector<double>> d(n, vector<double>(n, 0.0));\n        for (int i = 0; i < n; i++) d[i][i] = 1.0;\n        for (int i = 0; i < (int)eq.size(); i++) {\n            int a = id[eq[i][0]], b = id[eq[i][1]];\n            d[a][b] = vals[i]; d[b][a] = 1.0 / vals[i];\n        }\n        for (int k = 0; k < n; k++)\n            for (int i = 0; i < n; i++)\n                for (int j = 0; j < n; j++)\n                    if (d[i][k] && d[k][j]) d[i][j] = d[i][k] * d[k][j];\n        vector<double> res;\n        for (auto& q : queries) {\n            if (!id.count(q[0]) || !id.count(q[1]) || d[id[q[0]]][id[q[1]]] == 0.0) res.push_back(-1.0);\n            else res.push_back(d[id[q[0]]][id[q[1]]]);\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def calcEquation(self, equations, values, queries):\n        idx = {}\n        for a, b in equations:\n            idx.setdefault(a, len(idx)); idx.setdefault(b, len(idx))\n        n = len(idx)\n        d = [[0.0] * n for _ in range(n)]\n        for i in range(n):\n            d[i][i] = 1.0\n        for (a, b), v in zip(equations, values):\n            d[idx[a]][idx[b]] = v\n            d[idx[b]][idx[a]] = 1.0 / v\n        for k in range(n):\n            for i in range(n):\n                if d[i][k]:\n                    for j in range(n):\n                        if d[k][j]:\n                            d[i][j] = d[i][k] * d[k][j]\n        res = []\n        for a, b in queries:\n            if a in idx and b in idx and d[idx[a]][idx[b]]:\n                res.append(d[idx[a]][idx[b]])\n            else:\n                res.append(-1.0)\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "fw4",
@@ -124,7 +190,29 @@
       "statement": "Cheapest per-character conversion cost.",
       "hint": "Floyd-Warshall over the 26-letter graph.",
       "tests": "Small all-pairs graph.",
-      "link": "https://leetcode.com/problems/minimum-cost-to-convert-string-i/"
+      "link": "https://leetcode.com/problems/minimum-cost-to-convert-string-i/",
+      "solution": {
+        "approach": [
+          "There are only 26 letters, so build a 26×26 cost matrix of single-character conversions and run Floyd-Warshall for cheapest letter-to-letter costs.",
+          "Sum the per-position costs of converting source to target; if any position is unreachable, return -1."
+        ],
+        "complexity": {
+          "time": "O(26^3 + n)",
+          "space": "O(26^2)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    long long minimumCost(string source, string target, vector<char>& original, vector<char>& changed, vector<int>& cost) {\n        const long long INF = 1e18;\n        vector<vector<long long>> d(26, vector<long long>(26, INF));\n        for (int i = 0; i < 26; i++) d[i][i] = 0;\n        for (int i = 0; i < (int)cost.size(); i++) {\n            int u = original[i] - 'a', v = changed[i] - 'a';\n            d[u][v] = min(d[u][v], (long long)cost[i]);\n        }\n        for (int k = 0; k < 26; k++)\n            for (int i = 0; i < 26; i++)\n                for (int j = 0; j < 26; j++)\n                    if (d[i][k] + d[k][j] < d[i][j]) d[i][j] = d[i][k] + d[k][j];\n        long long total = 0;\n        for (int i = 0; i < (int)source.size(); i++) {\n            long long c = d[source[i] - 'a'][target[i] - 'a'];\n            if (c == INF) return -1;\n            total += c;\n        }\n        return total;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def minimumCost(self, source, target, original, changed, cost):\n        INF = float('inf')\n        d = [[INF] * 26 for _ in range(26)]\n        for i in range(26):\n            d[i][i] = 0\n        for o, c, w in zip(original, changed, cost):\n            u, v = ord(o) - 97, ord(c) - 97\n            d[u][v] = min(d[u][v], w)\n        for k in range(26):\n            for i in range(26):\n                if d[i][k] < INF:\n                    for j in range(26):\n                        if d[i][k] + d[k][j] < d[i][j]:\n                            d[i][j] = d[i][k] + d[k][j]\n        total = 0\n        for s, t in zip(source, target):\n            c = d[ord(s) - 97][ord(t) - 97]\n            if c == INF:\n                return -1\n            total += c\n        return total"
+          }
+        ]
+      }
     },
     {
       "id": "fw5",
@@ -133,7 +221,29 @@
       "statement": "Answer many pairwise distance queries on a small graph.",
       "hint": "Precompute all pairs once.",
       "tests": "All-pairs precomputation.",
-      "link": "https://cses.fi/problemset/task/1672"
+      "link": "https://cses.fi/problemset/task/1672",
+      "solution": {
+        "approach": [
+          "When the graph is dense or many all-pairs queries are needed, Floyd-Warshall computes every shortest distance in one O(n^3) sweep.",
+          "Initialise the matrix with direct edges and 0 on the diagonal, then relax through each intermediate vertex k."
+        ],
+        "complexity": {
+          "time": "O(n^3)",
+          "space": "O(n^2)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<vector<int>> allPairs(int n, vector<vector<int>>& edges) {\n        const int INF = 1e9;\n        vector<vector<int>> d(n, vector<int>(n, INF));\n        for (int i = 0; i < n; i++) d[i][i] = 0;\n        for (auto& e : edges) d[e[0]][e[1]] = min(d[e[0]][e[1]], e[2]);\n        for (int k = 0; k < n; k++)\n            for (int i = 0; i < n; i++)\n                for (int j = 0; j < n; j++)\n                    if (d[i][k] + d[k][j] < d[i][j]) d[i][j] = d[i][k] + d[k][j];\n        return d;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def allPairs(self, n, edges):\n        INF = float('inf')\n        d = [[INF] * n for _ in range(n)]\n        for i in range(n):\n            d[i][i] = 0\n        for u, v, w in edges:\n            d[u][v] = min(d[u][v], w)\n        for k in range(n):\n            for i in range(n):\n                dik = d[i][k]\n                if dik < INF:\n                    row = d[i]\n                    for j in range(n):\n                        if dik + d[k][j] < row[j]:\n                            row[j] = dik + d[k][j]\n        return d"
+          }
+        ]
+      }
     }
   ]
 }

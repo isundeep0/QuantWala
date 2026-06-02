@@ -102,7 +102,29 @@
       "statement": "Count connected components.",
       "hint": "Union all connected pairs; count distinct roots.",
       "tests": "Core DSU connectivity.",
-      "link": "https://leetcode.com/problems/number-of-provinces/"
+      "link": "https://leetcode.com/problems/number-of-provinces/",
+      "solution": {
+        "approach": [
+          "Provinces are connected components. Union every pair of directly-connected cities, then count distinct roots.",
+          "Path compression and union by rank keep each operation near O(1)."
+        ],
+        "complexity": {
+          "time": "O(n^2 α)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<int> p;\n    int find(int x){ return p[x]==x?x:p[x]=find(p[x]); }\npublic:\n    int findCircleNum(vector<vector<int>>& M) {\n        int n = M.size(); p.resize(n); iota(p.begin(), p.end(), 0);\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n; j++)\n                if (M[i][j]) p[find(i)] = find(j);\n        int count = 0;\n        for (int i = 0; i < n; i++) if (find(i) == i) count++;\n        return count;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findCircleNum(self, M):\n        n = len(M)\n        parent = list(range(n))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]; x = parent[x]\n            return x\n        for i in range(n):\n            for j in range(i + 1, n):\n                if M[i][j]:\n                    parent[find(i)] = find(j)\n        return sum(1 for i in range(n) if find(i) == i)"
+          }
+        ]
+      }
     },
     {
       "id": "uf2",
@@ -111,7 +133,29 @@
       "statement": "Find the edge that creates a cycle in a tree-plus-one-edge graph.",
       "hint": "The first edge whose endpoints already share a root is the answer.",
       "tests": "Cycle detection via DSU.",
-      "link": "https://leetcode.com/problems/redundant-connection/"
+      "link": "https://leetcode.com/problems/redundant-connection/",
+      "solution": {
+        "approach": [
+          "Add edges one by one with union-find. The first edge whose endpoints already share a root closes a cycle — that edge is redundant.",
+          "Since exactly one extra edge exists, this single detection gives the answer."
+        ],
+        "complexity": {
+          "time": "O(n α)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<int> p;\n    int find(int x){ return p[x]==x?x:p[x]=find(p[x]); }\npublic:\n    vector<int> findRedundantConnection(vector<vector<int>>& edges) {\n        int n = edges.size(); p.resize(n + 1); iota(p.begin(), p.end(), 0);\n        for (auto& e : edges) {\n            int a = find(e[0]), b = find(e[1]);\n            if (a == b) return e;\n            p[a] = b;\n        }\n        return {};\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findRedundantConnection(self, edges):\n        parent = list(range(len(edges) + 1))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]; x = parent[x]\n            return x\n        for u, v in edges:\n            ru, rv = find(u), find(v)\n            if ru == rv:\n                return [u, v]\n            parent[ru] = rv\n        return []"
+          }
+        ]
+      }
     },
     {
       "id": "uf3",
@@ -120,7 +164,29 @@
       "statement": "Merge accounts sharing any email.",
       "hint": "Union accounts by shared emails; group by root.",
       "tests": "DSU for grouping.",
-      "link": "https://leetcode.com/problems/accounts-merge/"
+      "link": "https://leetcode.com/problems/accounts-merge/",
+      "solution": {
+        "approach": [
+          "Two accounts belong to the same person if they share any email. Union all emails within each account, then group emails by their root.",
+          "Map each email to an owner name, collect emails per component, sort them, and prepend the name."
+        ],
+        "complexity": {
+          "time": "O(N·K log K)",
+          "space": "O(N·K)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<int> p;\n    int find(int x){ return p[x]==x?x:p[x]=find(p[x]); }\npublic:\n    vector<vector<string>> accountsMerge(vector<vector<string>>& accounts) {\n        unordered_map<string,int> emailId; unordered_map<string,string> owner;\n        int id = 0;\n        for (auto& a : accounts) for (int j = 1; j < (int)a.size(); j++)\n            if (!emailId.count(a[j])) { emailId[a[j]] = id++; owner[a[j]] = a[0]; }\n        p.resize(id); iota(p.begin(), p.end(), 0);\n        for (auto& a : accounts)\n            for (int j = 2; j < (int)a.size(); j++)\n                p[find(emailId[a[j]])] = find(emailId[a[1]]);\n        unordered_map<int, vector<string>> groups;\n        for (auto& [email, eid] : emailId) groups[find(eid)].push_back(email);\n        vector<vector<string>> res;\n        for (auto& [root, emails] : groups) {\n            sort(emails.begin(), emails.end());\n            vector<string> acc = {owner[emails[0]]};\n            acc.insert(acc.end(), emails.begin(), emails.end());\n            res.push_back(acc);\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def accountsMerge(self, accounts):\n        parent = {}\n        owner = {}\n        def find(x):\n            parent.setdefault(x, x)\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]; x = parent[x]\n            return x\n        for acc in accounts:\n            name = acc[0]\n            for email in acc[1:]:\n                owner[email] = name\n                parent.setdefault(email, email)\n                parent[find(email)] = find(acc[1])\n        from collections import defaultdict\n        groups = defaultdict(list)\n        for email in owner:\n            groups[find(email)].append(email)\n        return [[owner[g[0]]] + sorted(g) for g in groups.values()]"
+          }
+        ]
+      }
     },
     {
       "id": "uf4",
@@ -129,7 +195,29 @@
       "statement": "Min cable moves to connect all computers.",
       "hint": "Components − 1 cables needed if you have enough spare edges.",
       "tests": "Counting components.",
-      "link": "https://leetcode.com/problems/number-of-operations-to-make-network-connected/"
+      "link": "https://leetcode.com/problems/number-of-operations-to-make-network-connected/",
+      "solution": {
+        "approach": [
+          "To connect c components you need at least c-1 extra cables. Count components and the number of spare (redundant) cables.",
+          "If spare cables >= components - 1 the answer is components - 1, otherwise it is impossible (-1)."
+        ],
+        "complexity": {
+          "time": "O(n + E α)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<int> p;\n    int find(int x){ return p[x]==x?x:p[x]=find(p[x]); }\npublic:\n    int makeConnected(int n, vector<vector<int>>& connections) {\n        if ((int)connections.size() < n - 1) return -1;\n        p.resize(n); iota(p.begin(), p.end(), 0);\n        for (auto& c : connections) p[find(c[0])] = find(c[1]);\n        int comps = 0;\n        for (int i = 0; i < n; i++) if (find(i) == i) comps++;\n        return comps - 1;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def makeConnected(self, n, connections):\n        if len(connections) < n - 1:\n            return -1\n        parent = list(range(n))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]; x = parent[x]\n            return x\n        for u, v in connections:\n            parent[find(u)] = find(v)\n        comps = sum(1 for i in range(n) if find(i) == i)\n        return comps - 1"
+          }
+        ]
+      }
     },
     {
       "id": "uf5",
@@ -138,7 +226,29 @@
       "statement": "Lexicographically smallest string given swap pairs.",
       "hint": "Union swap-connected indices; sort characters within each group.",
       "tests": "DSU components + sorting.",
-      "link": "https://leetcode.com/problems/smallest-string-with-swaps/"
+      "link": "https://leetcode.com/problems/smallest-string-with-swaps/",
+      "solution": {
+        "approach": [
+          "Swaps are transitive: any indices linked by a chain of allowed swaps can be permuted freely. Union all swap pairs into components.",
+          "Within each component, sort both the indices and their characters, then place the smallest characters at the smallest indices."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<int> p;\n    int find(int x){ return p[x]==x?x:p[x]=find(p[x]); }\npublic:\n    string smallestStringWithSwaps(string s, vector<vector<int>>& pairs) {\n        int n = s.size(); p.resize(n); iota(p.begin(), p.end(), 0);\n        for (auto& pr : pairs) p[find(pr[0])] = find(pr[1]);\n        unordered_map<int, vector<int>> groups;\n        for (int i = 0; i < n; i++) groups[find(i)].push_back(i);\n        string res = s;\n        for (auto& [root, idx] : groups) {\n            string chars;\n            for (int i : idx) chars += s[i];\n            sort(chars.begin(), chars.end());\n            for (int k = 0; k < (int)idx.size(); k++) res[idx[k]] = chars[k];\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def smallestStringWithSwaps(self, s, pairs):\n        n = len(s)\n        parent = list(range(n))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]; x = parent[x]\n            return x\n        for a, b in pairs:\n            parent[find(a)] = find(b)\n        from collections import defaultdict\n        groups = defaultdict(list)\n        for i in range(n):\n            groups[find(i)].append(i)\n        res = list(s)\n        for idx in groups.values():\n            chars = sorted(res[i] for i in idx)\n            for k, i in enumerate(sorted(idx)):\n                res[i] = chars[k]\n        return \"\".join(res)"
+          }
+        ]
+      }
     }
   ]
 }

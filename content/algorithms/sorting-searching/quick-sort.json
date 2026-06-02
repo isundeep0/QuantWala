@@ -102,7 +102,29 @@
       "statement": "Sort an array; practise an in-place quicksort with random pivots.",
       "hint": "Randomise the pivot to dodge the sorted-input worst case.",
       "tests": "Partition + recursion.",
-      "link": "https://leetcode.com/problems/sort-an-array/"
+      "link": "https://leetcode.com/problems/sort-an-array/",
+      "solution": {
+        "approach": [
+          "Quicksort partitions around a pivot so smaller elements go left, larger go right, then recurses on each side. A random pivot avoids the O(n^2) worst case on sorted/adversarial input.",
+          "Use Hoare/Lomuto partitioning in place; expected O(n log n) with O(log n) recursion depth."
+        ],
+        "complexity": {
+          "time": "O(n log n) expected",
+          "space": "O(log n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    void qsort(vector<int>& a, int lo, int hi) {\n        while (lo < hi) {\n            int p = lo + rand() % (hi - lo + 1);\n            swap(a[p], a[hi]);\n            int pivot = a[hi], i = lo;\n            for (int j = lo; j < hi; j++) if (a[j] < pivot) swap(a[i++], a[j]);\n            swap(a[i], a[hi]);\n            if (i - lo < hi - i) { qsort(a, lo, i - 1); lo = i + 1; }\n            else { qsort(a, i + 1, hi); hi = i - 1; }\n        }\n    }\npublic:\n    vector<int> sortArray(vector<int>& a) { qsort(a, 0, a.size() - 1); return a; }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import random\nclass Solution:\n    def sortArray(self, a: list[int]) -> list[int]:\n        def qsort(lo, hi):\n            while lo < hi:\n                p = random.randint(lo, hi)\n                a[p], a[hi] = a[hi], a[p]\n                pivot, i = a[hi], lo\n                for j in range(lo, hi):\n                    if a[j] < pivot:\n                        a[i], a[j] = a[j], a[i]; i += 1\n                a[i], a[hi] = a[hi], a[i]\n                if i - lo < hi - i:\n                    qsort(lo, i - 1); lo = i + 1\n                else:\n                    qsort(i + 1, hi); hi = i - 1\n        qsort(0, len(a) - 1)\n        return a"
+          }
+        ]
+      }
     },
     {
       "id": "qs2",
@@ -111,7 +133,29 @@
       "statement": "Find the kth largest element in an unsorted array.",
       "hint": "Quickselect: partition, then recurse only into the side that contains rank k — average O(n).",
       "tests": "Quickselect (partition without full sort).",
-      "link": "https://leetcode.com/problems/kth-largest-element-in-an-array/"
+      "link": "https://leetcode.com/problems/kth-largest-element-in-an-array/",
+      "solution": {
+        "approach": [
+          "We do not need a full sort — only the kth largest. Quickselect partitions around a random pivot and recurses into just the side containing the target rank.",
+          "The kth largest is the (n-k)th smallest. Each step discards one side, giving expected O(n)."
+        ],
+        "complexity": {
+          "time": "O(n) expected",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int findKthLargest(vector<int>& a, int k) {\n        int target = a.size() - k, lo = 0, hi = a.size() - 1;\n        while (true) {\n            int p = lo + rand() % (hi - lo + 1);\n            swap(a[p], a[hi]);\n            int pivot = a[hi], i = lo;\n            for (int j = lo; j < hi; j++) if (a[j] < pivot) swap(a[i++], a[j]);\n            swap(a[i], a[hi]);\n            if (i == target) return a[i];\n            if (i < target) lo = i + 1; else hi = i - 1;\n        }\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import random\nclass Solution:\n    def findKthLargest(self, a: list[int], k: int) -> int:\n        target, lo, hi = len(a) - k, 0, len(a) - 1\n        while True:\n            p = random.randint(lo, hi)\n            a[p], a[hi] = a[hi], a[p]\n            pivot, i = a[hi], lo\n            for j in range(lo, hi):\n                if a[j] < pivot:\n                    a[i], a[j] = a[j], a[i]; i += 1\n            a[i], a[hi] = a[hi], a[i]\n            if i == target:\n                return a[i]\n            if i < target:\n                lo = i + 1\n            else:\n                hi = i - 1"
+          }
+        ]
+      }
     },
     {
       "id": "qs3",
@@ -120,7 +164,29 @@
       "statement": "Sort an array of 0s, 1s, and 2s in one pass.",
       "hint": "Three-way (Dutch national flag) partition with low, mid, high pointers.",
       "tests": "Three-way partitioning.",
-      "link": "https://leetcode.com/problems/sort-colors/"
+      "link": "https://leetcode.com/problems/sort-colors/",
+      "solution": {
+        "approach": [
+          "This is the partition step of quicksort generalised to a fixed pivot value of 1 — the Dutch National Flag three-way partition.",
+          "Three pointers split the array into <1, =1, >1 regions in a single in-place pass."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    void sortColors(vector<int>& a) {\n        int low = 0, mid = 0, high = a.size() - 1;\n        while (mid <= high) {\n            if (a[mid] < 1) swap(a[low++], a[mid++]);\n            else if (a[mid] > 1) swap(a[mid], a[high--]);\n            else mid++;\n        }\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def sortColors(self, a: list[int]) -> None:\n        low, mid, high = 0, 0, len(a) - 1\n        while mid <= high:\n            if a[mid] < 1:\n                a[low], a[mid] = a[mid], a[low]; low += 1; mid += 1\n            elif a[mid] > 1:\n                a[mid], a[high] = a[high], a[mid]; high -= 1\n            else:\n                mid += 1"
+          }
+        ]
+      }
     },
     {
       "id": "qs4",
@@ -129,7 +195,29 @@
       "statement": "Reorder so that nums[0] < nums[1] > nums[2] < ...",
       "hint": "Quickselect to find the median, then place small/large halves at even/odd indices.",
       "tests": "Quickselect + index mapping.",
-      "link": "https://leetcode.com/problems/wiggle-sort-ii/"
+      "link": "https://leetcode.com/problems/wiggle-sort-ii/",
+      "solution": {
+        "approach": [
+          "Find the median with quickselect, then three-way partition around it. Finally interleave: smaller half into odd indices, larger half into even indices (both filled from the high end) so equal medians never touch.",
+          "The index mapping (1,3,5,...,0,2,4,...) is the trick that separates duplicate medians. O(n) average with O(1) extra space via virtual indexing."
+        ],
+        "complexity": {
+          "time": "O(n) average",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    void wiggleSort(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> t = nums;\n        nth_element(t.begin(), t.begin() + n / 2, t.end());\n        int mid = t[n / 2];\n        auto A = [&](int i){ return (1 + 2 * i) % (n | 1); };\n        int i = 0, j = 0, k = n - 1;\n        while (j <= k) {\n            if (nums[A(j)] > mid) swap(nums[A(i++)], nums[A(j++)]);\n            else if (nums[A(j)] < mid) swap(nums[A(j)], nums[A(k--)]);\n            else j++;\n        }\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def wiggleSort(self, nums: list[int]) -> None:\n        n = len(nums)\n        s = sorted(nums)\n        mid = (n - 1) // 2\n        small, large = s[:mid + 1][::-1], s[mid + 1:][::-1]\n        nums[::2] = small\n        nums[1::2] = large"
+          }
+        ]
+      }
     },
     {
       "id": "qs5",
@@ -138,7 +226,29 @@
       "statement": "Return the k most frequent elements.",
       "hint": "Count frequencies, then quickselect on frequency to isolate the top k in average O(n).",
       "tests": "Quickselect on a derived key.",
-      "link": "https://leetcode.com/problems/top-k-frequent-elements/"
+      "link": "https://leetcode.com/problems/top-k-frequent-elements/",
+      "solution": {
+        "approach": [
+          "Count frequencies, then we only need the k most frequent — quickselect on the unique elements by frequency, or bucket by frequency for guaranteed linear time.",
+          "Bucketing places each value at index = its frequency (0..n); scanning buckets from high to low collects the top k. O(n)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> topKFrequent(vector<int>& a, int k) {\n        unordered_map<int,int> freq;\n        for (int x : a) freq[x]++;\n        vector<vector<int>> bucket(a.size() + 1);\n        for (auto& [v, c] : freq) bucket[c].push_back(v);\n        vector<int> res;\n        for (int c = a.size(); c >= 1 && (int)res.size() < k; c--)\n            for (int v : bucket[c]) { res.push_back(v); if ((int)res.size() == k) break; }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import Counter\nclass Solution:\n    def topKFrequent(self, a: list[int], k: int) -> list[int]:\n        freq = Counter(a)\n        bucket = [[] for _ in range(len(a) + 1)]\n        for v, c in freq.items():\n            bucket[c].append(v)\n        res = []\n        for c in range(len(a), 0, -1):\n            for v in bucket[c]:\n                res.append(v)\n                if len(res) == k:\n                    return res\n        return res"
+          }
+        ]
+      }
     }
   ]
 }

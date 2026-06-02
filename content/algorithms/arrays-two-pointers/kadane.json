@@ -102,7 +102,29 @@
       "statement": "Find the contiguous subarray with the largest sum.",
       "hint": "Direct Kadane; initialise with the first element.",
       "tests": "Core Kadane.",
-      "link": "https://leetcode.com/problems/maximum-subarray/"
+      "link": "https://leetcode.com/problems/maximum-subarray/",
+      "solution": {
+        "approach": [
+          "Kadane's core: a maximum-sum subarray ending at i either extends the best subarray ending at i-1 or restarts at a[i].",
+          "Keep a running `cur = max(a[i], cur + a[i])` and track the global best. One pass, O(1) memory."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int maxSubArray(vector<int>& a) {\n        int cur = a[0], best = a[0];\n        for (int i = 1; i < (int)a.size(); i++) {\n            cur = max(a[i], cur + a[i]);\n            best = max(best, cur);\n        }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def maxSubArray(self, a: list[int]) -> int:\n        cur = best = a[0]\n        for x in a[1:]:\n            cur = max(x, cur + x)\n            best = max(best, cur)\n        return best"
+          }
+        ]
+      }
     },
     {
       "id": "kd2",
@@ -111,7 +133,29 @@
       "statement": "Find the contiguous subarray with the largest product.",
       "hint": "Track both max and min running products — a negative can flip min into max.",
       "tests": "Kadane variant with sign handling.",
-      "link": "https://leetcode.com/problems/maximum-product-subarray/"
+      "link": "https://leetcode.com/problems/maximum-product-subarray/",
+      "solution": {
+        "approach": [
+          "Products flip sign, so a large negative times a negative can become the new maximum. Track both the max and min product ending at i.",
+          "When a[i] is negative, swap the running max and min before updating. The answer is the largest max product seen."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int maxProduct(vector<int>& a) {\n        int mx = a[0], mn = a[0], best = a[0];\n        for (int i = 1; i < (int)a.size(); i++) {\n            if (a[i] < 0) swap(mx, mn);\n            mx = max(a[i], mx * a[i]);\n            mn = min(a[i], mn * a[i]);\n            best = max(best, mx);\n        }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def maxProduct(self, a: list[int]) -> int:\n        mx = mn = best = a[0]\n        for x in a[1:]:\n            if x < 0:\n                mx, mn = mn, mx\n            mx = max(x, mx * x)\n            mn = min(x, mn * x)\n            best = max(best, mx)\n        return best"
+          }
+        ]
+      }
     },
     {
       "id": "kd3",
@@ -120,7 +164,29 @@
       "statement": "Max subarray sum where the array is circular.",
       "hint": "Answer = max(normal Kadane, total − minimum subarray). Handle the all-negative edge case.",
       "tests": "Kadane plus a wrap-around trick.",
-      "link": "https://leetcode.com/problems/maximum-sum-circular-subarray/"
+      "link": "https://leetcode.com/problems/maximum-sum-circular-subarray/",
+      "solution": {
+        "approach": [
+          "The best circular subarray is either a normal (non-wrapping) max subarray, or the total minus the minimum subarray (which carves out a wrapping one).",
+          "Compute both with Kadane. Edge case: if every element is negative, total - minSum becomes 0 (empty), so fall back to the plain maximum."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int maxSubarraySumCircular(vector<int>& a) {\n        int total = 0, curMax = 0, bestMax = INT_MIN, curMin = 0, bestMin = INT_MAX;\n        for (int x : a) {\n            total += x;\n            curMax = max(x, curMax + x); bestMax = max(bestMax, curMax);\n            curMin = min(x, curMin + x); bestMin = min(bestMin, curMin);\n        }\n        if (bestMax < 0) return bestMax;          // all negative\n        return max(bestMax, total - bestMin);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def maxSubarraySumCircular(self, a: list[int]) -> int:\n        total = 0\n        cur_max = best_max = a[0]\n        cur_min = best_min = a[0]\n        for i, x in enumerate(a):\n            total += x\n            if i == 0:\n                continue\n            cur_max = max(x, cur_max + x); best_max = max(best_max, cur_max)\n            cur_min = min(x, cur_min + x); best_min = min(best_min, cur_min)\n        if best_max < 0:\n            return best_max\n        return max(best_max, total - best_min)"
+          }
+        ]
+      }
     },
     {
       "id": "kd4",
@@ -129,7 +195,29 @@
       "statement": "Maximise profit from one buy and one sell.",
       "hint": "Kadane on consecutive differences, or track the running minimum price.",
       "tests": "Reframing as max-subarray of deltas.",
-      "link": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/"
+      "link": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/",
+      "solution": {
+        "approach": [
+          "Maximising sell-buy profit is Kadane in disguise: track the minimum price seen so far and the best profit if you sold today.",
+          "profit = max(profit, price - minSoFar); update minSoFar each step. Single pass."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int maxProfit(vector<int>& p) {\n        int minPrice = INT_MAX, best = 0;\n        for (int x : p) { minPrice = min(minPrice, x); best = max(best, x - minPrice); }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def maxProfit(self, prices: list[int]) -> int:\n        min_price, best = float('inf'), 0\n        for x in prices:\n            min_price = min(min_price, x)\n            best = max(best, x - min_price)\n        return best"
+          }
+        ]
+      }
     },
     {
       "id": "kd5",
@@ -138,7 +226,29 @@
       "statement": "Find the maximum-sum submatrix in a 2D grid.",
       "hint": "Fix a pair of columns, compress rows to sums, run Kadane over rows.",
       "tests": "2D extension of Kadane.",
-      "link": "https://www.geeksforgeeks.org/maximum-sum-rectangle-in-a-2d-matrix-dp-27/"
+      "link": "https://www.geeksforgeeks.org/maximum-sum-rectangle-in-a-2d-matrix-dp-27/",
+      "solution": {
+        "approach": [
+          "Reduce 2D to 1D: fix a pair of top/bottom rows, compress each column's values between them into a single array, and run Kadane on that array.",
+          "Iterate all O(rows^2) row pairs; each Kadane pass is O(cols). Total O(rows^2 · cols)."
+        ],
+        "complexity": {
+          "time": "O(rows^2 · cols)",
+          "space": "O(cols)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int maxRectangleSum(vector<vector<int>>& m) {\n        int R = m.size(), C = m[0].size(), best = INT_MIN;\n        for (int top = 0; top < R; top++) {\n            vector<int> col(C, 0);\n            for (int bot = top; bot < R; bot++) {\n                for (int c = 0; c < C; c++) col[c] += m[bot][c];\n                int cur = col[0], local = col[0];\n                for (int c = 1; c < C; c++) { cur = max(col[c], cur + col[c]); local = max(local, cur); }\n                best = max(best, local);\n            }\n        }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def maxRectangleSum(self, m: list[list[int]]) -> int:\n        R, C = len(m), len(m[0])\n        best = float('-inf')\n        for top in range(R):\n            col = [0] * C\n            for bot in range(top, R):\n                for c in range(C):\n                    col[c] += m[bot][c]\n                cur = local = col[0]\n                for c in range(1, C):\n                    cur = max(col[c], cur + col[c])\n                    local = max(local, cur)\n                best = max(best, local)\n        return best"
+          }
+        ]
+      }
     }
   ]
 }

@@ -101,7 +101,29 @@
       "statement": "Support point updates and range-sum queries.",
       "hint": "Fenwick with update + prefix query.",
       "tests": "Core BIT.",
-      "link": "https://leetcode.com/problems/range-sum-query-mutable/"
+      "link": "https://leetcode.com/problems/range-sum-query-mutable/",
+      "solution": {
+        "approach": [
+          "A Fenwick tree (BIT) supports point updates and prefix sums in O(log n).",
+          "update(i, delta) walks indices upward by i += i&-i; query(i) walks down by i -= i&-i. A range sum is query(r) - query(l-1)."
+        ],
+        "complexity": {
+          "time": "O(log n) per op",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class NumArray {\n    vector<int> bit, a; int n;\n    void add(int i, int delta) { for (++i; i <= n; i += i & -i) bit[i] += delta; }\n    int pre(int i) { int s = 0; for (++i; i > 0; i -= i & -i) s += bit[i]; return s; }\npublic:\n    NumArray(vector<int>& nums) : a(nums), n(nums.size()) {\n        bit.assign(n + 1, 0);\n        for (int i = 0; i < n; i++) add(i, nums[i]);\n    }\n    void update(int i, int val) { add(i, val - a[i]); a[i] = val; }\n    int sumRange(int l, int r) { return pre(r) - (l ? pre(l - 1) : 0); }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class NumArray:\n    def __init__(self, nums: list[int]):\n        self.n = len(nums)\n        self.a = nums[:]\n        self.bit = [0] * (self.n + 1)\n        for i, v in enumerate(nums):\n            self._add(i, v)\n    def _add(self, i, delta):\n        i += 1\n        while i <= self.n:\n            self.bit[i] += delta\n            i += i & -i\n    def _pre(self, i):\n        i += 1; s = 0\n        while i > 0:\n            s += self.bit[i]\n            i -= i & -i\n        return s\n    def update(self, i: int, val: int) -> None:\n        self._add(i, val - self.a[i]); self.a[i] = val\n    def sumRange(self, l: int, r: int) -> int:\n        return self._pre(r) - (self._pre(l - 1) if l else 0)"
+          }
+        ]
+      }
     },
     {
       "id": "fw2",
@@ -110,7 +132,29 @@
       "statement": "Count smaller elements to the right.",
       "hint": "Coordinate-compress values; BIT over value frequencies, processed right to left.",
       "tests": "BIT for inversions.",
-      "link": "https://leetcode.com/problems/count-of-smaller-numbers-after-self/"
+      "link": "https://leetcode.com/problems/count-of-smaller-numbers-after-self/",
+      "solution": {
+        "approach": [
+          "Count, for each element, how many later elements are smaller. Process right-to-left, querying a BIT indexed by value rank.",
+          "Coordinate-compress the values to ranks. query(rank-1) gives how many already-seen (to the right) values are smaller, then add the current rank."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> countSmaller(vector<int>& nums) {\n        vector<int> sorted(nums); sort(sorted.begin(), sorted.end());\n        sorted.erase(unique(sorted.begin(), sorted.end()), sorted.end());\n        int m = sorted.size();\n        vector<int> bit(m + 1, 0), res(nums.size());\n        auto add = [&](int i){ for (++i; i <= m; i += i & -i) bit[i]++; };\n        auto pre = [&](int i){ int s = 0; for (++i; i > 0; i -= i & -i) s += bit[i]; return s; };\n        for (int k = nums.size() - 1; k >= 0; k--) {\n            int r = lower_bound(sorted.begin(), sorted.end(), nums[k]) - sorted.begin();\n            res[k] = r ? pre(r - 1) : 0;\n            add(r);\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import bisect\nclass Solution:\n    def countSmaller(self, nums: list[int]) -> list[int]:\n        sorted_vals = sorted(set(nums))\n        m = len(sorted_vals)\n        bit = [0] * (m + 1)\n        def add(i):\n            i += 1\n            while i <= m:\n                bit[i] += 1; i += i & -i\n        def pre(i):\n            i += 1; s = 0\n            while i > 0:\n                s += bit[i]; i -= i & -i\n            return s\n        res = [0] * len(nums)\n        for k in range(len(nums) - 1, -1, -1):\n            r = bisect.bisect_left(sorted_vals, nums[k])\n            res[k] = pre(r - 1) if r else 0\n            add(r)\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "fw3",
@@ -119,7 +163,29 @@
       "statement": "Count pairs with a[i] > 2·a[j], i < j.",
       "hint": "BIT over compressed values with the 2x condition.",
       "tests": "BIT counting variant.",
-      "link": "https://leetcode.com/problems/reverse-pairs/"
+      "link": "https://leetcode.com/problems/reverse-pairs/",
+      "solution": {
+        "approach": [
+          "Reverse pairs (i<j with a[i] > 2·a[j]) can be counted with a BIT over compressed values, scanning left-to-right.",
+          "For each a[j], first count earlier values greater than 2·a[j] (query the suffix of ranks), then insert a[j]'s rank."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int reversePairs(vector<int>& nums) {\n        vector<long long> s(nums.begin(), nums.end());\n        sort(s.begin(), s.end()); s.erase(unique(s.begin(), s.end()), s.end());\n        int m = s.size(); vector<int> bit(m + 1, 0); long long ans = 0;\n        auto add = [&](int i){ for (++i; i <= m; i += i & -i) bit[i]++; };\n        auto pre = [&](int i){ int t = 0; for (++i; i > 0; i -= i & -i) t += bit[i]; return t; };\n        int seen = 0;\n        for (int j = 0; j < (int)nums.size(); j++) {\n            int r = upper_bound(s.begin(), s.end(), 2LL * nums[j]) - s.begin();\n            ans += seen - (r ? pre(r - 1) : 0);\n            int pos = lower_bound(s.begin(), s.end(), (long long)nums[j]) - s.begin();\n            add(pos); seen++;\n        }\n        return (int)ans;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import bisect\nclass Solution:\n    def reversePairs(self, nums: list[int]) -> int:\n        s = sorted(set(nums))\n        m = len(s)\n        bit = [0] * (m + 1)\n        def add(i):\n            i += 1\n            while i <= m:\n                bit[i] += 1; i += i & -i\n        def pre(i):\n            i += 1; t = 0\n            while i > 0:\n                t += bit[i]; i -= i & -i\n            return t\n        ans = seen = 0\n        for x in nums:\n            r = bisect.bisect_right(s, 2 * x)\n            ans += seen - (pre(r - 1) if r else 0)\n            pos = bisect.bisect_left(s, x)\n            add(pos); seen += 1\n        return ans"
+          }
+        ]
+      }
     },
     {
       "id": "fw4",
@@ -128,7 +194,29 @@
       "statement": "2D point updates and submatrix sums.",
       "hint": "2D Fenwick tree.",
       "tests": "Multi-dim BIT.",
-      "link": "https://leetcode.com/problems/range-sum-query-2d-mutable/"
+      "link": "https://leetcode.com/problems/range-sum-query-2d-mutable/",
+      "solution": {
+        "approach": [
+          "Extend the BIT to two dimensions: bit[i][j] accumulates a 2D prefix. Point update and rectangle sum each cost O(log m · log n).",
+          "A rectangle sum uses 2D inclusion-exclusion over four prefix queries."
+        ],
+        "complexity": {
+          "time": "O(log m · log n) per op",
+          "space": "O(mn)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class NumMatrix {\n    vector<vector<int>> bit, a; int R, C;\n    void add(int r, int c, int delta) { for (int i = r + 1; i <= R; i += i & -i) for (int j = c + 1; j <= C; j += j & -j) bit[i][j] += delta; }\n    int pre(int r, int c) { int s = 0; for (int i = r + 1; i > 0; i -= i & -i) for (int j = c + 1; j > 0; j -= j & -j) s += bit[i][j]; return s; }\npublic:\n    NumMatrix(vector<vector<int>>& m) {\n        R = m.size(); C = m[0].size();\n        a.assign(R, vector<int>(C, 0)); bit.assign(R + 1, vector<int>(C + 1, 0));\n        for (int i = 0; i < R; i++) for (int j = 0; j < C; j++) update(i, j, m[i][j]);\n    }\n    void update(int r, int c, int val) { add(r, c, val - a[r][c]); a[r][c] = val; }\n    int sumRegion(int r1, int c1, int r2, int c2) {\n        return pre(r2, c2) - pre(r1 - 1, c2) - pre(r2, c1 - 1) + pre(r1 - 1, c1 - 1);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class NumMatrix:\n    def __init__(self, matrix: list[list[int]]):\n        self.R, self.C = len(matrix), len(matrix[0])\n        self.a = [[0]*self.C for _ in range(self.R)]\n        self.bit = [[0]*(self.C+1) for _ in range(self.R+1)]\n        for i in range(self.R):\n            for j in range(self.C):\n                self.update(i, j, matrix[i][j])\n    def _add(self, r, c, delta):\n        i = r + 1\n        while i <= self.R:\n            j = c + 1\n            while j <= self.C:\n                self.bit[i][j] += delta; j += j & -j\n            i += i & -i\n    def _pre(self, r, c):\n        s = 0; i = r + 1\n        while i > 0:\n            j = c + 1\n            while j > 0:\n                s += self.bit[i][j]; j -= j & -j\n            i -= i & -i\n        return s\n    def update(self, r: int, c: int, val: int) -> None:\n        self._add(r, c, val - self.a[r][c]); self.a[r][c] = val\n    def sumRegion(self, r1, c1, r2, c2) -> int:\n        return self._pre(r2, c2) - self._pre(r1-1, c2) - self._pre(r2, c1-1) + self._pre(r1-1, c1-1)"
+          }
+        ]
+      }
     },
     {
       "id": "fw5",
@@ -137,7 +225,29 @@
       "statement": "LIS length and count via a BIT keyed on value.",
       "hint": "BIT storing (best length, count) prefix maxima.",
       "tests": "BIT with custom merge.",
-      "link": "https://cses.fi/problemset/task/1145"
+      "link": "https://cses.fi/problemset/task/1145",
+      "solution": {
+        "approach": [
+          "Track LIS length and the number of LIS simultaneously with a BIT keyed by value rank, where each node stores the best (length, count) over a prefix.",
+          "For each value, query smaller ranks for the best length and its total count; the new state is (best+1, count or 1). Merge into the BIT, combining equal lengths by adding counts."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int findNumberOfLIS(vector<int>& nums) {\n        vector<int> s(nums); sort(s.begin(), s.end()); s.erase(unique(s.begin(), s.end()), s.end());\n        int m = s.size();\n        vector<pair<int,int>> bit(m + 1, {0, 0});   // (maxLen, countAtThatLen)\n        auto combine = [](pair<int,int> a, pair<int,int> b) {\n            if (a.first == b.first) return make_pair(a.first, a.first == 0 ? 0 : a.second + b.second);\n            return a.first > b.first ? a : b;\n        };\n        auto query = [&](int i){ pair<int,int> r = {0, 0}; for (++i; i > 0; i -= i & -i) r = combine(r, bit[i]); return r; };\n        auto update = [&](int i, pair<int,int> v){ for (++i; i <= m; i += i & -i) bit[i] = combine(bit[i], v); };\n        for (int x : nums) {\n            int r = lower_bound(s.begin(), s.end(), x) - s.begin();\n            auto best = r ? query(r - 1) : make_pair(0, 0);\n            int nl = best.first + 1, nc = best.first == 0 ? 1 : best.second;\n            update(r, {nl, nc});\n        }\n        return query(m - 1).second;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import bisect\nclass Solution:\n    def findNumberOfLIS(self, nums: list[int]) -> int:\n        s = sorted(set(nums))\n        m = len(s)\n        bit = [(0, 0)] * (m + 1)\n        def combine(a, b):\n            if a[0] == b[0]:\n                return (a[0], 0 if a[0] == 0 else a[1] + b[1])\n            return a if a[0] > b[0] else b\n        def query(i):\n            i += 1; r = (0, 0)\n            while i > 0:\n                r = combine(r, bit[i]); i -= i & -i\n            return r\n        def update(i, v):\n            i += 1\n            while i <= m:\n                bit[i] = combine(bit[i], v); i += i & -i\n        for x in nums:\n            r = bisect.bisect_left(s, x)\n            best = query(r - 1) if r else (0, 0)\n            nl = best[0] + 1\n            nc = 1 if best[0] == 0 else best[1]\n            update(r, (nl, nc))\n        return query(m - 1)[1]"
+          }
+        ]
+      }
     }
   ]
 }

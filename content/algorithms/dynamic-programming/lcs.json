@@ -102,7 +102,29 @@
       "statement": "Return the length of the LCS of two strings.",
       "hint": "The match/skip table.",
       "tests": "Core 2D DP.",
-      "link": "https://leetcode.com/problems/longest-common-subsequence/"
+      "link": "https://leetcode.com/problems/longest-common-subsequence/",
+      "solution": {
+        "approach": [
+          "dp[i][j] = LCS length of the first i chars of A and first j of B.",
+          "If A[i-1]==B[j-1] extend the diagonal (dp[i-1][j-1]+1); otherwise take the better of dropping one character from either string."
+        ],
+        "complexity": {
+          "time": "O(n·m)",
+          "space": "O(n·m)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int longestCommonSubsequence(string a, string b) {\n        int n = a.size(), m = b.size();\n        vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));\n        for (int i = 1; i <= n; i++)\n            for (int j = 1; j <= m; j++)\n                dp[i][j] = a[i-1] == b[j-1] ? dp[i-1][j-1] + 1 : max(dp[i-1][j], dp[i][j-1]);\n        return dp[n][m];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def longestCommonSubsequence(self, a: str, b: str) -> int:\n        n, m = len(a), len(b)\n        dp = [[0] * (m + 1) for _ in range(n + 1)]\n        for i in range(1, n + 1):\n            for j in range(1, m + 1):\n                if a[i-1] == b[j-1]:\n                    dp[i][j] = dp[i-1][j-1] + 1\n                else:\n                    dp[i][j] = max(dp[i-1][j], dp[i][j-1])\n        return dp[n][m]"
+          }
+        ]
+      }
     },
     {
       "id": "lcs2",
@@ -111,7 +133,29 @@
       "statement": "Min insert/delete/replace operations to convert one string to another.",
       "hint": "Same table shape; three transitions for the three operations.",
       "tests": "LCS-style 2D DP variant.",
-      "link": "https://leetcode.com/problems/edit-distance/"
+      "link": "https://leetcode.com/problems/edit-distance/",
+      "solution": {
+        "approach": [
+          "dp[i][j] = edits to turn the first i chars of A into the first j of B.",
+          "If characters match, no cost (diagonal). Else 1 + min(insert dp[i][j-1], delete dp[i-1][j], replace dp[i-1][j-1]). Base rows/cols are prefix lengths."
+        ],
+        "complexity": {
+          "time": "O(n·m)",
+          "space": "O(n·m)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int minDistance(string a, string b) {\n        int n = a.size(), m = b.size();\n        vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));\n        for (int i = 0; i <= n; i++) dp[i][0] = i;\n        for (int j = 0; j <= m; j++) dp[0][j] = j;\n        for (int i = 1; i <= n; i++)\n            for (int j = 1; j <= m; j++)\n                dp[i][j] = a[i-1] == b[j-1] ? dp[i-1][j-1]\n                         : 1 + min({dp[i-1][j], dp[i][j-1], dp[i-1][j-1]});\n        return dp[n][m];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def minDistance(self, a: str, b: str) -> int:\n        n, m = len(a), len(b)\n        dp = [[0] * (m + 1) for _ in range(n + 1)]\n        for i in range(n + 1):\n            dp[i][0] = i\n        for j in range(m + 1):\n            dp[0][j] = j\n        for i in range(1, n + 1):\n            for j in range(1, m + 1):\n                if a[i-1] == b[j-1]:\n                    dp[i][j] = dp[i-1][j-1]\n                else:\n                    dp[i][j] = 1 + min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1])\n        return dp[n][m]"
+          }
+        ]
+      }
     },
     {
       "id": "lcs3",
@@ -120,7 +164,29 @@
       "statement": "Longest subsequence that is a palindrome.",
       "hint": "LCS of the string with its reverse.",
       "tests": "Clever LCS reduction.",
-      "link": "https://leetcode.com/problems/longest-palindromic-subsequence/"
+      "link": "https://leetcode.com/problems/longest-palindromic-subsequence/",
+      "solution": {
+        "approach": [
+          "The longest palindromic subsequence of s equals the LCS of s and its reverse.",
+          "Run the standard LCS between s and reversed(s)."
+        ],
+        "complexity": {
+          "time": "O(n^2)",
+          "space": "O(n^2)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int longestPalindromeSubseq(string s) {\n        string r(s.rbegin(), s.rend());\n        int n = s.size();\n        vector<vector<int>> dp(n + 1, vector<int>(n + 1, 0));\n        for (int i = 1; i <= n; i++)\n            for (int j = 1; j <= n; j++)\n                dp[i][j] = s[i-1] == r[j-1] ? dp[i-1][j-1] + 1 : max(dp[i-1][j], dp[i][j-1]);\n        return dp[n][n];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def longestPalindromeSubseq(self, s: str) -> int:\n        r = s[::-1]\n        n = len(s)\n        dp = [[0] * (n + 1) for _ in range(n + 1)]\n        for i in range(1, n + 1):\n            for j in range(1, n + 1):\n                if s[i-1] == r[j-1]:\n                    dp[i][j] = dp[i-1][j-1] + 1\n                else:\n                    dp[i][j] = max(dp[i-1][j], dp[i][j-1])\n        return dp[n][n]"
+          }
+        ]
+      }
     },
     {
       "id": "lcs4",
@@ -129,7 +195,29 @@
       "statement": "Min deletions to make two strings equal.",
       "hint": "n + m − 2·LCS.",
       "tests": "Deriving from LCS.",
-      "link": "https://leetcode.com/problems/delete-operation-for-two-strings/"
+      "link": "https://leetcode.com/problems/delete-operation-for-two-strings/",
+      "solution": {
+        "approach": [
+          "Characters outside the LCS must be deleted from one side or the other.",
+          "Answer = len(A) + len(B) - 2·LCS(A, B)."
+        ],
+        "complexity": {
+          "time": "O(n·m)",
+          "space": "O(n·m)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int minDistance(string a, string b) {\n        int n = a.size(), m = b.size();\n        vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));\n        for (int i = 1; i <= n; i++)\n            for (int j = 1; j <= m; j++)\n                dp[i][j] = a[i-1] == b[j-1] ? dp[i-1][j-1] + 1 : max(dp[i-1][j], dp[i][j-1]);\n        return n + m - 2 * dp[n][m];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def minDistance(self, a: str, b: str) -> int:\n        n, m = len(a), len(b)\n        dp = [[0] * (m + 1) for _ in range(n + 1)]\n        for i in range(1, n + 1):\n            for j in range(1, m + 1):\n                if a[i-1] == b[j-1]:\n                    dp[i][j] = dp[i-1][j-1] + 1\n                else:\n                    dp[i][j] = max(dp[i-1][j], dp[i][j-1])\n        return n + m - 2 * dp[n][m]"
+          }
+        ]
+      }
     },
     {
       "id": "lcs5",
@@ -138,7 +226,29 @@
       "statement": "Shortest string containing both as subsequences.",
       "hint": "Build the LCS table, then backtrack merging both strings.",
       "tests": "LCS reconstruction + merge.",
-      "link": "https://leetcode.com/problems/shortest-common-supersequence/"
+      "link": "https://leetcode.com/problems/shortest-common-supersequence/",
+      "solution": {
+        "approach": [
+          "The shortest common supersequence keeps the LCS once and inserts the leftover characters of both strings around it.",
+          "Build the LCS dp table, then walk backward from (n, m): on a match emit the shared char, otherwise emit the character from whichever direction the larger dp came, and prepend leftovers."
+        ],
+        "complexity": {
+          "time": "O(n·m)",
+          "space": "O(n·m)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    string shortestCommonSupersequence(string a, string b) {\n        int n = a.size(), m = b.size();\n        vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));\n        for (int i = 1; i <= n; i++)\n            for (int j = 1; j <= m; j++)\n                dp[i][j] = a[i-1] == b[j-1] ? dp[i-1][j-1] + 1 : max(dp[i-1][j], dp[i][j-1]);\n        string res; int i = n, j = m;\n        while (i > 0 && j > 0) {\n            if (a[i-1] == b[j-1]) { res += a[--i]; --j; }\n            else if (dp[i-1][j] >= dp[i][j-1]) res += a[--i];\n            else res += b[--j];\n        }\n        while (i > 0) res += a[--i];\n        while (j > 0) res += b[--j];\n        reverse(res.begin(), res.end());\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def shortestCommonSupersequence(self, a: str, b: str) -> str:\n        n, m = len(a), len(b)\n        dp = [[0] * (m + 1) for _ in range(n + 1)]\n        for i in range(1, n + 1):\n            for j in range(1, m + 1):\n                if a[i-1] == b[j-1]:\n                    dp[i][j] = dp[i-1][j-1] + 1\n                else:\n                    dp[i][j] = max(dp[i-1][j], dp[i][j-1])\n        res = []\n        i, j = n, m\n        while i > 0 and j > 0:\n            if a[i-1] == b[j-1]:\n                res.append(a[i-1]); i -= 1; j -= 1\n            elif dp[i-1][j] >= dp[i][j-1]:\n                res.append(a[i-1]); i -= 1\n            else:\n                res.append(b[j-1]); j -= 1\n        res.append(a[:i]); res.append(b[:j])\n        return \"\".join(reversed(res))"
+          }
+        ]
+      }
     }
   ]
 }

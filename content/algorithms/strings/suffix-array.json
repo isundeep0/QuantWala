@@ -5,7 +5,7 @@
   "title": "Suffix Array (Basics)",
   "tagline": "All suffixes sorted — compact substring search and the base for LCP-powered string magic.",
   "estMinutes": 20,
-  "simulator": null,
+  "simulator": "suffix-array",
   "complexity": {
     "time": "O(n log n)",
     "space": "O(n)"
@@ -102,7 +102,29 @@
       "statement": "Find the longest substring that appears at least twice.",
       "hint": "Max value in the LCP array.",
       "tests": "Suffix array + LCP.",
-      "link": "https://www.spoj.com/problems/SUBST1/"
+      "link": "https://www.spoj.com/problems/SUBST1/",
+      "solution": {
+        "approach": [
+          "Build the suffix array (suffixes sorted) and the LCP array (longest common prefix of adjacent suffixes).",
+          "Two equal substrings appear as a shared prefix of adjacent sorted suffixes, so the longest repeated substring length is max(LCP)."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<int> buildSA(const string& s) {\n        int n = s.size(); vector<int> sa(n), rk(n), tmp(n);\n        for (int i = 0; i < n; i++) { sa[i] = i; rk[i] = s[i]; }\n        for (int k = 1; k < n; k <<= 1) {\n            auto cmp = [&](int a, int b){\n                if (rk[a] != rk[b]) return rk[a] < rk[b];\n                int ra = a + k < n ? rk[a+k] : -1, rb = b + k < n ? rk[b+k] : -1;\n                return ra < rb;\n            };\n            sort(sa.begin(), sa.end(), cmp);\n            tmp[sa[0]] = 0;\n            for (int i = 1; i < n; i++) tmp[sa[i]] = tmp[sa[i-1]] + (cmp(sa[i-1], sa[i]) ? 1 : 0);\n            rk = tmp;\n            if (rk[sa[n-1]] == n - 1) break;\n        }\n        return sa;\n    }\n    vector<int> kasai(const string& s, vector<int>& sa) {\n        int n = s.size(); vector<int> rk(n), lcp(n, 0);\n        for (int i = 0; i < n; i++) rk[sa[i]] = i;\n        int h = 0;\n        for (int i = 0; i < n; i++)\n            if (rk[i] > 0) {\n                int j = sa[rk[i]-1];\n                while (i + h < n && j + h < n && s[i+h] == s[j+h]) h++;\n                lcp[rk[i]] = h; if (h) h--;\n            } else h = 0;\n        return lcp;\n    }\npublic:\n    string longestRepeatedSubstring(string s) {\n        if (s.empty()) return \"\";\n        auto sa = buildSA(s); auto lcp = kasai(s, sa);\n        int best = 0, pos = 0;\n        for (int i = 0; i < (int)s.size(); i++) if (lcp[i] > best) { best = lcp[i]; pos = sa[i]; }\n        return s.substr(pos, best);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def longestRepeatedSubstring(self, s: str) -> str:\n        n = len(s)\n        if n == 0:\n            return \"\"\n        sa = sorted(range(n), key=lambda i: s[i:])\n        rank = [0] * n\n        for i, x in enumerate(sa):\n            rank[x] = i\n        lcp = [0] * n\n        h = 0\n        for i in range(n):\n            if rank[i] > 0:\n                j = sa[rank[i] - 1]\n                while i + h < n and j + h < n and s[i + h] == s[j + h]:\n                    h += 1\n                lcp[rank[i]] = h\n                if h:\n                    h -= 1\n            else:\n                h = 0\n        best = max(range(n), key=lambda i: lcp[i])\n        return s[sa[best]:sa[best] + lcp[best]]"
+          }
+        ]
+      }
     },
     {
       "id": "sa2",
@@ -111,7 +133,29 @@
       "statement": "Count distinct substrings of a string.",
       "hint": "n(n+1)/2 − sum(LCP).",
       "tests": "LCP aggregation.",
-      "link": "https://cses.fi/problemset/task/2105"
+      "link": "https://cses.fi/problemset/task/2105",
+      "solution": {
+        "approach": [
+          "Every substring is a prefix of some suffix. The total number of prefixes is n(n+1)/2, but adjacent sorted suffixes share LCP-many prefixes that are duplicates.",
+          "Distinct substrings = n(n+1)/2 - sum(LCP)."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<int> buildSA(const string& s) {\n        int n = s.size(); vector<int> sa(n), rk(n), tmp(n);\n        for (int i = 0; i < n; i++) { sa[i] = i; rk[i] = s[i]; }\n        for (int k = 1; k < n; k <<= 1) {\n            auto cmp = [&](int a, int b){ if (rk[a] != rk[b]) return rk[a] < rk[b]; int ra = a+k<n?rk[a+k]:-1, rb = b+k<n?rk[b+k]:-1; return ra < rb; };\n            sort(sa.begin(), sa.end(), cmp);\n            tmp[sa[0]] = 0;\n            for (int i = 1; i < n; i++) tmp[sa[i]] = tmp[sa[i-1]] + (cmp(sa[i-1], sa[i]) ? 1 : 0);\n            rk = tmp; if (rk[sa[n-1]] == n - 1) break;\n        }\n        return sa;\n    }\n    vector<int> kasai(const string& s, vector<int>& sa) {\n        int n = s.size(); vector<int> rk(n), lcp(n, 0);\n        for (int i = 0; i < n; i++) rk[sa[i]] = i; int h = 0;\n        for (int i = 0; i < n; i++) if (rk[i] > 0) { int j = sa[rk[i]-1]; while (i+h<n && j+h<n && s[i+h]==s[j+h]) h++; lcp[rk[i]] = h; if (h) h--; } else h = 0;\n        return lcp;\n    }\npublic:\n    long long countDistinctSubstrings(string s) {\n        int n = s.size();\n        long long total = (long long)n * (n + 1) / 2;\n        auto sa = buildSA(s); auto lcp = kasai(s, sa);\n        for (int x : lcp) total -= x;\n        return total;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def countDistinctSubstrings(self, s: str) -> int:\n        n = len(s)\n        if n == 0:\n            return 0\n        sa = sorted(range(n), key=lambda i: s[i:])\n        rank = [0] * n\n        for i, x in enumerate(sa):\n            rank[x] = i\n        total = n * (n + 1) // 2\n        h = 0\n        for i in range(n):\n            if rank[i] > 0:\n                j = sa[rank[i] - 1]\n                while i + h < n and j + h < n and s[i + h] == s[j + h]:\n                    h += 1\n                total -= h\n                if h:\n                    h -= 1\n            else:\n                h = 0\n        return total"
+          }
+        ]
+      }
     },
     {
       "id": "sa3",
@@ -120,7 +164,29 @@
       "statement": "Longest substring occurring more than once.",
       "hint": "Suffix array + LCP (or binary search + hashing).",
       "tests": "Repeat detection.",
-      "link": "https://leetcode.com/problems/longest-duplicate-substring/"
+      "link": "https://leetcode.com/problems/longest-duplicate-substring/",
+      "solution": {
+        "approach": [
+          "The longest duplicated substring is the maximum LCP between adjacent sorted suffixes — identical to the longest repeated substring.",
+          "Build the suffix array and LCP; return the substring achieving max LCP."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<int> buildSA(const string& s) {\n        int n = s.size(); vector<int> sa(n), rk(n), tmp(n);\n        for (int i = 0; i < n; i++) { sa[i] = i; rk[i] = s[i]; }\n        for (int k = 1; k < n; k <<= 1) {\n            auto cmp = [&](int a, int b){ if (rk[a]!=rk[b]) return rk[a]<rk[b]; int ra=a+k<n?rk[a+k]:-1, rb=b+k<n?rk[b+k]:-1; return ra<rb; };\n            sort(sa.begin(), sa.end(), cmp);\n            tmp[sa[0]] = 0;\n            for (int i = 1; i < n; i++) tmp[sa[i]] = tmp[sa[i-1]] + (cmp(sa[i-1], sa[i]) ? 1 : 0);\n            rk = tmp; if (rk[sa[n-1]] == n - 1) break;\n        }\n        return sa;\n    }\n    vector<int> kasai(const string& s, vector<int>& sa) {\n        int n = s.size(); vector<int> rk(n), lcp(n, 0);\n        for (int i = 0; i < n; i++) rk[sa[i]] = i; int h = 0;\n        for (int i = 0; i < n; i++) if (rk[i] > 0) { int j = sa[rk[i]-1]; while (i+h<n && j+h<n && s[i+h]==s[j+h]) h++; lcp[rk[i]] = h; if (h) h--; } else h = 0;\n        return lcp;\n    }\npublic:\n    string longestDupSubstring(string s) {\n        int n = s.size(); if (n < 2) return \"\";\n        auto sa = buildSA(s); auto lcp = kasai(s, sa);\n        int best = 0, pos = 0;\n        for (int i = 0; i < n; i++) if (lcp[i] > best) { best = lcp[i]; pos = sa[i]; }\n        return s.substr(pos, best);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def longestDupSubstring(self, s: str) -> str:\n        n = len(s)\n        if n < 2:\n            return \"\"\n        sa = sorted(range(n), key=lambda i: s[i:])\n        rank = [0] * n\n        for i, x in enumerate(sa):\n            rank[x] = i\n        best = best_pos = 0\n        h = 0\n        for i in range(n):\n            if rank[i] > 0:\n                j = sa[rank[i] - 1]\n                while i + h < n and j + h < n and s[i + h] == s[j + h]:\n                    h += 1\n                if h > best:\n                    best, best_pos = h, i\n                if h:\n                    h -= 1\n            else:\n                h = 0\n        return s[sa[best_pos]:sa[best_pos] + best]"
+          }
+        ]
+      }
     },
     {
       "id": "sa4",
@@ -129,7 +195,29 @@
       "statement": "Count occurrences of a pattern.",
       "hint": "Binary search the suffix array for the pattern range.",
       "tests": "Substring search.",
-      "link": "https://cses.fi/problemset/task/2103"
+      "link": "https://cses.fi/problemset/task/2103",
+      "solution": {
+        "approach": [
+          "Sorted suffixes let us binary-search a pattern: all suffixes starting with the pattern form a contiguous block.",
+          "Find the lower and upper bounds by comparing the pattern with suffix prefixes; the matching suffix start indices are the occurrence positions."
+        ],
+        "complexity": {
+          "time": "O((n + m) log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<int> buildSA(const string& s) {\n        int n = s.size(); vector<int> sa(n), rk(n), tmp(n);\n        for (int i = 0; i < n; i++) { sa[i] = i; rk[i] = s[i]; }\n        for (int k = 1; k < n; k <<= 1) {\n            auto cmp = [&](int a, int b){ if (rk[a]!=rk[b]) return rk[a]<rk[b]; int ra=a+k<n?rk[a+k]:-1, rb=b+k<n?rk[b+k]:-1; return ra<rb; };\n            sort(sa.begin(), sa.end(), cmp);\n            tmp[sa[0]] = 0;\n            for (int i = 1; i < n; i++) tmp[sa[i]] = tmp[sa[i-1]] + (cmp(sa[i-1], sa[i]) ? 1 : 0);\n            rk = tmp; if (rk[sa[n-1]] == n - 1) break;\n        }\n        return sa;\n    }\npublic:\n    vector<int> search(string text, string pat) {\n        int n = text.size(); auto sa = buildSA(text);\n        auto cmp = [&](int idx){ return text.compare(idx, pat.size(), pat); };\n        int lo = 0, hi = n;\n        while (lo < hi) { int mid = (lo + hi) / 2; if (cmp(sa[mid]) < 0) lo = mid + 1; else hi = mid; }\n        int start = lo; hi = n;\n        while (lo < hi) { int mid = (lo + hi) / 2; if (cmp(sa[mid]) <= 0) lo = mid + 1; else hi = mid; }\n        vector<int> res;\n        for (int i = start; i < lo; i++) res.push_back(sa[i]);\n        sort(res.begin(), res.end());\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import bisect\nclass Solution:\n    def search(self, text: str, pat: str) -> list[int]:\n        n = len(text)\n        sa = sorted(range(n), key=lambda i: text[i:])\n        suffixes = [text[i:i+len(pat)] for i in sa]\n        lo = bisect.bisect_left(suffixes, pat)\n        hi = bisect.bisect_right(suffixes, pat)\n        return sorted(sa[lo:hi])"
+          }
+        ]
+      }
     },
     {
       "id": "sa5",
@@ -138,7 +226,29 @@
       "statement": "Smallest rotation of a string.",
       "hint": "Build SA of s+s; first valid suffix gives the rotation.",
       "tests": "SA on doubled string.",
-      "link": "https://cses.fi/problemset/task/1110"
+      "link": "https://cses.fi/problemset/task/1110",
+      "solution": {
+        "approach": [
+          "The lexicographically smallest rotation is found by Booth's algorithm on the doubled string in linear time.",
+          "It scans s+s maintaining the candidate start of the least rotation, advancing past mismatches like a failure-function comparison."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    string leastRotation(string s) {\n        int n = s.size();\n        string t = s + s;\n        vector<int> f(2 * n, -1);\n        int k = 0;\n        for (int j = 1; j < 2 * n; j++) {\n            char sj = t[j]; int i = f[j - k - 1];\n            while (i != -1 && sj != t[k + i + 1]) {\n                if (sj < t[k + i + 1]) k = j - i - 1;\n                i = f[i];\n            }\n            if (sj != t[k + i + 1]) {\n                if (sj < t[k]) k = j;\n                f[j - k] = -1;\n            } else f[j - k] = i + 1;\n        }\n        return t.substr(k, n);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def leastRotation(self, s: str) -> str:\n        n = len(s)\n        t = s + s\n        f = [-1] * (2 * n)\n        k = 0\n        for j in range(1, 2 * n):\n            sj = t[j]\n            i = f[j - k - 1]\n            while i != -1 and sj != t[k + i + 1]:\n                if sj < t[k + i + 1]:\n                    k = j - i - 1\n                i = f[i]\n            if sj != t[k + i + 1]:\n                if sj < t[k]:\n                    k = j\n                f[j - k] = -1\n            else:\n                f[j - k] = i + 1\n        return t[k:k + n]"
+          }
+        ]
+      }
     }
   ]
 }

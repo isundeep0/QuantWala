@@ -97,7 +97,29 @@
       "statement": "Count primes strictly less than n.",
       "hint": "Sieve then count true entries.",
       "tests": "Core sieve.",
-      "link": "https://leetcode.com/problems/count-primes/"
+      "link": "https://leetcode.com/problems/count-primes/",
+      "solution": {
+        "approach": [
+          "The Sieve of Eratosthenes marks multiples of each prime as composite; what's left are primes.",
+          "Start from p=2; for each prime mark p·p, p·p+p, … as composite. Count remaining primes below n."
+        ],
+        "complexity": {
+          "time": "O(n log log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int countPrimes(int n) {\n        if (n < 3) return 0;\n        vector<bool> composite(n, false);\n        int count = 0;\n        for (int p = 2; p < n; p++) {\n            if (composite[p]) continue;\n            count++;\n            for (long long m = (long long)p * p; m < n; m += p) composite[m] = true;\n        }\n        return count;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def countPrimes(self, n: int) -> int:\n        if n < 3:\n            return 0\n        composite = [False] * n\n        count = 0\n        for p in range(2, n):\n            if composite[p]:\n                continue\n            count += 1\n            for m in range(p * p, n, p):\n                composite[m] = True\n        return count"
+          }
+        ]
+      }
     },
     {
       "id": "sv2",
@@ -106,7 +128,29 @@
       "statement": "Find the closest pair of primes in [left, right].",
       "hint": "Sieve the range, scan consecutive primes.",
       "tests": "Sieve + scan.",
-      "link": "https://leetcode.com/problems/closest-prime-numbers-in-range/"
+      "link": "https://leetcode.com/problems/closest-prime-numbers-in-range/",
+      "solution": {
+        "approach": [
+          "Sieve primes up to right, then scan the primes within [left, right] for the closest consecutive pair (smallest difference).",
+          "Track the previous prime in range; the first pair with difference < current best wins (ties prefer the smaller pair)."
+        ],
+        "complexity": {
+          "time": "O(right log log right)",
+          "space": "O(right)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> closestPrimes(int left, int right) {\n        vector<bool> comp(right + 1, false);\n        for (int p = 2; (long long)p * p <= right; p++)\n            if (!comp[p]) for (long long m = (long long)p * p; m <= right; m += p) comp[m] = true;\n        int prev = -1, a = -1, b = -1, best = INT_MAX;\n        for (int x = max(2, left); x <= right; x++) {\n            if (comp[x]) continue;\n            if (prev != -1 && x - prev < best) { best = x - prev; a = prev; b = x; }\n            prev = x;\n        }\n        return {a, b};\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def closestPrimes(self, left: int, right: int) -> list[int]:\n        comp = [False] * (right + 1)\n        p = 2\n        while p * p <= right:\n            if not comp[p]:\n                for m in range(p * p, right + 1, p):\n                    comp[m] = True\n            p += 1\n        prev, a, b, best = -1, -1, -1, float('inf')\n        for x in range(max(2, left), right + 1):\n            if comp[x]:\n                continue\n            if prev != -1 and x - prev < best:\n                best, a, b = x - prev, prev, x\n            prev = x\n        return [a, b]"
+          }
+        ]
+      }
     },
     {
       "id": "sv3",
@@ -115,7 +159,29 @@
       "statement": "Factorize many numbers quickly.",
       "hint": "Sieve storing the smallest prime factor of each number.",
       "tests": "Smallest-prime-factor sieve.",
-      "link": "https://www.geeksforgeeks.org/smallest-prime-factor-of-numbers-till-n/"
+      "link": "https://www.geeksforgeeks.org/smallest-prime-factor-of-numbers-till-n/",
+      "solution": {
+        "approach": [
+          "A modified sieve records the smallest prime factor (SPF) of every number. Then any n is factorised by repeatedly dividing by spf[n].",
+          "Precompute SPF once in O(N log log N); each factorisation is O(log n)."
+        ],
+        "complexity": {
+          "time": "O(N log log N) precompute",
+          "space": "O(N)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> primeFactorize(int n) {\n        vector<int> spf(n + 1);\n        for (int i = 2; i <= n; i++) if (!spf[i]) for (int j = i; j <= n; j += i) if (!spf[j]) spf[j] = i;\n        vector<int> factors;\n        while (n > 1) { factors.push_back(spf[n]); n /= spf[n]; }\n        return factors;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def primeFactorize(self, n: int) -> list[int]:\n        spf = [0] * (n + 1)\n        for i in range(2, n + 1):\n            if spf[i] == 0:\n                for j in range(i, n + 1, i):\n                    if spf[j] == 0:\n                        spf[j] = i\n        factors = []\n        while n > 1:\n            factors.append(spf[n])\n            n //= spf[n]\n        return factors"
+          }
+        ]
+      }
     },
     {
       "id": "sv4",
@@ -124,7 +190,29 @@
       "statement": "Count distinct primes across a product range.",
       "hint": "Sieve-based factor counting.",
       "tests": "Sieve application.",
-      "link": "https://leetcode.com/problems/distinct-prime-factors-of-product-of-array/"
+      "link": "https://leetcode.com/problems/distinct-prime-factors-of-product-of-array/",
+      "solution": {
+        "approach": [
+          "A sieve variant counts distinct prime factors: for each prime p, increment a counter for every multiple of p.",
+          "After the sieve, cnt[x] is the number of distinct primes dividing x."
+        ],
+        "complexity": {
+          "time": "O(N log log N)",
+          "space": "O(N)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> distinctPrimeFactors(int N) {\n        vector<int> cnt(N + 1, 0);\n        for (int p = 2; p <= N; p++)\n            if (cnt[p] == 0)                       // p is prime\n                for (int m = p; m <= N; m += p) cnt[m]++;\n        return cnt;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def distinctPrimeFactors(self, N: int) -> list[int]:\n        cnt = [0] * (N + 1)\n        for p in range(2, N + 1):\n            if cnt[p] == 0:\n                for m in range(p, N + 1, p):\n                    cnt[m] += 1\n        return cnt"
+          }
+        ]
+      }
     },
     {
       "id": "sv5",
@@ -133,7 +221,29 @@
       "statement": "Generate numbers with only small prime factors.",
       "hint": "Sieve-like multiplicative generation.",
       "tests": "Multiplicative sieving idea.",
-      "link": "https://leetcode.com/problems/ugly-number-ii/"
+      "link": "https://leetcode.com/problems/ugly-number-ii/",
+      "solution": {
+        "approach": [
+          "Ugly numbers have only 2, 3, 5 as prime factors. Build them in order: each new ugly number is the smallest of (last·2, last·3, last·5) using three pointers.",
+          "Advance whichever pointer(s) produced the chosen value to avoid duplicates."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int nthUglyNumber(int n) {\n        vector<int> dp(n);\n        dp[0] = 1; int i2 = 0, i3 = 0, i5 = 0;\n        for (int i = 1; i < n; i++) {\n            int n2 = dp[i2] * 2, n3 = dp[i3] * 3, n5 = dp[i5] * 5;\n            int nxt = min({n2, n3, n5});\n            dp[i] = nxt;\n            if (nxt == n2) i2++;\n            if (nxt == n3) i3++;\n            if (nxt == n5) i5++;\n        }\n        return dp[n - 1];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def nthUglyNumber(self, n: int) -> int:\n        dp = [1] * n\n        i2 = i3 = i5 = 0\n        for i in range(1, n):\n            n2, n3, n5 = dp[i2] * 2, dp[i3] * 3, dp[i5] * 5\n            nxt = min(n2, n3, n5)\n            dp[i] = nxt\n            if nxt == n2: i2 += 1\n            if nxt == n3: i3 += 1\n            if nxt == n5: i5 += 1\n        return dp[-1]"
+          }
+        ]
+      }
     }
   ]
 }

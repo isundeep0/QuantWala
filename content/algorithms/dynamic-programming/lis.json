@@ -106,7 +106,29 @@
       "statement": "Return the LIS length.",
       "hint": "tails + lower_bound.",
       "tests": "Core O(n log n) LIS.",
-      "link": "https://leetcode.com/problems/longest-increasing-subsequence/"
+      "link": "https://leetcode.com/problems/longest-increasing-subsequence/",
+      "solution": {
+        "approach": [
+          "Patience sorting: keep `tails`, where tails[k] is the smallest possible tail of an increasing subsequence of length k+1.",
+          "For each value, binary-search its insertion point in tails; replace or append. The length of tails is the LIS length."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int lengthOfLIS(vector<int>& a) {\n        vector<int> tails;\n        for (int x : a) {\n            auto it = lower_bound(tails.begin(), tails.end(), x);\n            if (it == tails.end()) tails.push_back(x);\n            else *it = x;\n        }\n        return tails.size();\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import bisect\nclass Solution:\n    def lengthOfLIS(self, a: list[int]) -> int:\n        tails = []\n        for x in a:\n            i = bisect.bisect_left(tails, x)\n            if i == len(tails):\n                tails.append(x)\n            else:\n                tails[i] = x\n        return len(tails)"
+          }
+        ]
+      }
     },
     {
       "id": "lis2",
@@ -115,7 +137,29 @@
       "statement": "Max envelopes you can nest.",
       "hint": "Sort by width asc, height desc; LIS on heights.",
       "tests": "2D LIS via sorting.",
-      "link": "https://leetcode.com/problems/russian-doll-envelopes/"
+      "link": "https://leetcode.com/problems/russian-doll-envelopes/",
+      "solution": {
+        "approach": [
+          "Sort by width ascending, breaking ties by height descending. Then the answer is the LIS over heights — the tie-break stops equal-width envelopes from nesting.",
+          "Apply the O(n log n) patience LIS to the height sequence."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int maxEnvelopes(vector<vector<int>>& env) {\n        sort(env.begin(), env.end(), [](auto& a, auto& b){ return a[0] != b[0] ? a[0] < b[0] : a[1] > b[1]; });\n        vector<int> tails;\n        for (auto& e : env) {\n            int h = e[1];\n            auto it = lower_bound(tails.begin(), tails.end(), h);\n            if (it == tails.end()) tails.push_back(h);\n            else *it = h;\n        }\n        return tails.size();\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import bisect\nclass Solution:\n    def maxEnvelopes(self, envelopes: list[list[int]]) -> int:\n        envelopes.sort(key=lambda e: (e[0], -e[1]))\n        tails = []\n        for _, h in envelopes:\n            i = bisect.bisect_left(tails, h)\n            if i == len(tails):\n                tails.append(h)\n            else:\n                tails[i] = h\n        return len(tails)"
+          }
+        ]
+      }
     },
     {
       "id": "lis3",
@@ -124,7 +168,29 @@
       "statement": "Count how many longest increasing subsequences exist.",
       "hint": "O(n²) DP tracking both length and count.",
       "tests": "Counting variant.",
-      "link": "https://leetcode.com/problems/number-of-longest-increasing-subsequence/"
+      "link": "https://leetcode.com/problems/number-of-longest-increasing-subsequence/",
+      "solution": {
+        "approach": [
+          "Track two arrays: length[i] (LIS ending at i) and count[i] (number of such LIS).",
+          "For j < i with a[j] < a[i]: if it extends to a longer subsequence, copy the count; if it ties the best length, add the count. Sum counts of maximal length."
+        ],
+        "complexity": {
+          "time": "O(n^2)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int findNumberOfLIS(vector<int>& a) {\n        int n = a.size(), best = 0, total = 0;\n        vector<int> len(n, 1), cnt(n, 1);\n        for (int i = 0; i < n; i++) {\n            for (int j = 0; j < i; j++) if (a[j] < a[i]) {\n                if (len[j] + 1 > len[i]) { len[i] = len[j] + 1; cnt[i] = cnt[j]; }\n                else if (len[j] + 1 == len[i]) cnt[i] += cnt[j];\n            }\n            if (len[i] > best) { best = len[i]; total = cnt[i]; }\n            else if (len[i] == best) total += cnt[i];\n        }\n        return total;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findNumberOfLIS(self, a: list[int]) -> int:\n        n = len(a)\n        length = [1] * n\n        count = [1] * n\n        best = total = 0\n        for i in range(n):\n            for j in range(i):\n                if a[j] < a[i]:\n                    if length[j] + 1 > length[i]:\n                        length[i] = length[j] + 1\n                        count[i] = count[j]\n                    elif length[j] + 1 == length[i]:\n                        count[i] += count[j]\n            if length[i] > best:\n                best, total = length[i], count[i]\n            elif length[i] == best:\n                total += count[i]\n        return total"
+          }
+        ]
+      }
     },
     {
       "id": "lis4",
@@ -133,7 +199,29 @@
       "statement": "Longest chain where each word adds one letter.",
       "hint": "Sort by length; DP like LIS over predecessor words.",
       "tests": "LIS-style chaining.",
-      "link": "https://leetcode.com/problems/longest-string-chain/"
+      "link": "https://leetcode.com/problems/longest-string-chain/",
+      "solution": {
+        "approach": [
+          "Sort words by length. dp[w] = longest chain ending at w; try removing each character to form a predecessor and extend its best chain.",
+          "Hash-map dp keyed by word; answer is the maximum chain length."
+        ],
+        "complexity": {
+          "time": "O(n · L^2)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int longestStrChain(vector<string>& words) {\n        sort(words.begin(), words.end(), [](const string& a, const string& b){ return a.size() < b.size(); });\n        unordered_map<string,int> dp; int best = 0;\n        for (auto& w : words) {\n            int cur = 1;\n            for (int i = 0; i < (int)w.size(); i++) {\n                string prev = w.substr(0, i) + w.substr(i + 1);\n                if (dp.count(prev)) cur = max(cur, dp[prev] + 1);\n            }\n            dp[w] = cur; best = max(best, cur);\n        }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def longestStrChain(self, words: list[str]) -> int:\n        words.sort(key=len)\n        dp = {}\n        best = 0\n        for w in words:\n            cur = 1\n            for i in range(len(w)):\n                prev = w[:i] + w[i+1:]\n                if prev in dp:\n                    cur = max(cur, dp[prev] + 1)\n            dp[w] = cur\n            best = max(best, cur)\n        return best"
+          }
+        ]
+      }
     },
     {
       "id": "lis5",
@@ -142,7 +230,29 @@
       "statement": "Max stack height under dimension constraints.",
       "hint": "Sort dimensions, then a LIS-like DP.",
       "tests": "Multi-dimensional LIS.",
-      "link": "https://leetcode.com/problems/maximum-height-by-stacking-cuboids/"
+      "link": "https://leetcode.com/problems/maximum-height-by-stacking-cuboids/",
+      "solution": {
+        "approach": [
+          "Sort each cuboid's dimensions so any face can be the base, then sort cuboids. Now stacking is a 3-D 'all dimensions non-increasing' LIS.",
+          "dp[i] = max height with cuboid i on top; for j < i where all dims of j <= dims of i, dp[i] = max(dp[i], dp[j]) + height_i."
+        ],
+        "complexity": {
+          "time": "O(n^2)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int maxHeight(vector<vector<int>>& cuboids) {\n        for (auto& c : cuboids) sort(c.begin(), c.end());\n        sort(cuboids.begin(), cuboids.end());\n        int n = cuboids.size(), best = 0;\n        vector<int> dp(n);\n        for (int i = 0; i < n; i++) {\n            dp[i] = cuboids[i][2];\n            for (int j = 0; j < i; j++)\n                if (cuboids[j][0] <= cuboids[i][0] && cuboids[j][1] <= cuboids[i][1] && cuboids[j][2] <= cuboids[i][2])\n                    dp[i] = max(dp[i], dp[j] + cuboids[i][2]);\n            best = max(best, dp[i]);\n        }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def maxHeight(self, cuboids: list[list[int]]) -> int:\n        for c in cuboids:\n            c.sort()\n        cuboids.sort()\n        n = len(cuboids)\n        dp = [0] * n\n        best = 0\n        for i in range(n):\n            dp[i] = cuboids[i][2]\n            for j in range(i):\n                if all(cuboids[j][k] <= cuboids[i][k] for k in range(3)):\n                    dp[i] = max(dp[i], dp[j] + cuboids[i][2])\n            best = max(best, dp[i])\n        return best"
+          }
+        ]
+      }
     }
   ]
 }

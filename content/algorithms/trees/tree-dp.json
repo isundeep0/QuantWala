@@ -5,7 +5,7 @@
   "title": "DP on Trees",
   "tagline": "Compute each node's answer from its children — subtree DP and rerooting.",
   "estMinutes": 20,
-  "simulator": null,
+  "simulator": "tree-dp",
   "complexity": {
     "time": "O(n)",
     "space": "O(h)"
@@ -106,7 +106,29 @@
       "statement": "Max sum with no two directly-linked nodes chosen.",
       "hint": "Return (rob, skip) per node.",
       "tests": "Two-state subtree DP.",
-      "link": "https://leetcode.com/problems/house-robber-iii/"
+      "link": "https://leetcode.com/problems/house-robber-iii/",
+      "solution": {
+        "approach": [
+          "Each node returns two values: the best total if we rob it (val + skip children) and the best if we skip it (max of child's rob/skip).",
+          "The answer at the root is max(rob, skip). Classic tree DP with a pair return."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(h)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    pair<int,int> dfs(TreeNode* r) {     // {rob, skip}\n        if (!r) return {0, 0};\n        auto [lr, ls] = dfs(r->left);\n        auto [rr, rs] = dfs(r->right);\n        int rob = r->val + ls + rs;\n        int skip = max(lr, ls) + max(rr, rs);\n        return {rob, skip};\n    }\npublic:\n    int rob(TreeNode* root) { auto [a, b] = dfs(root); return max(a, b); }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def rob(self, root) -> int:\n        def dfs(r):\n            if not r:\n                return (0, 0)\n            lr, ls = dfs(r.left)\n            rr, rs = dfs(r.right)\n            rob = r.val + ls + rs\n            skip = max(lr, ls) + max(rr, rs)\n            return (rob, skip)\n        return max(dfs(root))"
+          }
+        ]
+      }
     },
     {
       "id": "tdp2",
@@ -115,7 +137,29 @@
       "statement": "Minimum cameras to monitor all nodes.",
       "hint": "Three states per node: covered+camera, covered+no-camera, not-covered. Greedy bottom-up.",
       "tests": "Multi-state tree DP.",
-      "link": "https://leetcode.com/problems/binary-tree-cameras/"
+      "link": "https://leetcode.com/problems/binary-tree-cameras/",
+      "solution": {
+        "approach": [
+          "Post-order with three states per node: 0 = needs coverage, 1 = covered without a camera, 2 = has a camera.",
+          "If any child needs coverage, place a camera here (state 2). If any child has a camera, this node is covered (state 1). Otherwise it needs coverage (state 0). Count cameras; cover the root if it ends in state 0."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(h)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int cameras = 0;\n    int dfs(TreeNode* r) {                 // 0 need, 1 covered, 2 camera\n        if (!r) return 1;\n        int L = dfs(r->left), R = dfs(r->right);\n        if (L == 0 || R == 0) { cameras++; return 2; }\n        if (L == 2 || R == 2) return 1;\n        return 0;\n    }\npublic:\n    int minCameraCover(TreeNode* root) {\n        if (dfs(root) == 0) cameras++;\n        return cameras;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def minCameraCover(self, root) -> int:\n        self.cameras = 0\n        def dfs(r):\n            if not r:\n                return 1\n            L, R = dfs(r.left), dfs(r.right)\n            if L == 0 or R == 0:\n                self.cameras += 1\n                return 2\n            if L == 2 or R == 2:\n                return 1\n            return 0\n        if dfs(root) == 0:\n            self.cameras += 1\n        return self.cameras"
+          }
+        ]
+      }
     },
     {
       "id": "tdp3",
@@ -124,7 +168,29 @@
       "statement": "Count nodes ≥ every ancestor on their path.",
       "hint": "Carry the running path maximum downward.",
       "tests": "Top-down accumulation.",
-      "link": "https://leetcode.com/problems/count-good-nodes-in-binary-tree/"
+      "link": "https://leetcode.com/problems/count-good-nodes-in-binary-tree/",
+      "solution": {
+        "approach": [
+          "A node is good if no node on the path from the root to it has a greater value. Carry the running maximum down the recursion.",
+          "Increment the count when the current value is >= the path maximum, then recurse with an updated maximum."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(h)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int dfs(TreeNode* r, int mx) {\n        if (!r) return 0;\n        int good = r->val >= mx ? 1 : 0;\n        int nm = max(mx, r->val);\n        return good + dfs(r->left, nm) + dfs(r->right, nm);\n    }\npublic:\n    int goodNodes(TreeNode* root) { return dfs(root, INT_MIN); }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def goodNodes(self, root) -> int:\n        def dfs(r, mx):\n            if not r:\n                return 0\n            good = 1 if r.val >= mx else 0\n            nm = max(mx, r.val)\n            return good + dfs(r.left, nm) + dfs(r.right, nm)\n        return dfs(root, float('-inf'))"
+          }
+        ]
+      }
     },
     {
       "id": "tdp4",
@@ -133,7 +199,29 @@
       "statement": "Minimum moves to give each node exactly one coin.",
       "hint": "Each edge carries |subtree balance|; sum these in post-order.",
       "tests": "Subtree balance aggregation.",
-      "link": "https://leetcode.com/problems/distribute-coins-in-binary-tree/"
+      "link": "https://leetcode.com/problems/distribute-coins-in-binary-tree/",
+      "solution": {
+        "approach": [
+          "Each node must end with exactly one coin. A subtree's 'balance' = total coins - node count; coins equal to that balance must flow across the edge to the parent.",
+          "Sum the absolute balances of all edges — each unit is one move. Post-order returns the running balance."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(h)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int moves = 0;\n    int dfs(TreeNode* r) {\n        if (!r) return 0;\n        int L = dfs(r->left), R = dfs(r->right);\n        moves += abs(L) + abs(R);\n        return r->val - 1 + L + R;\n    }\npublic:\n    int distributeCoins(TreeNode* root) { dfs(root); return moves; }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def distributeCoins(self, root) -> int:\n        self.moves = 0\n        def dfs(r):\n            if not r:\n                return 0\n            L, R = dfs(r.left), dfs(r.right)\n            self.moves += abs(L) + abs(R)\n            return r.val - 1 + L + R\n        dfs(root)\n        return self.moves"
+          }
+        ]
+      }
     },
     {
       "id": "tdp5",
@@ -142,7 +230,29 @@
       "statement": "For each node, the sum of distances to all others.",
       "hint": "Classic rerooting: compute for the root, then adjust per child in a second DFS.",
       "tests": "Rerooting technique.",
-      "link": "https://leetcode.com/problems/sum-of-distances-in-tree/"
+      "link": "https://leetcode.com/problems/sum-of-distances-in-tree/",
+      "solution": {
+        "approach": [
+          "Rerooting in two DFS passes. First pass (post-order) computes subtree sizes and the answer for the root: sum of depths.",
+          "Second pass (pre-order) shifts the root along each edge: moving from parent u to child v adds (n - size[v]) nodes one step farther and brings size[v] nodes one step closer, so ans[v] = ans[u] + n - 2·size[v]."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<vector<int>> adj; vector<int> sz, ans;\n    void dfs1(int u, int p, int depth, long long& rootSum) {\n        sz[u] = 1; rootSum += depth;\n        for (int v : adj[u]) if (v != p) { dfs1(v, u, depth + 1, rootSum); sz[u] += sz[v]; }\n    }\n    void dfs2(int u, int p, int n) {\n        for (int v : adj[u]) if (v != p) { ans[v] = ans[u] + n - 2 * sz[v]; dfs2(v, u, n); }\n    }\npublic:\n    vector<int> sumOfDistancesInTree(int n, vector<vector<int>>& edges) {\n        adj.assign(n, {}); sz.assign(n, 0); ans.assign(n, 0);\n        for (auto& e : edges) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); }\n        long long rootSum = 0; dfs1(0, -1, 0, rootSum); ans[0] = (int)rootSum;\n        dfs2(0, -1, n);\n        return ans;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import sys\nclass Solution:\n    def sumOfDistancesInTree(self, n: int, edges: list[list[int]]) -> list[int]:\n        sys.setrecursionlimit(10**6)\n        adj = [[] for _ in range(n)]\n        for a, b in edges:\n            adj[a].append(b); adj[b].append(a)\n        sz = [1] * n\n        ans = [0] * n\n        def dfs1(u, p, depth):\n            ans[0] += depth\n            for v in adj[u]:\n                if v != p:\n                    dfs1(v, u, depth + 1)\n                    sz[u] += sz[v]\n        def dfs2(u, p):\n            for v in adj[u]:\n                if v != p:\n                    ans[v] = ans[u] + n - 2 * sz[v]\n                    dfs2(v, u)\n        dfs1(0, -1, 0)\n        dfs2(0, -1)\n        return ans"
+          }
+        ]
+      }
     }
   ]
 }

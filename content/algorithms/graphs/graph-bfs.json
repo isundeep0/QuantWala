@@ -102,7 +102,29 @@
       "statement": "Count connected groups of land in a grid.",
       "hint": "BFS/DFS flood fill from each unvisited land cell.",
       "tests": "Grid BFS / connectivity.",
-      "link": "https://leetcode.com/problems/number-of-islands/"
+      "link": "https://leetcode.com/problems/number-of-islands/",
+      "solution": {
+        "approach": [
+          "Scan the grid; each unvisited land cell starts a new island. Flood-fill its whole component with BFS, marking cells visited.",
+          "The number of flood-fills is the island count. O(rows·cols)."
+        ],
+        "complexity": {
+          "time": "O(R·C)",
+          "space": "O(R·C)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int numIslands(vector<vector<char>>& g) {\n        int R = g.size(), C = g[0].size(), count = 0;\n        int dx[] = {0,0,1,-1}, dy[] = {1,-1,0,0};\n        for (int i = 0; i < R; i++)\n            for (int j = 0; j < C; j++)\n                if (g[i][j] == '1') {\n                    count++;\n                    queue<pair<int,int>> q; q.push({i, j}); g[i][j] = '0';\n                    while (!q.empty()) {\n                        auto [r, c] = q.front(); q.pop();\n                        for (int d = 0; d < 4; d++) {\n                            int nr = r + dx[d], nc = c + dy[d];\n                            if (nr >= 0 && nc >= 0 && nr < R && nc < C && g[nr][nc] == '1') {\n                                g[nr][nc] = '0'; q.push({nr, nc});\n                            }\n                        }\n                    }\n                }\n        return count;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def numIslands(self, g: list[list[str]]) -> int:\n        R, C, count = len(g), len(g[0]), 0\n        for i in range(R):\n            for j in range(C):\n                if g[i][j] == '1':\n                    count += 1\n                    q = deque([(i, j)]); g[i][j] = '0'\n                    while q:\n                        r, c = q.popleft()\n                        for nr, nc in ((r,c+1),(r,c-1),(r+1,c),(r-1,c)):\n                            if 0 <= nr < R and 0 <= nc < C and g[nr][nc] == '1':\n                                g[nr][nc] = '0'; q.append((nr, nc))\n        return count"
+          }
+        ]
+      }
     },
     {
       "id": "bfs2",
@@ -111,7 +133,29 @@
       "statement": "Minutes until all oranges rot, spreading to neighbours.",
       "hint": "Multi-source BFS from all initially rotten oranges.",
       "tests": "Multi-source BFS levels.",
-      "link": "https://leetcode.com/problems/rotting-oranges/"
+      "link": "https://leetcode.com/problems/rotting-oranges/",
+      "solution": {
+        "approach": [
+          "All rotten oranges spread simultaneously, so this is multi-source BFS: enqueue every rotten cell at time 0.",
+          "Each BFS layer is one minute. Track fresh count; if any fresh remain after BFS, return -1, else the number of layers."
+        ],
+        "complexity": {
+          "time": "O(R·C)",
+          "space": "O(R·C)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int orangesRotting(vector<vector<int>>& g) {\n        int R = g.size(), C = g[0].size(), fresh = 0, minutes = 0;\n        queue<pair<int,int>> q;\n        for (int i = 0; i < R; i++) for (int j = 0; j < C; j++) {\n            if (g[i][j] == 2) q.push({i, j});\n            else if (g[i][j] == 1) fresh++;\n        }\n        int dx[] = {0,0,1,-1}, dy[] = {1,-1,0,0};\n        while (!q.empty() && fresh) {\n            int sz = q.size(); minutes++;\n            while (sz--) {\n                auto [r, c] = q.front(); q.pop();\n                for (int d = 0; d < 4; d++) {\n                    int nr = r + dx[d], nc = c + dy[d];\n                    if (nr >= 0 && nc >= 0 && nr < R && nc < C && g[nr][nc] == 1) {\n                        g[nr][nc] = 2; fresh--; q.push({nr, nc});\n                    }\n                }\n            }\n        }\n        return fresh ? -1 : minutes;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def orangesRotting(self, g: list[list[int]]) -> int:\n        R, C = len(g), len(g[0])\n        q, fresh = deque(), 0\n        for i in range(R):\n            for j in range(C):\n                if g[i][j] == 2: q.append((i, j))\n                elif g[i][j] == 1: fresh += 1\n        minutes = 0\n        while q and fresh:\n            minutes += 1\n            for _ in range(len(q)):\n                r, c = q.popleft()\n                for nr, nc in ((r,c+1),(r,c-1),(r+1,c),(r-1,c)):\n                    if 0 <= nr < R and 0 <= nc < C and g[nr][nc] == 1:\n                        g[nr][nc] = 2; fresh -= 1; q.append((nr, nc))\n        return -1 if fresh else minutes"
+          }
+        ]
+      }
     },
     {
       "id": "bfs3",
@@ -120,7 +164,29 @@
       "statement": "Shortest transformation sequence between two words.",
       "hint": "BFS over words where edges connect one-letter changes.",
       "tests": "BFS shortest path on an implicit graph.",
-      "link": "https://leetcode.com/problems/word-ladder/"
+      "link": "https://leetcode.com/problems/word-ladder/",
+      "solution": {
+        "approach": [
+          "Each word is a node; edges connect words differing by one letter. The shortest transformation is an unweighted shortest path → BFS.",
+          "Generate neighbours by replacing each position with a-z and checking the dictionary. BFS layers count the ladder length."
+        ],
+        "complexity": {
+          "time": "O(N · L^2 · 26)",
+          "space": "O(N · L)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int ladderLength(string begin, string end, vector<string>& wordList) {\n        unordered_set<string> dict(wordList.begin(), wordList.end());\n        if (!dict.count(end)) return 0;\n        queue<string> q; q.push(begin);\n        int steps = 1;\n        while (!q.empty()) {\n            int sz = q.size();\n            while (sz--) {\n                string w = q.front(); q.pop();\n                if (w == end) return steps;\n                for (int i = 0; i < (int)w.size(); i++) {\n                    char old = w[i];\n                    for (char c = 'a'; c <= 'z'; c++) {\n                        w[i] = c;\n                        if (dict.count(w)) { dict.erase(w); q.push(w); }\n                    }\n                    w[i] = old;\n                }\n            }\n            steps++;\n        }\n        return 0;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def ladderLength(self, begin, end, wordList):\n        dict_ = set(wordList)\n        if end not in dict_:\n            return 0\n        q = deque([begin])\n        steps = 1\n        while q:\n            for _ in range(len(q)):\n                w = q.popleft()\n                if w == end:\n                    return steps\n                for i in range(len(w)):\n                    for c in 'abcdefghijklmnopqrstuvwxyz':\n                        nxt = w[:i] + c + w[i+1:]\n                        if nxt in dict_:\n                            dict_.remove(nxt); q.append(nxt)\n            steps += 1\n        return 0"
+          }
+        ]
+      }
     },
     {
       "id": "bfs4",
@@ -129,7 +195,29 @@
       "statement": "Distance of each cell to the nearest 0.",
       "hint": "Multi-source BFS seeded with all zeros.",
       "tests": "Distance via BFS.",
-      "link": "https://leetcode.com/problems/01-matrix/"
+      "link": "https://leetcode.com/problems/01-matrix/",
+      "solution": {
+        "approach": [
+          "Distance to the nearest 0 for every cell: seed a multi-source BFS with all 0-cells at distance 0.",
+          "BFS expands outward in unit steps, so the first time a 1-cell is reached gives its nearest-zero distance."
+        ],
+        "complexity": {
+          "time": "O(R·C)",
+          "space": "O(R·C)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<vector<int>> updateMatrix(vector<vector<int>>& mat) {\n        int R = mat.size(), C = mat[0].size();\n        vector<vector<int>> dist(R, vector<int>(C, -1));\n        queue<pair<int,int>> q;\n        for (int i = 0; i < R; i++) for (int j = 0; j < C; j++)\n            if (mat[i][j] == 0) { dist[i][j] = 0; q.push({i, j}); }\n        int dx[] = {0,0,1,-1}, dy[] = {1,-1,0,0};\n        while (!q.empty()) {\n            auto [r, c] = q.front(); q.pop();\n            for (int d = 0; d < 4; d++) {\n                int nr = r + dx[d], nc = c + dy[d];\n                if (nr >= 0 && nc >= 0 && nr < R && nc < C && dist[nr][nc] == -1) {\n                    dist[nr][nc] = dist[r][c] + 1; q.push({nr, nc});\n                }\n            }\n        }\n        return dist;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def updateMatrix(self, mat):\n        R, C = len(mat), len(mat[0])\n        dist = [[-1] * C for _ in range(R)]\n        q = deque()\n        for i in range(R):\n            for j in range(C):\n                if mat[i][j] == 0:\n                    dist[i][j] = 0; q.append((i, j))\n        while q:\n            r, c = q.popleft()\n            for nr, nc in ((r,c+1),(r,c-1),(r+1,c),(r-1,c)):\n                if 0 <= nr < R and 0 <= nc < C and dist[nr][nc] == -1:\n                    dist[nr][nc] = dist[r][c] + 1; q.append((nr, nc))\n        return dist"
+          }
+        ]
+      }
     },
     {
       "id": "bfs5",
@@ -138,7 +226,29 @@
       "statement": "Shortest clear path from top-left to bottom-right (8-directional).",
       "hint": "BFS counting cells with 8 neighbour moves.",
       "tests": "Grid BFS shortest path.",
-      "link": "https://leetcode.com/problems/shortest-path-in-binary-matrix/"
+      "link": "https://leetcode.com/problems/shortest-path-in-binary-matrix/",
+      "solution": {
+        "approach": [
+          "Shortest clear path with 8-directional moves on an unweighted grid → BFS from the top-left.",
+          "Count cells along the path (not edges). Return -1 if start/end is blocked or no path exists."
+        ],
+        "complexity": {
+          "time": "O(n^2)",
+          "space": "O(n^2)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int shortestPathBinaryMatrix(vector<vector<int>>& g) {\n        int n = g.size();\n        if (g[0][0] || g[n-1][n-1]) return -1;\n        queue<pair<int,int>> q; q.push({0, 0}); g[0][0] = 1;\n        int dist = 1;\n        while (!q.empty()) {\n            int sz = q.size();\n            while (sz--) {\n                auto [r, c] = q.front(); q.pop();\n                if (r == n - 1 && c == n - 1) return dist;\n                for (int dr = -1; dr <= 1; dr++)\n                    for (int dc = -1; dc <= 1; dc++) {\n                        int nr = r + dr, nc = c + dc;\n                        if (nr >= 0 && nc >= 0 && nr < n && nc < n && g[nr][nc] == 0) {\n                            g[nr][nc] = 1; q.push({nr, nc});\n                        }\n                    }\n            }\n            dist++;\n        }\n        return -1;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def shortestPathBinaryMatrix(self, g):\n        n = len(g)\n        if g[0][0] or g[n-1][n-1]:\n            return -1\n        q = deque([(0, 0)]); g[0][0] = 1\n        dist = 1\n        while q:\n            for _ in range(len(q)):\n                r, c = q.popleft()\n                if r == n - 1 and c == n - 1:\n                    return dist\n                for dr in (-1, 0, 1):\n                    for dc in (-1, 0, 1):\n                        nr, nc = r + dr, c + dc\n                        if 0 <= nr < n and 0 <= nc < n and g[nr][nc] == 0:\n                            g[nr][nc] = 1; q.append((nr, nc))\n            dist += 1\n        return -1"
+          }
+        ]
+      }
     }
   ]
 }

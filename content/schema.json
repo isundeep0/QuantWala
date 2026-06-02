@@ -113,7 +113,36 @@
           "statement": { "type": "string" },
           "hint": { "type": "string" },
           "tests": { "type": "string", "description": "Which part of the algorithm the problem exercises." },
-          "link": { "type": "string", "description": "URL to the problem (LeetCode/Codeforces/CSES/etc.)." }
+          "link": { "type": "string", "description": "URL to the problem (LeetCode/Codeforces/CSES/etc.)." },
+          "solution": {
+            "type": "object",
+            "description": "Full worked solution, revealed progressively in the UI after the hint.",
+            "required": ["approach"],
+            "properties": {
+              "approach": {
+                "type": "array",
+                "description": "Ordered explanation paragraphs walking from idea to algorithm.",
+                "items": { "type": "string" }
+              },
+              "complexity": {
+                "type": "object",
+                "properties": { "time": { "type": "string" }, "space": { "type": "string" } }
+              },
+              "codes": {
+                "type": "array",
+                "description": "Reference implementations (C++ first, then Python).",
+                "items": {
+                  "type": "object",
+                  "required": ["language", "source"],
+                  "properties": {
+                    "language": { "type": "string", "enum": ["cpp", "python"] },
+                    "title": { "type": "string" },
+                    "source": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

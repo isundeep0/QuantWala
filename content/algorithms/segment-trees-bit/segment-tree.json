@@ -5,7 +5,7 @@
   "title": "Segment Tree",
   "tagline": "A binary tree over array ranges — flexible range queries and point updates in O(log n).",
   "estMinutes": 22,
-  "simulator": null,
+  "simulator": "segment-tree",
   "complexity": {
     "time": "O(log n) per op, O(n) build",
     "space": "O(n)"
@@ -102,7 +102,29 @@
       "statement": "Point updates + range sums.",
       "hint": "Segment tree (or BIT).",
       "tests": "Core segment tree.",
-      "link": "https://leetcode.com/problems/range-sum-query-mutable/"
+      "link": "https://leetcode.com/problems/range-sum-query-mutable/",
+      "solution": {
+        "approach": [
+          "A segment tree stores subtree sums; point update walks one root-to-leaf path and fixes O(log n) nodes; range sum merges O(log n) covered segments.",
+          "Build recursively; updates and queries recurse only into overlapping children."
+        ],
+        "complexity": {
+          "time": "O(log n) per op",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class NumArray {\n    int n; vector<int> tree;\n    void build(vector<int>& a, int node, int l, int r) {\n        if (l == r) { tree[node] = a[l]; return; }\n        int mid = (l + r) / 2;\n        build(a, 2*node, l, mid); build(a, 2*node+1, mid+1, r);\n        tree[node] = tree[2*node] + tree[2*node+1];\n    }\n    void upd(int node, int l, int r, int i, int v) {\n        if (l == r) { tree[node] = v; return; }\n        int mid = (l + r) / 2;\n        if (i <= mid) upd(2*node, l, mid, i, v); else upd(2*node+1, mid+1, r, i, v);\n        tree[node] = tree[2*node] + tree[2*node+1];\n    }\n    int qry(int node, int l, int r, int ql, int qr) {\n        if (qr < l || r < ql) return 0;\n        if (ql <= l && r <= qr) return tree[node];\n        int mid = (l + r) / 2;\n        return qry(2*node, l, mid, ql, qr) + qry(2*node+1, mid+1, r, ql, qr);\n    }\npublic:\n    NumArray(vector<int>& nums) : n(nums.size()), tree(4*nums.size(), 0) { build(nums, 1, 0, n-1); }\n    void update(int i, int val) { upd(1, 0, n-1, i, val); }\n    int sumRange(int l, int r) { return qry(1, 0, n-1, l, r); }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class NumArray:\n    def __init__(self, nums: list[int]):\n        self.n = len(nums)\n        self.tree = [0] * (4 * self.n)\n        def build(node, l, r):\n            if l == r:\n                self.tree[node] = nums[l]; return\n            mid = (l + r) // 2\n            build(2*node, l, mid); build(2*node+1, mid+1, r)\n            self.tree[node] = self.tree[2*node] + self.tree[2*node+1]\n        if self.n:\n            build(1, 0, self.n - 1)\n    def update(self, i: int, val: int) -> None:\n        def upd(node, l, r):\n            if l == r:\n                self.tree[node] = val; return\n            mid = (l + r) // 2\n            if i <= mid: upd(2*node, l, mid)\n            else: upd(2*node+1, mid+1, r)\n            self.tree[node] = self.tree[2*node] + self.tree[2*node+1]\n        upd(1, 0, self.n - 1)\n    def sumRange(self, l: int, r: int) -> int:\n        def qry(node, lo, hi):\n            if r < lo or hi < l:\n                return 0\n            if l <= lo and hi <= r:\n                return self.tree[node]\n            mid = (lo + hi) // 2\n            return qry(2*node, lo, mid) + qry(2*node+1, mid+1, hi)\n        return qry(1, 0, self.n - 1)"
+          }
+        ]
+      }
     },
     {
       "id": "st2",
@@ -111,7 +133,29 @@
       "statement": "Range min with updates.",
       "hint": "Merge = min; identity = +∞.",
       "tests": "Different merge operation.",
-      "link": "https://cses.fi/problemset/task/1649"
+      "link": "https://cses.fi/problemset/task/1649",
+      "solution": {
+        "approach": [
+          "Identical structure to the sum tree, but the merge operation is min instead of add, and empty ranges return +infinity.",
+          "Build, point-update, and range-min all run in O(log n)."
+        ],
+        "complexity": {
+          "time": "O(log n) per op",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class SegTreeMin {\n    int n; vector<int> tree;\n    void build(vector<int>& a, int node, int l, int r) {\n        if (l == r) { tree[node] = a[l]; return; }\n        int mid = (l + r) / 2;\n        build(a, 2*node, l, mid); build(a, 2*node+1, mid+1, r);\n        tree[node] = min(tree[2*node], tree[2*node+1]);\n    }\n    int qry(int node, int l, int r, int ql, int qr) {\n        if (qr < l || r < ql) return INT_MAX;\n        if (ql <= l && r <= qr) return tree[node];\n        int mid = (l + r) / 2;\n        return min(qry(2*node, l, mid, ql, qr), qry(2*node+1, mid+1, r, ql, qr));\n    }\npublic:\n    SegTreeMin(vector<int>& a) : n(a.size()), tree(4*a.size(), INT_MAX) { build(a, 1, 0, n-1); }\n    int rangeMin(int l, int r) { return qry(1, 0, n-1, l, r); }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class SegTreeMin:\n    def __init__(self, a: list[int]):\n        self.n = len(a)\n        self.tree = [float('inf')] * (4 * self.n)\n        def build(node, l, r):\n            if l == r:\n                self.tree[node] = a[l]; return\n            mid = (l + r) // 2\n            build(2*node, l, mid); build(2*node+1, mid+1, r)\n            self.tree[node] = min(self.tree[2*node], self.tree[2*node+1])\n        build(1, 0, self.n - 1)\n    def range_min(self, l: int, r: int) -> int:\n        def qry(node, lo, hi):\n            if r < lo or hi < l:\n                return float('inf')\n            if l <= lo and hi <= r:\n                return self.tree[node]\n            mid = (lo + hi) // 2\n            return min(qry(2*node, lo, mid), qry(2*node+1, mid+1, hi))\n        return qry(1, 0, self.n - 1)"
+          }
+        ]
+      }
     },
     {
       "id": "st3",
@@ -120,7 +164,29 @@
       "statement": "Count subarray sums within [lower, upper].",
       "hint": "Segment tree / BIT over prefix sums.",
       "tests": "Segment tree on prefix values.",
-      "link": "https://leetcode.com/problems/count-of-range-sum/"
+      "link": "https://leetcode.com/problems/count-of-range-sum/",
+      "solution": {
+        "approach": [
+          "A range sum in [lower, upper] equals prefix[j] - prefix[i] within bounds. Sweep prefix sums and count, for each prefix[j], how many earlier prefix[i] fall in [prefix[j]-upper, prefix[j]-lower].",
+          "Coordinate-compress all needed prefix values and use a BIT for the range counts."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int countRangeSum(vector<int>& nums, int lower, int upper) {\n        int n = nums.size();\n        vector<long long> pre(n + 1, 0);\n        for (int i = 0; i < n; i++) pre[i + 1] = pre[i] + nums[i];\n        vector<long long> all;\n        for (long long p : pre) { all.push_back(p); all.push_back(p - lower); all.push_back(p - upper); }\n        sort(all.begin(), all.end()); all.erase(unique(all.begin(), all.end()), all.end());\n        int m = all.size(); vector<int> bit(m + 1, 0);\n        auto add = [&](int i){ for (++i; i <= m; i += i & -i) bit[i]++; };\n        auto qy = [&](int i){ int s = 0; for (++i; i > 0; i -= i & -i) s += bit[i]; return s; };\n        auto idx = [&](long long v){ return (int)(lower_bound(all.begin(), all.end(), v) - all.begin()); };\n        int ans = 0;\n        for (long long p : pre) {\n            int lo = idx(p - upper), hi = idx(p - lower);\n            ans += qy(hi) - (lo ? qy(lo - 1) : 0);\n            add(idx(p));\n        }\n        return ans;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import bisect\nclass Solution:\n    def countRangeSum(self, nums: list[int], lower: int, upper: int) -> int:\n        n = len(nums)\n        pre = [0] * (n + 1)\n        for i in range(n):\n            pre[i + 1] = pre[i] + nums[i]\n        allv = sorted(set([p for p in pre] + [p - lower for p in pre] + [p - upper for p in pre]))\n        m = len(allv)\n        bit = [0] * (m + 1)\n        def add(i):\n            i += 1\n            while i <= m:\n                bit[i] += 1; i += i & -i\n        def qy(i):\n            i += 1; s = 0\n            while i > 0:\n                s += bit[i]; i -= i & -i\n            return s\n        idx = lambda v: bisect.bisect_left(allv, v)\n        ans = 0\n        for p in pre:\n            lo, hi = idx(p - upper), idx(p - lower)\n            ans += qy(hi) - (qy(lo - 1) if lo else 0)\n            add(idx(p))\n        return ans"
+          }
+        ]
+      }
     },
     {
       "id": "st4",
@@ -129,7 +195,29 @@
       "statement": "Compute the skyline of buildings.",
       "hint": "Segment tree on heights, or a sweep with a heap.",
       "tests": "Range-max structure.",
-      "link": "https://leetcode.com/problems/the-skyline-problem/"
+      "link": "https://leetcode.com/problems/the-skyline-problem/",
+      "solution": {
+        "approach": [
+          "Sweep x-coordinates. At each building's left edge add its height, at the right edge remove it; the current skyline height is the max active height.",
+          "A multiset of active heights gives the current max in O(log n); emit a key point whenever the max changes."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<vector<int>> getSkyline(vector<vector<int>>& buildings) {\n        vector<pair<int,int>> events;\n        for (auto& b : buildings) { events.push_back({b[0], -b[2]}); events.push_back({b[1], b[2]}); }\n        sort(events.begin(), events.end());\n        multiset<int> heights = {0};\n        vector<vector<int>> res; int prev = 0;\n        for (auto& [x, h] : events) {\n            if (h < 0) heights.insert(-h);\n            else heights.erase(heights.find(h));\n            int cur = *heights.rbegin();\n            if (cur != prev) { res.push_back({x, cur}); prev = cur; }\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def getSkyline(self, buildings: list[list[int]]) -> list[list[int]]:\n        events = []\n        for L, R, H in buildings:\n            events.append((L, -H, R))\n            events.append((R, 0, 0))\n        events.sort()\n        res = [[0, 0]]\n        live = [(0, float('inf'))]   # (-height, end)\n        for x, negH, R in events:\n            while live[0][1] <= x:\n                heapq.heappop(live)\n            if negH:\n                heapq.heappush(live, (negH, R))\n            cur = -live[0][0]\n            if res[-1][1] != cur:\n                res.append([x, cur])\n        return res[1:]"
+          }
+        ]
+      }
     },
     {
       "id": "st5",
@@ -138,7 +226,29 @@
       "statement": "Track max stack height as squares land.",
       "hint": "Coordinate-compressed segment tree with range-max + range-assign.",
       "tests": "Segment tree with assignment.",
-      "link": "https://leetcode.com/problems/falling-squares/"
+      "link": "https://leetcode.com/problems/falling-squares/",
+      "solution": {
+        "approach": [
+          "Each falling square lands on the current max height across the x-interval it covers, then raises that interval.",
+          "With small input a coordinate-interval scan works: for every previous square overlapping in x, the base is the max of their tops; the new top is base + side. (A coordinate-compressed segment tree with range-assign + range-max does this in O(n log n).)"
+        ],
+        "complexity": {
+          "time": "O(n^2)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> fallingSquares(vector<vector<int>>& positions) {\n        int n = positions.size();\n        vector<int> heights(n, 0), res;\n        int best = 0;\n        for (int i = 0; i < n; i++) {\n            int l1 = positions[i][0], r1 = l1 + positions[i][1];\n            int base = 0;\n            for (int j = 0; j < i; j++) {\n                int l2 = positions[j][0], r2 = l2 + positions[j][1];\n                if (l1 < r2 && l2 < r1) base = max(base, heights[j]);\n            }\n            heights[i] = base + positions[i][1];\n            best = max(best, heights[i]);\n            res.push_back(best);\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def fallingSquares(self, positions: list[list[int]]) -> list[int]:\n        n = len(positions)\n        heights = [0] * n\n        res = []\n        best = 0\n        for i, (l1, s1) in enumerate(positions):\n            r1 = l1 + s1\n            base = 0\n            for j in range(i):\n                l2, s2 = positions[j]\n                r2 = l2 + s2\n                if l1 < r2 and l2 < r1:\n                    base = max(base, heights[j])\n            heights[i] = base + s1\n            best = max(best, heights[i])\n            res.append(best)\n        return res"
+          }
+        ]
+      }
     }
   ]
 }

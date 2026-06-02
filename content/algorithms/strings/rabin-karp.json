@@ -5,7 +5,7 @@
   "title": "Rabin-Karp (Rolling Hash)",
   "tagline": "Match by comparing hashes, sliding the window in O(1) per step with a rolling hash.",
   "estMinutes": 18,
-  "simulator": null,
+  "simulator": "rabin-karp",
   "complexity": {
     "time": "O(n + m) average",
     "space": "O(1)"
@@ -97,7 +97,29 @@
       "statement": "Find a substring's first index.",
       "hint": "Rolling hash with verification.",
       "tests": "Core Rabin-Karp.",
-      "link": "https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/"
+      "link": "https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/",
+      "solution": {
+        "approach": [
+          "Hash the pattern, then roll a hash over each window of the text: dropping the leading character and adding the trailing one in O(1).",
+          "When hashes match, verify the substring to guard against collisions. Use a large prime modulus."
+        ],
+        "complexity": {
+          "time": "O(n + m) average",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int strStr(string h, string n) {\n        if (n.empty()) return 0;\n        int m = n.size(), N = h.size();\n        if (m > N) return -1;\n        const long long MOD = 1e9 + 7, B = 131;\n        long long pw = 1, hp = 0, hw = 0;\n        for (int i = 0; i < m; i++) { pw = i ? pw * B % MOD : 1; hp = (hp * B + n[i]) % MOD; hw = (hw * B + h[i]) % MOD; }\n        for (int i = 0; i + m <= N; i++) {\n            if (hw == hp && h.compare(i, m, n) == 0) return i;\n            if (i + m < N) hw = ((hw - h[i] * pw % MOD + MOD) % MOD * B + h[i + m]) % MOD;\n        }\n        return -1;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def strStr(self, h: str, n: str) -> int:\n        if not n:\n            return 0\n        m, N = len(n), len(h)\n        if m > N:\n            return -1\n        MOD, B = 10**9 + 7, 131\n        pw = pow(B, m - 1, MOD)\n        hp = hw = 0\n        for i in range(m):\n            hp = (hp * B + ord(n[i])) % MOD\n            hw = (hw * B + ord(h[i])) % MOD\n        for i in range(N - m + 1):\n            if hw == hp and h[i:i+m] == n:\n                return i\n            if i + m < N:\n                hw = ((hw - ord(h[i]) * pw) * B + ord(h[i + m])) % MOD\n        return -1"
+          }
+        ]
+      }
     },
     {
       "id": "rk2",
@@ -106,7 +128,29 @@
       "statement": "Longest substring occurring more than once.",
       "hint": "Binary search the length + rolling-hash set membership.",
       "tests": "Hashing + binary search.",
-      "link": "https://leetcode.com/problems/longest-duplicate-substring/"
+      "link": "https://leetcode.com/problems/longest-duplicate-substring/",
+      "solution": {
+        "approach": [
+          "Binary search the answer length L (duplicate-existence is monotonic). For a given L, hash every length-L window and look for a repeat.",
+          "Store seen hashes in a set; on a hash hit, verify to avoid collisions. Each check is O(n), so total O(n log n)."
+        ],
+        "complexity": {
+          "time": "O(n log n) average",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    string s; long long MOD = (1LL << 61) - 1, B = 131;\n    int check(int L) {\n        if (L == 0) return 0;\n        unordered_map<long long, vector<int>> seen;\n        long long pw = 1, h = 0;\n        for (int i = 0; i < L; i++) { h = (__int128)h * B % MOD; h = (h + s[i]) % MOD; if (i) pw = (__int128)pw * B % MOD; }\n        seen[h].push_back(0);\n        for (int i = 1; i + L <= (int)s.size(); i++) {\n            h = (h + MOD - (__int128)s[i-1] * pw % MOD) % MOD;\n            h = ((__int128)h * B + s[i + L - 1]) % MOD;\n            for (int st : seen[h]) if (s.compare(st, L, s, i, L) == 0) return i;\n            seen[h].push_back(i);\n        }\n        return -1;\n    }\npublic:\n    string longestDupSubstring(string S) {\n        s = S; int lo = 1, hi = s.size() - 1, start = -1, len = 0;\n        while (lo <= hi) {\n            int mid = (lo + hi) / 2, p = check(mid);\n            if (p != -1) { start = p; len = mid; lo = mid + 1; }\n            else hi = mid - 1;\n        }\n        return start == -1 ? \"\" : s.substr(start, len);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def longestDupSubstring(self, s: str) -> str:\n        MOD, B = (1 << 61) - 1, 131\n        n = len(s)\n        nums = [ord(c) for c in s]\n        def check(L):\n            if L == 0:\n                return 0\n            h = 0\n            for i in range(L):\n                h = (h * B + nums[i]) % MOD\n            pw = pow(B, L, MOD)\n            seen = {h: [0]}\n            for i in range(1, n - L + 1):\n                h = (h * B - nums[i - 1] * pw + nums[i + L - 1]) % MOD\n                if h in seen:\n                    for st in seen[h]:\n                        if s[st:st+L] == s[i:i+L]:\n                            return i\n                    seen[h].append(i)\n                else:\n                    seen[h] = [i]\n            return -1\n        lo, hi, start, length = 1, n - 1, -1, 0\n        while lo <= hi:\n            mid = (lo + hi) // 2\n            p = check(mid)\n            if p != -1:\n                start, length = p, mid; lo = mid + 1\n            else:\n                hi = mid - 1\n        return s[start:start + length] if start != -1 else "
+          }
+        ]
+      }
     },
     {
       "id": "rk3",
@@ -115,7 +159,29 @@
       "statement": "Find 10-letter sequences that repeat.",
       "hint": "Rolling hash over fixed-length windows.",
       "tests": "Fixed-window hashing.",
-      "link": "https://leetcode.com/problems/repeated-dna-sequences/"
+      "link": "https://leetcode.com/problems/repeated-dna-sequences/",
+      "solution": {
+        "approach": [
+          "All substrings have fixed length 10, so simply hash each window and record which appear more than once.",
+          "A rolling hash (or even a sliding set of the raw 10-char strings) finds the repeats in one pass."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<string> findRepeatedDnaSequences(string s) {\n        unordered_map<string,int> cnt; vector<string> res;\n        for (int i = 0; i + 10 <= (int)s.size(); i++) {\n            string w = s.substr(i, 10);\n            if (++cnt[w] == 2) res.push_back(w);\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findRepeatedDnaSequences(self, s: str) -> list[str]:\n        seen, res = set(), set()\n        for i in range(len(s) - 9):\n            w = s[i:i+10]\n            if w in seen:\n                res.add(w)\n            seen.add(w)\n        return list(res)"
+          }
+        ]
+      }
     },
     {
       "id": "rk4",
@@ -124,7 +190,29 @@
       "statement": "Count substrings of the form t+t.",
       "hint": "Hash substrings to compare halves in O(1).",
       "tests": "Substring hash comparison.",
-      "link": "https://leetcode.com/problems/distinct-echo-substrings/"
+      "link": "https://leetcode.com/problems/distinct-echo-substrings/",
+      "solution": {
+        "approach": [
+          "An echo substring is t+t. For every possible half-length L, slide and compare the two halves using prefix hashes in O(1).",
+          "Collect distinct echo substrings by their hash (verify on hit). Iterate L from 1; total O(n^2) with hashing."
+        ],
+        "complexity": {
+          "time": "O(n^2) average",
+          "space": "O(n^2)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int distinctEchoSubstrings(string text) {\n        int n = text.size();\n        const long long MOD = (1LL << 61) - 1, B = 131;\n        vector<long long> h(n + 1, 0), pw(n + 1, 1);\n        for (int i = 0; i < n; i++) { h[i+1] = ((__int128)h[i] * B + text[i]) % MOD; pw[i+1] = (__int128)pw[i] * B % MOD; }\n        auto sub = [&](int l, int r){ return (h[r] - (__int128)h[l] * pw[r - l] % MOD + MOD) % MOD; };\n        unordered_set<long long> seen;\n        for (int len = 1; 2 * len <= n; len++)\n            for (int i = 0; i + 2 * len <= n; i++)\n                if (sub(i, i + len) == sub(i + len, i + 2 * len)) seen.insert(sub(i, i + 2 * len));\n        return seen.size();\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def distinctEchoSubstrings(self, text: str) -> int:\n        n = len(text)\n        MOD, B = (1 << 61) - 1, 131\n        h = [0] * (n + 1)\n        pw = [1] * (n + 1)\n        for i in range(n):\n            h[i+1] = (h[i] * B + ord(text[i])) % MOD\n            pw[i+1] = pw[i] * B % MOD\n        def sub(l, r):\n            return (h[r] - h[l] * pw[r - l]) % MOD\n        seen = set()\n        for length in range(1, n // 2 + 1):\n            for i in range(n - 2 * length + 1):\n                if sub(i, i + length) == sub(i + length, i + 2 * length):\n                    seen.add(sub(i, i + 2 * length))\n        return len(seen)"
+          }
+        ]
+      }
     },
     {
       "id": "rk5",
@@ -133,7 +221,29 @@
       "statement": "Longest path common to all sequences.",
       "hint": "Binary search length + rolling-hash intersection.",
       "tests": "Multi-string hashing.",
-      "link": "https://leetcode.com/problems/longest-common-subpath/"
+      "link": "https://leetcode.com/problems/longest-common-subpath/",
+      "solution": {
+        "approach": [
+          "Binary search the common-subpath length L (monotonic). For each L, hash all length-L windows of every path and intersect the hash sets.",
+          "If the intersection across all paths is non-empty, length L is feasible. Use a strong 64-bit modulus to keep collisions negligible."
+        ],
+        "complexity": {
+          "time": "O(N log N) average",
+          "space": "O(N)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<vector<int>>* paths; long long MOD = (1LL << 61) - 1, B = 1000003;\n    bool feasible(int L) {\n        if (L == 0) return true;\n        long long pw = 1; for (int i = 0; i < L; i++) pw = (__int128)pw * B % MOD;\n        unordered_set<long long> common;\n        bool first = true;\n        for (auto& p : *paths) {\n            if ((int)p.size() < L) return false;\n            unordered_set<long long> cur; long long h = 0;\n            for (int i = 0; i < L; i++) h = ((__int128)h * B + p[i] + 1) % MOD;\n            cur.insert(h);\n            for (int i = L; i < (int)p.size(); i++) {\n                h = (h + MOD - (__int128)(p[i-L]+1) * pw % MOD) % MOD;\n                h = ((__int128)h * B + p[i] + 1) % MOD;\n                cur.insert(h);\n            }\n            if (first) { common = cur; first = false; }\n            else { unordered_set<long long> nx; for (long long x : cur) if (common.count(x)) nx.insert(x); common = nx; }\n            if (common.empty()) return false;\n        }\n        return !common.empty();\n    }\npublic:\n    int longestCommonSubpath(int n, vector<vector<int>>& p) {\n        paths = &p; int lo = 0, hi = INT_MAX;\n        for (auto& x : p) hi = min(hi, (int)x.size());\n        int ans = 0;\n        while (lo <= hi) { int mid = (lo + hi) / 2; if (feasible(mid)) { ans = mid; lo = mid + 1; } else hi = mid - 1; }\n        return ans;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def longestCommonSubpath(self, n: int, paths: list[list[int]]) -> int:\n        MOD, B = (1 << 61) - 1, 1000003\n        def feasible(L):\n            if L == 0:\n                return True\n            pw = pow(B, L, MOD)\n            common = None\n            for p in paths:\n                if len(p) < L:\n                    return False\n                h = 0\n                for i in range(L):\n                    h = (h * B + p[i] + 1) % MOD\n                cur = {h}\n                for i in range(L, len(p)):\n                    h = (h * B - (p[i - L] + 1) * pw + p[i] + 1) % MOD\n                    cur.add(h)\n                common = cur if common is None else (common & cur)\n                if not common:\n                    return False\n            return bool(common)\n        lo, hi = 0, min(len(p) for p in paths)\n        ans = 0\n        while lo <= hi:\n            mid = (lo + hi) // 2\n            if feasible(mid):\n                ans = mid; lo = mid + 1\n            else:\n                hi = mid - 1\n        return ans"
+          }
+        ]
+      }
     }
   ]
 }

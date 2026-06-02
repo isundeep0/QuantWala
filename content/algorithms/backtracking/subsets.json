@@ -102,7 +102,29 @@
       "statement": "Return all subsets of distinct integers.",
       "hint": "Include/exclude recursion.",
       "tests": "Core power set.",
-      "link": "https://leetcode.com/problems/subsets/"
+      "link": "https://leetcode.com/problems/subsets/",
+      "solution": {
+        "approach": [
+          "Each element is either in or out. Backtrack over a start index, recording the path at every node of the decision tree.",
+          "Recurse from index i picking each later element once; this enumerates all 2^n subsets."
+        ],
+        "complexity": {
+          "time": "O(n · 2^n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<vector<int>> res; vector<int> path;\n    void dfs(vector<int>& a, int start) {\n        res.push_back(path);\n        for (int i = start; i < (int)a.size(); i++) {\n            path.push_back(a[i]);\n            dfs(a, i + 1);\n            path.pop_back();\n        }\n    }\npublic:\n    vector<vector<int>> subsets(vector<int>& a) { dfs(a, 0); return res; }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def subsets(self, a: list[int]) -> list[list[int]]:\n        res, path = [], []\n        def dfs(start):\n            res.append(path[:])\n            for i in range(start, len(a)):\n                path.append(a[i])\n                dfs(i + 1)\n                path.pop()\n        dfs(0)\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "su2",
@@ -111,7 +133,29 @@
       "statement": "Power set with duplicates, no repeated subsets.",
       "hint": "Sort; skip duplicate siblings at each level.",
       "tests": "Dedup in backtracking.",
-      "link": "https://leetcode.com/problems/subsets-ii/"
+      "link": "https://leetcode.com/problems/subsets-ii/",
+      "solution": {
+        "approach": [
+          "Sort so equal values are adjacent. When choosing at a level, skip a value equal to the previous one already considered at the same level to avoid duplicate subsets.",
+          "Otherwise it's the standard subset backtracking."
+        ],
+        "complexity": {
+          "time": "O(n · 2^n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<vector<int>> res; vector<int> path;\n    void dfs(vector<int>& a, int start) {\n        res.push_back(path);\n        for (int i = start; i < (int)a.size(); i++) {\n            if (i > start && a[i] == a[i-1]) continue;\n            path.push_back(a[i]);\n            dfs(a, i + 1);\n            path.pop_back();\n        }\n    }\npublic:\n    vector<vector<int>> subsetsWithDup(vector<int>& a) {\n        sort(a.begin(), a.end()); dfs(a, 0); return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def subsetsWithDup(self, a: list[int]) -> list[list[int]]:\n        a.sort()\n        res, path = [], []\n        def dfs(start):\n            res.append(path[:])\n            for i in range(start, len(a)):\n                if i > start and a[i] == a[i-1]:\n                    continue\n                path.append(a[i])\n                dfs(i + 1)\n                path.pop()\n        dfs(0)\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "su3",
@@ -120,7 +164,29 @@
       "statement": "All k-length combinations from 1..n.",
       "hint": "Start index + fixed depth k.",
       "tests": "Combination variant.",
-      "link": "https://leetcode.com/problems/combinations/"
+      "link": "https://leetcode.com/problems/combinations/",
+      "solution": {
+        "approach": [
+          "Choose k numbers from 1..n. Backtrack over a start value, adding to the path until it has length k.",
+          "Prune when not enough numbers remain to complete a combination of size k."
+        ],
+        "complexity": {
+          "time": "O(k · C(n,k))",
+          "space": "O(k)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<vector<int>> res; vector<int> path; int n, k;\n    void dfs(int start) {\n        if ((int)path.size() == k) { res.push_back(path); return; }\n        for (int i = start; i <= n - (k - (int)path.size()) + 1; i++) {\n            path.push_back(i);\n            dfs(i + 1);\n            path.pop_back();\n        }\n    }\npublic:\n    vector<vector<int>> combine(int N, int K) { n = N; k = K; dfs(1); return res; }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def combine(self, n: int, k: int) -> list[list[int]]:\n        res, path = [], []\n        def dfs(start):\n            if len(path) == k:\n                res.append(path[:]); return\n            for i in range(start, n - (k - len(path)) + 2):\n                path.append(i)\n                dfs(i + 1)\n                path.pop()\n        dfs(1)\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "su4",
@@ -129,7 +195,29 @@
       "statement": "All combinations summing to target (reuse allowed).",
       "hint": "Backtrack with a running sum; allow reusing the same index.",
       "tests": "Constrained subsets.",
-      "link": "https://leetcode.com/problems/combination-sum/"
+      "link": "https://leetcode.com/problems/combination-sum/",
+      "solution": {
+        "approach": [
+          "Each candidate may be reused, so recurse with the same index after picking it (only advance to avoid earlier candidates and duplicate sets).",
+          "Subtract from the remaining target; record a path when target hits 0, prune when it goes negative."
+        ],
+        "complexity": {
+          "time": "O(2^target)",
+          "space": "O(target)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<vector<int>> res; vector<int> path;\n    void dfs(vector<int>& a, int start, int target) {\n        if (target == 0) { res.push_back(path); return; }\n        for (int i = start; i < (int)a.size(); i++) {\n            if (a[i] > target) continue;\n            path.push_back(a[i]);\n            dfs(a, i, target - a[i]);   // reuse i\n            path.pop_back();\n        }\n    }\npublic:\n    vector<vector<int>> combinationSum(vector<int>& candidates, int target) {\n        sort(candidates.begin(), candidates.end());\n        dfs(candidates, 0, target); return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def combinationSum(self, candidates: list[int], target: int) -> list[list[int]]:\n        candidates.sort()\n        res, path = [], []\n        def dfs(start, remain):\n            if remain == 0:\n                res.append(path[:]); return\n            for i in range(start, len(candidates)):\n                if candidates[i] > remain:\n                    break\n                path.append(candidates[i])\n                dfs(i, remain - candidates[i])\n                path.pop()\n        dfs(0, target)\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "su5",
@@ -138,7 +226,29 @@
       "statement": "All letter strings a digit string can map to.",
       "hint": "Branch over each digit's letters.",
       "tests": "Cartesian product via backtracking.",
-      "link": "https://leetcode.com/problems/letter-combinations-of-a-phone-number/"
+      "link": "https://leetcode.com/problems/letter-combinations-of-a-phone-number/",
+      "solution": {
+        "approach": [
+          "Map each digit to its letters; backtrack one digit at a time, appending each possible letter.",
+          "When the path length equals the input length, record the string. The tree has at most 4^n leaves."
+        ],
+        "complexity": {
+          "time": "O(4^n · n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<string> res; string path; vector<string> M = {\"\",\"\",\"abc\",\"def\",\"ghi\",\"jkl\",\"mno\",\"pqrs\",\"tuv\",\"wxyz\"};\n    void dfs(string& digits, int idx) {\n        if (idx == (int)digits.size()) { res.push_back(path); return; }\n        for (char c : M[digits[idx] - '0']) {\n            path.push_back(c);\n            dfs(digits, idx + 1);\n            path.pop_back();\n        }\n    }\npublic:\n    vector<string> letterCombinations(string digits) {\n        if (digits.empty()) return {};\n        dfs(digits, 0); return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def letterCombinations(self, digits: str) -> list[str]:\n        if not digits:\n            return []\n        M = {'2':'abc','3':'def','4':'ghi','5':'jkl','6':'mno','7':'pqrs','8':'tuv','9':'wxyz'}\n        res, path = [], []\n        def dfs(idx):\n            if idx == len(digits):\n                res.append(\"\".join(path)); return\n            for c in M[digits[idx]]:\n                path.append(c)\n                dfs(idx + 1)\n                path.pop()\n        dfs(0)\n        return res"
+          }
+        ]
+      }
     }
   ]
 }

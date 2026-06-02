@@ -102,7 +102,29 @@
       "statement": "Return the index where target is, or where it would be inserted to keep the array sorted.",
       "hint": "This is exactly lower_bound.",
       "tests": "lower_bound template.",
-      "link": "https://leetcode.com/problems/search-insert-position/"
+      "link": "https://leetcode.com/problems/search-insert-position/",
+      "solution": {
+        "approach": [
+          "This is exactly lower_bound: the first index where a[i] >= target. If the target is present it returns its position; otherwise the insertion point.",
+          "Use the half-open window [0, n]; collapse toward the first index whose value is >= target."
+        ],
+        "complexity": {
+          "time": "O(log n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int searchInsert(vector<int>& a, int target) {\n        int lo = 0, hi = a.size();\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            if (a[mid] >= target) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def searchInsert(self, a: list[int], target: int) -> int:\n        lo, hi = 0, len(a)\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if a[mid] >= target:\n                hi = mid\n            else:\n                lo = mid + 1\n        return lo"
+          }
+        ]
+      }
     },
     {
       "id": "bsv2",
@@ -111,7 +133,29 @@
       "statement": "Find the starting and ending index of a target value in a sorted array.",
       "hint": "lower_bound(target) gives the start; lower_bound(target+1) - 1 gives the end.",
       "tests": "lower_bound and upper_bound together.",
-      "link": "https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/"
+      "link": "https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/",
+      "solution": {
+        "approach": [
+          "Run two boundary searches. lower_bound finds the first index with value >= target; upper_bound finds the first index with value > target.",
+          "The range is [lower, upper-1]. If lower == upper the target is absent, so return [-1, -1]."
+        ],
+        "complexity": {
+          "time": "O(log n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int lb(vector<int>& a, int t){int lo=0,hi=a.size();while(lo<hi){int m=(lo+hi)/2;if(a[m]>=t)hi=m;else lo=m+1;}return lo;}\npublic:\n    vector<int> searchRange(vector<int>& a, int target) {\n        int l = lb(a, target), r = lb(a, target + 1);\n        if (l == r) return {-1, -1};\n        return {l, r - 1};\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import bisect\nclass Solution:\n    def searchRange(self, a: list[int], target: int) -> list[int]:\n        l = bisect.bisect_left(a, target)\n        r = bisect.bisect_right(a, target)\n        if l == r:\n            return [-1, -1]\n        return [l, r - 1]"
+          }
+        ]
+      }
     },
     {
       "id": "bsv3",
@@ -120,7 +164,29 @@
       "statement": "Find the least ship capacity to deliver all packages within D days.",
       "hint": "Binary search on capacity; feasible(cap) = can we finish within D days?",
       "tests": "Binary search on the answer.",
-      "link": "https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/"
+      "link": "https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/",
+      "solution": {
+        "approach": [
+          "Binary search on the answer: the ship capacity. feasible(cap) = number of days needed when no day exceeds cap; it is monotonic (bigger capacity never needs more days).",
+          "The capacity must be at least max(weight) and at most sum(weights). Find the smallest capacity that ships within D days by a greedy day-count simulation."
+        ],
+        "complexity": {
+          "time": "O(n log(sum))",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    bool ok(vector<int>& w, int cap, int days){\n        int d = 1, cur = 0;\n        for (int x : w){ if (cur + x > cap){ d++; cur = 0; } cur += x; }\n        return d <= days;\n    }\npublic:\n    int shipWithinDays(vector<int>& w, int days) {\n        int lo = *max_element(w.begin(), w.end());\n        int hi = accumulate(w.begin(), w.end(), 0);\n        while (lo < hi){ int mid = (lo + hi) / 2; if (ok(w, mid, days)) hi = mid; else lo = mid + 1; }\n        return lo;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def shipWithinDays(self, w: list[int], days: int) -> int:\n        def ok(cap):\n            d, cur = 1, 0\n            for x in w:\n                if cur + x > cap:\n                    d += 1\n                    cur = 0\n                cur += x\n            return d <= days\n        lo, hi = max(w), sum(w)\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if ok(mid):\n                hi = mid\n            else:\n                lo = mid + 1\n        return lo"
+          }
+        ]
+      }
     },
     {
       "id": "bsv4",
@@ -129,7 +195,29 @@
       "statement": "Split the array into k subarrays minimising the largest subarray sum.",
       "hint": "Binary search the largest-sum value; greedily count how many pieces it forces.",
       "tests": "Answer-space search with a greedy predicate.",
-      "link": "https://leetcode.com/problems/split-array-largest-sum/"
+      "link": "https://leetcode.com/problems/split-array-largest-sum/",
+      "solution": {
+        "approach": [
+          "Identical pattern to ship-packages: binary search the largest allowed subarray sum. feasible(cap) = minimum number of subarrays whose sums each stay <= cap.",
+          "Search cap in [max(nums), sum(nums)]; greedily start a new subarray whenever adding the next element would exceed cap. The smallest cap needing <= k subarrays is the answer."
+        ],
+        "complexity": {
+          "time": "O(n log(sum))",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int parts(vector<int>& a, long long cap){\n        int p = 1; long long cur = 0;\n        for (int x : a){ if (cur + x > cap){ p++; cur = 0; } cur += x; }\n        return p;\n    }\npublic:\n    int splitArray(vector<int>& a, int k) {\n        long long lo = *max_element(a.begin(), a.end());\n        long long hi = accumulate(a.begin(), a.end(), 0LL);\n        while (lo < hi){ long long mid = (lo + hi) / 2; if (parts(a, mid) <= k) hi = mid; else lo = mid + 1; }\n        return (int)lo;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def splitArray(self, nums: list[int], k: int) -> int:\n        def parts(cap):\n            p, cur = 1, 0\n            for x in nums:\n                if cur + x > cap:\n                    p += 1\n                    cur = 0\n                cur += x\n            return p\n        lo, hi = max(nums), sum(nums)\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if parts(mid) <= k:\n                hi = mid\n            else:\n                lo = mid + 1\n        return lo"
+          }
+        ]
+      }
     },
     {
       "id": "bsv5",
@@ -138,7 +226,29 @@
       "statement": "Find any peak (an element greater than its neighbours) in O(log n).",
       "hint": "Compare mid with mid+1; move toward the higher side — a peak must exist there.",
       "tests": "Binary search without a globally sorted array.",
-      "link": "https://leetcode.com/problems/find-peak-element/"
+      "link": "https://leetcode.com/problems/find-peak-element/",
+      "solution": {
+        "approach": [
+          "A peak is any element greater than its neighbors; with nums[-1] = nums[n] = -infinity a peak always exists. Binary search on the slope.",
+          "If a[mid] < a[mid+1] an ascending slope guarantees a peak to the right (lo = mid+1); otherwise a peak is at mid or to the left (hi = mid)."
+        ],
+        "complexity": {
+          "time": "O(log n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int findPeakElement(vector<int>& a) {\n        int lo = 0, hi = a.size() - 1;\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            if (a[mid] < a[mid + 1]) lo = mid + 1;\n            else hi = mid;\n        }\n        return lo;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findPeakElement(self, a: list[int]) -> int:\n        lo, hi = 0, len(a) - 1\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if a[mid] < a[mid + 1]:\n                lo = mid + 1\n            else:\n                hi = mid\n        return lo"
+          }
+        ]
+      }
     }
   ]
 }

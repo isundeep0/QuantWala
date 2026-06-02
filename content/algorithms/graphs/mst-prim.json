@@ -5,7 +5,7 @@
   "title": "Minimum Spanning Tree — Prim",
   "tagline": "Grow the tree one cheapest frontier edge at a time — MST via a priority queue.",
   "estMinutes": 14,
-  "simulator": null,
+  "simulator": "mst-prim",
   "complexity": {
     "time": "O(E log V)",
     "space": "O(V)"
@@ -102,7 +102,29 @@
       "statement": "Minimum total distance to connect all points.",
       "hint": "Prim is great here since the graph is implicitly complete.",
       "tests": "Prim on a dense graph.",
-      "link": "https://leetcode.com/problems/min-cost-to-connect-all-points/"
+      "link": "https://leetcode.com/problems/min-cost-to-connect-all-points/",
+      "solution": {
+        "approach": [
+          "Prim grows the tree from one vertex, always adding the cheapest edge crossing to an unvisited point. With a complete Manhattan graph a min-heap drives the selection.",
+          "Pop the nearest unvisited point, add its weight, then push its distances to remaining points."
+        ],
+        "complexity": {
+          "time": "O(n^2 log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int minCostConnectPoints(vector<vector<int>>& pts) {\n        int n = pts.size(), cost = 0, used = 0;\n        vector<bool> inMST(n, false);\n        priority_queue<pair<int,int>, vector<pair<int,int>>, greater<>> pq;\n        pq.push({0, 0});\n        while (!pq.empty() && used < n) {\n            auto [w, u] = pq.top(); pq.pop();\n            if (inMST[u]) continue;\n            inMST[u] = true; cost += w; used++;\n            for (int v = 0; v < n; v++)\n                if (!inMST[v]) pq.push({abs(pts[u][0]-pts[v][0]) + abs(pts[u][1]-pts[v][1]), v});\n        }\n        return cost;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def minCostConnectPoints(self, pts):\n        n = len(pts)\n        in_mst = [False] * n\n        pq = [(0, 0)]\n        cost = used = 0\n        while pq and used < n:\n            w, u = heapq.heappop(pq)\n            if in_mst[u]:\n                continue\n            in_mst[u] = True; cost += w; used += 1\n            for v in range(n):\n                if not in_mst[v]:\n                    d = abs(pts[u][0]-pts[v][0]) + abs(pts[u][1]-pts[v][1])\n                    heapq.heappush(pq, (d, v))\n        return cost"
+          }
+        ]
+      }
     },
     {
       "id": "pr2",
@@ -111,7 +133,29 @@
       "statement": "Connect all cities minimally or return -1.",
       "hint": "Prim/Kruskal; verify all vertices joined.",
       "tests": "MST + connectivity.",
-      "link": "https://leetcode.com/problems/connecting-cities-with-minimum-cost/"
+      "link": "https://leetcode.com/problems/connecting-cities-with-minimum-cost/",
+      "solution": {
+        "approach": [
+          "Build an adjacency list and run Prim from city 1, repeatedly adding the cheapest edge to a new city via a min-heap.",
+          "If we cannot include all n cities, the graph is disconnected → -1."
+        ],
+        "complexity": {
+          "time": "O(E log V)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int minimumCost(int n, vector<vector<int>>& conns) {\n        vector<vector<pair<int,int>>> adj(n + 1);\n        for (auto& c : conns) { adj[c[0]].push_back({c[1], c[2]}); adj[c[1]].push_back({c[0], c[2]}); }\n        vector<bool> seen(n + 1, false);\n        priority_queue<pair<int,int>, vector<pair<int,int>>, greater<>> pq;\n        pq.push({0, 1}); int cost = 0, used = 0;\n        while (!pq.empty()) {\n            auto [w, u] = pq.top(); pq.pop();\n            if (seen[u]) continue;\n            seen[u] = true; cost += w; used++;\n            for (auto& [v, ww] : adj[u]) if (!seen[v]) pq.push({ww, v});\n        }\n        return used == n ? cost : -1;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def minimumCost(self, n, connections):\n        adj = [[] for _ in range(n + 1)]\n        for a, b, w in connections:\n            adj[a].append((b, w)); adj[b].append((a, w))\n        seen = [False] * (n + 1)\n        pq = [(0, 1)]\n        cost = used = 0\n        while pq:\n            w, u = heapq.heappop(pq)\n            if seen[u]:\n                continue\n            seen[u] = True; cost += w; used += 1\n            for v, ww in adj[u]:\n                if not seen[v]:\n                    heapq.heappush(pq, (ww, v))\n        return cost if used == n else -1"
+          }
+        ]
+      }
     },
     {
       "id": "pr3",
@@ -120,7 +164,29 @@
       "statement": "Wells + pipes minimum cost.",
       "hint": "Virtual node for wells, then Prim.",
       "tests": "MST modeling.",
-      "link": "https://leetcode.com/problems/optimize-water-distribution-in-a-village/"
+      "link": "https://leetcode.com/problems/optimize-water-distribution-in-a-village/",
+      "solution": {
+        "approach": [
+          "Add a virtual node 0 connected to each house by an edge equal to that house's well cost. Then a spanning tree of this augmented graph is the cheapest water plan.",
+          "Run Prim from node 0 with a min-heap over both pipe edges and well edges."
+        ],
+        "complexity": {
+          "time": "O(E log V)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int minCostToSupplyWater(int n, vector<int>& wells, vector<vector<int>>& pipes) {\n        vector<vector<pair<int,int>>> adj(n + 1);\n        for (int i = 0; i < n; i++) { adj[0].push_back({i + 1, wells[i]}); adj[i + 1].push_back({0, wells[i]}); }\n        for (auto& p : pipes) { adj[p[0]].push_back({p[1], p[2]}); adj[p[1]].push_back({p[0], p[2]}); }\n        vector<bool> seen(n + 1, false);\n        priority_queue<pair<int,int>, vector<pair<int,int>>, greater<>> pq;\n        pq.push({0, 0}); int cost = 0;\n        while (!pq.empty()) {\n            auto [w, u] = pq.top(); pq.pop();\n            if (seen[u]) continue;\n            seen[u] = true; cost += w;\n            for (auto& [v, ww] : adj[u]) if (!seen[v]) pq.push({ww, v});\n        }\n        return cost;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def minCostToSupplyWater(self, n, wells, pipes):\n        adj = [[] for _ in range(n + 1)]\n        for i, w in enumerate(wells):\n            adj[0].append((i + 1, w)); adj[i + 1].append((0, w))\n        for u, v, w in pipes:\n            adj[u].append((v, w)); adj[v].append((u, w))\n        seen = [False] * (n + 1)\n        pq = [(0, 0)]\n        cost = 0\n        while pq:\n            w, u = heapq.heappop(pq)\n            if seen[u]:\n                continue\n            seen[u] = True; cost += w\n            for v, ww in adj[u]:\n                if not seen[v]:\n                    heapq.heappush(pq, (ww, v))\n        return cost"
+          }
+        ]
+      }
     },
     {
       "id": "pr4",
@@ -129,7 +195,29 @@
       "statement": "Compute MST weight of a weighted graph.",
       "hint": "Either Prim or Kruskal.",
       "tests": "Core MST.",
-      "link": "https://cses.fi/problemset/task/1675"
+      "link": "https://cses.fi/problemset/task/1675",
+      "solution": {
+        "approach": [
+          "Generic MST via Prim: start anywhere, keep a min-heap of edges crossing the cut, and pull the lightest one that reaches a new vertex.",
+          "Return the accumulated weight once all vertices are included."
+        ],
+        "complexity": {
+          "time": "O(E log V)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int minimumSpanningTree(int n, vector<vector<int>>& edges) {\n        vector<vector<pair<int,int>>> adj(n);\n        for (auto& e : edges) { adj[e[0]].push_back({e[1], e[2]}); adj[e[1]].push_back({e[0], e[2]}); }\n        vector<bool> seen(n, false);\n        priority_queue<pair<int,int>, vector<pair<int,int>>, greater<>> pq;\n        pq.push({0, 0}); int cost = 0, used = 0;\n        while (!pq.empty()) {\n            auto [w, u] = pq.top(); pq.pop();\n            if (seen[u]) continue;\n            seen[u] = true; cost += w; used++;\n            for (auto& [v, ww] : adj[u]) if (!seen[v]) pq.push({ww, v});\n        }\n        return used == n ? cost : -1;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def minimumSpanningTree(self, n, edges):\n        adj = [[] for _ in range(n)]\n        for u, v, w in edges:\n            adj[u].append((v, w)); adj[v].append((u, w))\n        seen = [False] * n\n        pq = [(0, 0)]\n        cost = used = 0\n        while pq:\n            w, u = heapq.heappop(pq)\n            if seen[u]:\n                continue\n            seen[u] = True; cost += w; used += 1\n            for v, ww in adj[u]:\n                if not seen[v]:\n                    heapq.heappush(pq, (ww, v))\n        return cost if used == n else -1"
+          }
+        ]
+      }
     },
     {
       "id": "pr5",
@@ -138,7 +226,29 @@
       "statement": "Cheapest way to make a network fully connected.",
       "hint": "MST weight is the answer.",
       "tests": "MST application.",
-      "link": "https://www.spoj.com/problems/MST/"
+      "link": "https://www.spoj.com/problems/MST/",
+      "solution": {
+        "approach": [
+          "The cheapest network build-out connecting all sites is exactly an MST. Prim accumulates the minimum total edge weight that keeps the network connected.",
+          "Use a visited array plus a min-heap; each site joins via its cheapest crossing edge."
+        ],
+        "complexity": {
+          "time": "O(E log V)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int networkBuildCost(int n, vector<vector<int>>& edges) {\n        vector<vector<pair<int,int>>> adj(n);\n        for (auto& e : edges) { adj[e[0]].push_back({e[1], e[2]}); adj[e[1]].push_back({e[0], e[2]}); }\n        vector<bool> seen(n, false);\n        priority_queue<pair<int,int>, vector<pair<int,int>>, greater<>> pq;\n        pq.push({0, 0}); int cost = 0, used = 0;\n        while (!pq.empty()) {\n            auto [w, u] = pq.top(); pq.pop();\n            if (seen[u]) continue;\n            seen[u] = true; cost += w; used++;\n            for (auto& [v, ww] : adj[u]) if (!seen[v]) pq.push({ww, v});\n        }\n        return used == n ? cost : -1;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def networkBuildCost(self, n, edges):\n        adj = [[] for _ in range(n)]\n        for u, v, w in edges:\n            adj[u].append((v, w)); adj[v].append((u, w))\n        seen = [False] * n\n        pq = [(0, 0)]\n        cost = used = 0\n        while pq:\n            w, u = heapq.heappop(pq)\n            if seen[u]:\n                continue\n            seen[u] = True; cost += w; used += 1\n            for v, ww in adj[u]:\n                if not seen[v]:\n                    heapq.heappush(pq, (ww, v))\n        return cost if used == n else -1"
+          }
+        ]
+      }
     }
   ]
 }

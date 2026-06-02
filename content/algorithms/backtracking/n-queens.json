@@ -102,7 +102,29 @@
       "statement": "Return all distinct solutions to the n-queens puzzle.",
       "hint": "Row recursion + diagonal sets.",
       "tests": "Core constraint backtracking.",
-      "link": "https://leetcode.com/problems/n-queens/"
+      "link": "https://leetcode.com/problems/n-queens/",
+      "solution": {
+        "approach": [
+          "Place one queen per row. Track occupied columns and both diagonals (r-c and r+c) in sets for O(1) conflict checks.",
+          "Backtrack column by column in each row; when all rows are filled, record the board. Undo the markers when backtracking."
+        ],
+        "complexity": {
+          "time": "O(n!)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int n; vector<vector<string>> res; vector<int> pos;\n    set<int> cols, d1, d2;\n    void solve(int r) {\n        if (r == n) {\n            vector<string> board(n, string(n, '.'));\n            for (int i = 0; i < n; i++) board[i][pos[i]] = 'Q';\n            res.push_back(board); return;\n        }\n        for (int c = 0; c < n; c++) {\n            if (cols.count(c) || d1.count(r - c) || d2.count(r + c)) continue;\n            cols.insert(c); d1.insert(r - c); d2.insert(r + c); pos[r] = c;\n            solve(r + 1);\n            cols.erase(c); d1.erase(r - c); d2.erase(r + c);\n        }\n    }\npublic:\n    vector<vector<string>> solveNQueens(int N) { n = N; pos.assign(n, 0); solve(0); return res; }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def solveNQueens(self, n: int) -> list[list[str]]:\n        res = []\n        cols, d1, d2 = set(), set(), set()\n        pos = [0] * n\n        def solve(r):\n            if r == n:\n                res.append([\"\".join('Q' if pos[i] == c else '.' for c in range(n)) for i in range(n)])\n                return\n            for c in range(n):\n                if c in cols or (r - c) in d1 or (r + c) in d2:\n                    continue\n                cols.add(c); d1.add(r - c); d2.add(r + c); pos[r] = c\n                solve(r + 1)\n                cols.discard(c); d1.discard(r - c); d2.discard(r + c)\n        solve(0)\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "nq2",
@@ -111,7 +133,29 @@
       "statement": "Count the number of solutions.",
       "hint": "Same recursion, return a count.",
       "tests": "Counting variant.",
-      "link": "https://leetcode.com/problems/n-queens-ii/"
+      "link": "https://leetcode.com/problems/n-queens-ii/",
+      "solution": {
+        "approach": [
+          "Identical search to N-Queens, but we only need the count, so skip building boards.",
+          "Backtrack row by row using column and diagonal markers; increment a counter when a full placement is found."
+        ],
+        "complexity": {
+          "time": "O(n!)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int n, count = 0;\n    set<int> cols, d1, d2;\n    void solve(int r) {\n        if (r == n) { count++; return; }\n        for (int c = 0; c < n; c++) {\n            if (cols.count(c) || d1.count(r - c) || d2.count(r + c)) continue;\n            cols.insert(c); d1.insert(r - c); d2.insert(r + c);\n            solve(r + 1);\n            cols.erase(c); d1.erase(r - c); d2.erase(r + c);\n        }\n    }\npublic:\n    int totalNQueens(int N) { n = N; solve(0); return count; }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def totalNQueens(self, n: int) -> int:\n        self.count = 0\n        cols, d1, d2 = set(), set(), set()\n        def solve(r):\n            if r == n:\n                self.count += 1\n                return\n            for c in range(n):\n                if c in cols or (r - c) in d1 or (r + c) in d2:\n                    continue\n                cols.add(c); d1.add(r - c); d2.add(r + c)\n                solve(r + 1)\n                cols.discard(c); d1.discard(r - c); d2.discard(r + c)\n        solve(0)\n        return self.count"
+          }
+        ]
+      }
     },
     {
       "id": "nq3",
@@ -120,7 +164,29 @@
       "statement": "Fill a 9×9 Sudoku.",
       "hint": "Backtrack over empty cells with row/col/box constraints.",
       "tests": "Constraint backtracking sibling.",
-      "link": "https://leetcode.com/problems/sudoku-solver/"
+      "link": "https://leetcode.com/problems/sudoku-solver/",
+      "solution": {
+        "approach": [
+          "Backtracking: find an empty cell, try digits 1–9 that don't clash in the row, column, or 3×3 box.",
+          "Recurse after each placement; if a branch fails, erase the digit and try the next. Bitmask/array masks make conflict checks O(1)."
+        ],
+        "complexity": {
+          "time": "O(9^(empty))",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    bool valid(vector<vector<char>>& b, int r, int c, char d) {\n        for (int i = 0; i < 9; i++) {\n            if (b[r][i] == d || b[i][c] == d) return false;\n            if (b[3*(r/3) + i/3][3*(c/3) + i%3] == d) return false;\n        }\n        return true;\n    }\n    bool solve(vector<vector<char>>& b) {\n        for (int r = 0; r < 9; r++)\n            for (int c = 0; c < 9; c++)\n                if (b[r][c] == '.') {\n                    for (char d = '1'; d <= '9'; d++)\n                        if (valid(b, r, c, d)) {\n                            b[r][c] = d;\n                            if (solve(b)) return true;\n                            b[r][c] = '.';\n                        }\n                    return false;\n                }\n        return true;\n    }\npublic:\n    void solveSudoku(vector<vector<char>>& board) { solve(board); }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def solveSudoku(self, board: list[list[str]]) -> None:\n        def valid(r, c, d):\n            for i in range(9):\n                if board[r][i] == d or board[i][c] == d:\n                    return False\n                if board[3*(r//3) + i//3][3*(c//3) + i%3] == d:\n                    return False\n            return True\n        def solve():\n            for r in range(9):\n                for c in range(9):\n                    if board[r][c] == '.':\n                        for d in '123456789':\n                            if valid(r, c, d):\n                                board[r][c] = d\n                                if solve():\n                                    return True\n                                board[r][c] = '.'\n                        return False\n            return True\n        solve()"
+          }
+        ]
+      }
     },
     {
       "id": "nq4",
@@ -129,7 +195,29 @@
       "statement": "Find a word path in a grid.",
       "hint": "DFS backtracking with a visited mark restored on return.",
       "tests": "Grid backtracking.",
-      "link": "https://leetcode.com/problems/word-search/"
+      "link": "https://leetcode.com/problems/word-search/",
+      "solution": {
+        "approach": [
+          "DFS from every cell that matches the first letter, marking visited cells along the path.",
+          "Recurse to neighbours for the next letter; restore the cell on backtrack. Succeed when the whole word is matched."
+        ],
+        "complexity": {
+          "time": "O(R·C·4^L)",
+          "space": "O(L)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int R, C; string w;\n    bool dfs(vector<vector<char>>& b, int r, int c, int k) {\n        if (k == (int)w.size()) return true;\n        if (r < 0 || c < 0 || r >= R || c >= C || b[r][c] != w[k]) return false;\n        char tmp = b[r][c]; b[r][c] = '#';\n        bool found = dfs(b, r+1, c, k+1) || dfs(b, r-1, c, k+1) || dfs(b, r, c+1, k+1) || dfs(b, r, c-1, k+1);\n        b[r][c] = tmp;\n        return found;\n    }\npublic:\n    bool exist(vector<vector<char>>& board, string word) {\n        R = board.size(); C = board[0].size(); w = word;\n        for (int r = 0; r < R; r++)\n            for (int c = 0; c < C; c++)\n                if (dfs(board, r, c, 0)) return true;\n        return false;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def exist(self, board: list[list[str]], word: str) -> bool:\n        R, C = len(board), len(board[0])\n        def dfs(r, c, k):\n            if k == len(word):\n                return True\n            if r < 0 or c < 0 or r >= R or c >= C or board[r][c] != word[k]:\n                return False\n            tmp = board[r][c]; board[r][c] = '#'\n            found = (dfs(r+1, c, k+1) or dfs(r-1, c, k+1) or\n                     dfs(r, c+1, k+1) or dfs(r, c-1, k+1))\n            board[r][c] = tmp\n            return found\n        return any(dfs(r, c, 0) for r in range(R) for c in range(C))"
+          }
+        ]
+      }
     },
     {
       "id": "nq5",
@@ -138,7 +226,29 @@
       "statement": "Partition into k equal-sum groups.",
       "hint": "Backtrack assigning numbers to buckets with pruning.",
       "tests": "Assignment backtracking.",
-      "link": "https://leetcode.com/problems/partition-to-k-equal-sum-subsets/"
+      "link": "https://leetcode.com/problems/partition-to-k-equal-sum-subsets/",
+      "solution": {
+        "approach": [
+          "If total isn't divisible by k, fail. Otherwise backtrack filling k buckets to target each.",
+          "Sort descending to prune fast; skip duplicate bucket states and stop a branch as soon as a bucket overshoots target. (Bitmask DP is the polynomial-space alternative.)"
+        ],
+        "complexity": {
+          "time": "O(k · 2^n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    bool canPartitionKSubsets(vector<int>& nums, int k) {\n        int total = accumulate(nums.begin(), nums.end(), 0);\n        if (total % k) return false;\n        int target = total / k;\n        sort(nums.rbegin(), nums.rend());\n        if (nums[0] > target) return false;\n        vector<int> buckets(k, 0);\n        function<bool(int)> dfs = [&](int i) {\n            if (i == (int)nums.size()) return true;\n            for (int b = 0; b < k; b++) {\n                if (buckets[b] + nums[i] <= target) {\n                    buckets[b] += nums[i];\n                    if (dfs(i + 1)) return true;\n                    buckets[b] -= nums[i];\n                }\n                if (buckets[b] == 0) break;   // prune symmetric empty buckets\n            }\n            return false;\n        };\n        return dfs(0);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def canPartitionKSubsets(self, nums: list[int], k: int) -> bool:\n        total = sum(nums)\n        if total % k:\n            return False\n        target = total // k\n        nums.sort(reverse=True)\n        if nums[0] > target:\n            return False\n        buckets = [0] * k\n        def dfs(i):\n            if i == len(nums):\n                return True\n            for b in range(k):\n                if buckets[b] + nums[i] <= target:\n                    buckets[b] += nums[i]\n                    if dfs(i + 1):\n                        return True\n                    buckets[b] -= nums[i]\n                if buckets[b] == 0:\n                    break\n            return False\n        return dfs(0)"
+          }
+        ]
+      }
     }
   ]
 }

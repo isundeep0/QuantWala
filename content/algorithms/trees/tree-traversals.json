@@ -102,7 +102,29 @@
       "statement": "Return the in-order traversal of a binary tree.",
       "hint": "Recursion, or an explicit stack pushing left spines.",
       "tests": "In-order DFS.",
-      "link": "https://leetcode.com/problems/binary-tree-inorder-traversal/"
+      "link": "https://leetcode.com/problems/binary-tree-inorder-traversal/",
+      "solution": {
+        "approach": [
+          "Inorder = left, node, right. Iteratively push all left descendants, then pop to visit and move to the right child.",
+          "A stack replaces recursion; each node is pushed and popped once."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(h)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> inorderTraversal(TreeNode* root) {\n        vector<int> res; stack<TreeNode*> st; TreeNode* cur = root;\n        while (cur || !st.empty()) {\n            while (cur) { st.push(cur); cur = cur->left; }\n            cur = st.top(); st.pop();\n            res.push_back(cur->val);\n            cur = cur->right;\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def inorderTraversal(self, root) -> list[int]:\n        res, st, cur = [], [], root\n        while cur or st:\n            while cur:\n                st.append(cur)\n                cur = cur.left\n            cur = st.pop()\n            res.append(cur.val)\n            cur = cur.right\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "tt2",
@@ -111,7 +133,29 @@
       "statement": "Return node values grouped by level.",
       "hint": "BFS, capturing the queue size to delimit each level.",
       "tests": "BFS by levels.",
-      "link": "https://leetcode.com/problems/binary-tree-level-order-traversal/"
+      "link": "https://leetcode.com/problems/binary-tree-level-order-traversal/",
+      "solution": {
+        "approach": [
+          "Breadth-first with a queue. Process one full level at a time by capturing the queue's size before the loop.",
+          "Append each level's values as a sub-list."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<vector<int>> levelOrder(TreeNode* root) {\n        vector<vector<int>> res; if (!root) return res;\n        queue<TreeNode*> q; q.push(root);\n        while (!q.empty()) {\n            int sz = q.size(); vector<int> level;\n            while (sz--) {\n                TreeNode* n = q.front(); q.pop();\n                level.push_back(n->val);\n                if (n->left) q.push(n->left);\n                if (n->right) q.push(n->right);\n            }\n            res.push_back(level);\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def levelOrder(self, root) -> list[list[int]]:\n        if not root:\n            return []\n        res, q = [], deque([root])\n        while q:\n            level = []\n            for _ in range(len(q)):\n                n = q.popleft()\n                level.append(n.val)\n                if n.left: q.append(n.left)\n                if n.right: q.append(n.right)\n            res.append(level)\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "tt3",
@@ -120,7 +164,29 @@
       "statement": "Check whether a tree is a valid BST.",
       "hint": "In-order traversal must be strictly increasing.",
       "tests": "In-order property of BSTs.",
-      "link": "https://leetcode.com/problems/validate-binary-search-tree/"
+      "link": "https://leetcode.com/problems/validate-binary-search-tree/",
+      "solution": {
+        "approach": [
+          "A BST is valid iff an inorder traversal is strictly increasing, or equivalently every node lies within a (low, high) bound inherited from ancestors.",
+          "Recurse passing tightened bounds: left child must be < node, right child > node."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(h)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    bool valid(TreeNode* r, long long lo, long long hi) {\n        if (!r) return true;\n        if (r->val <= lo || r->val >= hi) return false;\n        return valid(r->left, lo, r->val) && valid(r->right, r->val, hi);\n    }\npublic:\n    bool isValidBST(TreeNode* root) { return valid(root, LLONG_MIN, LLONG_MAX); }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def isValidBST(self, root) -> bool:\n        def valid(r, lo, hi):\n            if not r:\n                return True\n            if not (lo < r.val < hi):\n                return False\n            return valid(r.left, lo, r.val) and valid(r.right, r.val, hi)\n        return valid(root, float('-inf'), float('inf'))"
+          }
+        ]
+      }
     },
     {
       "id": "tt4",
@@ -129,7 +195,29 @@
       "statement": "Rebuild a binary tree from its pre-order and in-order arrays.",
       "hint": "Pre-order gives the root; in-order splits left/right subtrees.",
       "tests": "Relationship between traversal orders.",
-      "link": "https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/"
+      "link": "https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/",
+      "solution": {
+        "approach": [
+          "The first preorder element is the root; its position in inorder splits left and right subtrees.",
+          "Use a hash map of value→inorder index and a moving preorder pointer to build the tree recursively in O(n)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    unordered_map<int,int> pos; int idx = 0; vector<int> pre;\n    TreeNode* build(vector<int>& in, int lo, int hi) {\n        if (lo > hi) return nullptr;\n        int rootVal = pre[idx++];\n        TreeNode* root = new TreeNode(rootVal);\n        int mid = pos[rootVal];\n        root->left = build(in, lo, mid - 1);\n        root->right = build(in, mid + 1, hi);\n        return root;\n    }\npublic:\n    TreeNode* buildTree(vector<int>& preorder, vector<int>& inorder) {\n        pre = preorder;\n        for (int i = 0; i < (int)inorder.size(); i++) pos[inorder[i]] = i;\n        return build(inorder, 0, inorder.size() - 1);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def buildTree(self, preorder, inorder):\n        pos = {v: i for i, v in enumerate(inorder)}\n        self.idx = 0\n        def build(lo, hi):\n            if lo > hi:\n                return None\n            val = preorder[self.idx]\n            self.idx += 1\n            root = TreeNode(val)\n            mid = pos[val]\n            root.left = build(lo, mid - 1)\n            root.right = build(mid + 1, hi)\n            return root\n        return build(0, len(inorder) - 1)"
+          }
+        ]
+      }
     },
     {
       "id": "tt5",
@@ -138,7 +226,29 @@
       "statement": "Return the values visible from the right side.",
       "hint": "BFS and take the last node per level (or DFS visiting right first).",
       "tests": "Level traversal with selection.",
-      "link": "https://leetcode.com/problems/binary-tree-right-side-view/"
+      "link": "https://leetcode.com/problems/binary-tree-right-side-view/",
+      "solution": {
+        "approach": [
+          "The right side view is the last node seen at each level in a BFS.",
+          "Do level-order traversal and record the final node of every level. (A right-first DFS tracking depth also works.)"
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> rightSideView(TreeNode* root) {\n        vector<int> res; if (!root) return res;\n        queue<TreeNode*> q; q.push(root);\n        while (!q.empty()) {\n            int sz = q.size();\n            for (int i = 0; i < sz; i++) {\n                TreeNode* n = q.front(); q.pop();\n                if (i == sz - 1) res.push_back(n->val);\n                if (n->left) q.push(n->left);\n                if (n->right) q.push(n->right);\n            }\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def rightSideView(self, root) -> list[int]:\n        if not root:\n            return []\n        res, q = [], deque([root])\n        while q:\n            sz = len(q)\n            for i in range(sz):\n                n = q.popleft()\n                if i == sz - 1:\n                    res.append(n.val)\n                if n.left: q.append(n.left)\n                if n.right: q.append(n.right)\n        return res"
+          }
+        ]
+      }
     }
   ]
 }

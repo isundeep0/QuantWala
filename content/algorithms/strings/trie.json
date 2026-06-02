@@ -5,7 +5,7 @@
   "title": "Trie (Prefix Tree)",
   "tagline": "A tree of characters for O(L) insert/search and lightning-fast prefix queries.",
   "estMinutes": 18,
-  "simulator": null,
+  "simulator": "trie",
   "complexity": {
     "time": "O(L) per op",
     "space": "O(total chars)"
@@ -102,7 +102,29 @@
       "statement": "Support insert, search, startsWith.",
       "hint": "Children array + end flag.",
       "tests": "Core trie.",
-      "link": "https://leetcode.com/problems/implement-trie-prefix-tree/"
+      "link": "https://leetcode.com/problems/implement-trie-prefix-tree/",
+      "solution": {
+        "approach": [
+          "A trie node has up to 26 children and an end-of-word flag. insert/search/startsWith all walk the tree letter by letter.",
+          "Each operation is O(word length)."
+        ],
+        "complexity": {
+          "time": "O(L) per op",
+          "space": "O(total letters)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Trie {\n    struct Node { Node* ch[26] = {}; bool end = false; };\n    Node* root;\n    Node* walk(const string& w) { Node* cur = root; for (char c : w) { if (!cur->ch[c-'a']) return nullptr; cur = cur->ch[c-'a']; } return cur; }\npublic:\n    Trie() { root = new Node(); }\n    void insert(string w) { Node* cur = root; for (char c : w) { if (!cur->ch[c-'a']) cur->ch[c-'a'] = new Node(); cur = cur->ch[c-'a']; } cur->end = true; }\n    bool search(string w) { Node* n = walk(w); return n && n->end; }\n    bool startsWith(string p) { return walk(p) != nullptr; }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Trie:\n    def __init__(self):\n        self.root = {}\n    def insert(self, w: str) -> None:\n        node = self.root\n        for c in w:\n            node = node.setdefault(c, {})\n        node['$'] = True\n    def _walk(self, w):\n        node = self.root\n        for c in w:\n            if c not in node:\n                return None\n            node = node[c]\n        return node\n    def search(self, w: str) -> bool:\n        node = self._walk(w)\n        return node is not None and '$' in node\n    def startsWith(self, p: str) -> bool:\n        return self._walk(p) is not None"
+          }
+        ]
+      }
     },
     {
       "id": "tr2",
@@ -111,7 +133,29 @@
       "statement": "Find all dictionary words on a board.",
       "hint": "Build a trie of words, DFS the board with pruning.",
       "tests": "Trie + backtracking.",
-      "link": "https://leetcode.com/problems/word-search-ii/"
+      "link": "https://leetcode.com/problems/word-search-ii/",
+      "solution": {
+        "approach": [
+          "Insert all words into a trie, then DFS the grid once, descending the trie in lockstep with the path.",
+          "When a trie node marks a complete word, record it (and clear it to avoid duplicates). The trie prunes impossible directions early."
+        ],
+        "complexity": {
+          "time": "O(R·C·4^L)",
+          "space": "O(total letters)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    struct Node { Node* ch[26] = {}; string word; };\n    int R, C; vector<string> res;\n    void dfs(vector<vector<char>>& b, int r, int c, Node* node) {\n        if (r < 0 || c < 0 || r >= R || c >= C || b[r][c] == '#') return;\n        char ch = b[r][c]; Node* nxt = node->ch[ch-'a'];\n        if (!nxt) return;\n        if (!nxt->word.empty()) { res.push_back(nxt->word); nxt->word.clear(); }\n        b[r][c] = '#';\n        dfs(b, r+1, c, nxt); dfs(b, r-1, c, nxt); dfs(b, r, c+1, nxt); dfs(b, r, c-1, nxt);\n        b[r][c] = ch;\n    }\npublic:\n    vector<string> findWords(vector<vector<char>>& board, vector<string>& words) {\n        Node* root = new Node();\n        for (auto& w : words) { Node* cur = root; for (char c : w) { if (!cur->ch[c-'a']) cur->ch[c-'a'] = new Node(); cur = cur->ch[c-'a']; } cur->word = w; }\n        R = board.size(); C = board[0].size();\n        for (int r = 0; r < R; r++) for (int c = 0; c < C; c++) dfs(board, r, c, root);\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findWords(self, board, words):\n        trie = {}\n        for w in words:\n            node = trie\n            for ch in w:\n                node = node.setdefault(ch, {})\n            node['$'] = w\n        R, C, res = len(board), len(board[0]), []\n        def dfs(r, c, node):\n            ch = board[r][c]\n            if ch not in node:\n                return\n            nxt = node[ch]\n            if '$' in nxt:\n                res.append(nxt['$']); del nxt['$']\n            board[r][c] = '#'\n            for nr, nc in ((r+1,c),(r-1,c),(r,c+1),(r,c-1)):\n                if 0 <= nr < R and 0 <= nc < C and board[nr][nc] != '#':\n                    dfs(nr, nc, nxt)\n            board[r][c] = ch\n        for r in range(R):\n            for c in range(C):\n                dfs(r, c, trie)\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "tr3",
@@ -120,7 +164,29 @@
       "statement": "Support '.' wildcard searches.",
       "hint": "Trie with branching DFS on wildcards.",
       "tests": "Trie with wildcards.",
-      "link": "https://leetcode.com/problems/design-add-and-search-words-data-structure/"
+      "link": "https://leetcode.com/problems/design-add-and-search-words-data-structure/",
+      "solution": {
+        "approach": [
+          "Insert words into a trie. For search, '.' matches any child, so the search branches at dots — handle it with recursion (or DFS).",
+          "At a '.', recurse into every existing child; otherwise follow the single matching edge."
+        ],
+        "complexity": {
+          "time": "O(L) average, O(26^dots) worst",
+          "space": "O(total letters)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class WordDictionary {\n    struct Node { Node* ch[26] = {}; bool end = false; };\n    Node* root;\n    bool dfs(Node* node, const string& w, int i) {\n        if (!node) return false;\n        if (i == (int)w.size()) return node->end;\n        if (w[i] == '.') {\n            for (int c = 0; c < 26; c++) if (dfs(node->ch[c], w, i + 1)) return true;\n            return false;\n        }\n        return dfs(node->ch[w[i]-'a'], w, i + 1);\n    }\npublic:\n    WordDictionary() { root = new Node(); }\n    void addWord(string w) { Node* cur = root; for (char c : w) { if (!cur->ch[c-'a']) cur->ch[c-'a'] = new Node(); cur = cur->ch[c-'a']; } cur->end = true; }\n    bool search(string w) { return dfs(root, w, 0); }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class WordDictionary:\n    def __init__(self):\n        self.root = {}\n    def addWord(self, w: str) -> None:\n        node = self.root\n        for c in w:\n            node = node.setdefault(c, {})\n        node['$'] = True\n    def search(self, w: str) -> bool:\n        def dfs(node, i):\n            if i == len(w):\n                return '$' in node\n            c = w[i]\n            if c == '.':\n                return any(dfs(child, i + 1) for k, child in node.items() if k != '$')\n            return c in node and dfs(node[c], i + 1)\n        return dfs(self.root, 0)"
+          }
+        ]
+      }
     },
     {
       "id": "tr4",
@@ -129,7 +195,29 @@
       "statement": "Max XOR pair in an array.",
       "hint": "Binary trie over bits; greedily pick opposite bits.",
       "tests": "Bitwise trie.",
-      "link": "https://leetcode.com/problems/maximum-xor-of-two-numbers-in-an-array/"
+      "link": "https://leetcode.com/problems/maximum-xor-of-two-numbers-in-an-array/",
+      "solution": {
+        "approach": [
+          "Insert each number's 32-bit binary into a binary trie (bit 0/1 children). To maximise XOR with a number, greedily pick the opposite bit at each level.",
+          "For every number, traverse the trie choosing the complementary bit when possible; track the best XOR."
+        ],
+        "complexity": {
+          "time": "O(32 n)",
+          "space": "O(32 n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    struct Node { Node* ch[2] = {}; };\npublic:\n    int findMaximumXOR(vector<int>& nums) {\n        Node* root = new Node();\n        for (int x : nums) {\n            Node* cur = root;\n            for (int b = 31; b >= 0; b--) { int bit = (x >> b) & 1; if (!cur->ch[bit]) cur->ch[bit] = new Node(); cur = cur->ch[bit]; }\n        }\n        int best = 0;\n        for (int x : nums) {\n            Node* cur = root; int curXor = 0;\n            for (int b = 31; b >= 0; b--) {\n                int bit = (x >> b) & 1;\n                if (cur->ch[1 - bit]) { curXor |= (1 << b); cur = cur->ch[1 - bit]; }\n                else cur = cur->ch[bit];\n            }\n            best = max(best, curXor);\n        }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findMaximumXOR(self, nums: list[int]) -> int:\n        root = {}\n        for x in nums:\n            node = root\n            for b in range(31, -1, -1):\n                bit = (x >> b) & 1\n                node = node.setdefault(bit, {})\n        best = 0\n        for x in nums:\n            node = root\n            cur = 0\n            for b in range(31, -1, -1):\n                bit = (x >> b) & 1\n                want = 1 - bit\n                if want in node:\n                    cur |= (1 << b); node = node[want]\n                else:\n                    node = node[bit]\n            best = max(best, cur)\n        return best"
+          }
+        ]
+      }
     },
     {
       "id": "tr5",
@@ -138,7 +226,29 @@
       "statement": "Replace words by their shortest dictionary root.",
       "hint": "Trie of roots; match the shortest prefix.",
       "tests": "Prefix replacement.",
-      "link": "https://leetcode.com/problems/replace-words/"
+      "link": "https://leetcode.com/problems/replace-words/",
+      "solution": {
+        "approach": [
+          "Insert all roots into a trie. For each word, walk the trie until the first end-of-root and replace the word with that shortest root.",
+          "If no root matches, keep the original word."
+        ],
+        "complexity": {
+          "time": "O(total letters)",
+          "space": "O(total letters)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    struct Node { Node* ch[26] = {}; bool end = false; };\npublic:\n    string replaceWords(vector<string>& dict, string sentence) {\n        Node* root = new Node();\n        for (auto& w : dict) { Node* cur = root; for (char c : w) { if (!cur->ch[c-'a']) cur->ch[c-'a'] = new Node(); cur = cur->ch[c-'a']; } cur->end = true; }\n        stringstream ss(sentence); string word, res;\n        while (ss >> word) {\n            Node* cur = root; string pre;\n            for (char c : word) {\n                if (!cur->ch[c-'a'] || cur->end) break;\n                pre += c; cur = cur->ch[c-'a'];\n            }\n            if (!res.empty()) res += \" \";\n            res += (cur->end ? pre : word);\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def replaceWords(self, dictionary: list[str], sentence: str) -> str:\n        trie = {}\n        for w in dictionary:\n            node = trie\n            for c in w:\n                node = node.setdefault(c, {})\n            node['$'] = True\n        def shorten(word):\n            node = trie\n            pre = []\n            for c in word:\n                if c not in node or '$' in node:\n                    break\n                pre.append(c)\n                node = node[c]\n            return \"\".join(pre) if '$' in node else word\n        return \" \".join(shorten(w) for w in sentence.split())"
+          }
+        ]
+      }
     }
   ]
 }

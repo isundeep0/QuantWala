@@ -5,7 +5,7 @@
   "title": "Z-Algorithm",
   "tagline": "For each position, the length of the longest prefix match — linear-time matching and periodicity.",
   "estMinutes": 18,
-  "simulator": null,
+  "simulator": "z-algorithm",
   "complexity": {
     "time": "O(n)",
     "space": "O(n)"
@@ -102,7 +102,29 @@
       "statement": "Find a needle in a haystack.",
       "hint": "Z-array of needle + '#' + haystack.",
       "tests": "Z for matching.",
-      "link": "https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/"
+      "link": "https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/",
+      "solution": {
+        "approach": [
+          "Form pattern + '#' + text and compute the Z-array (z[i] = longest prefix match starting at i).",
+          "Any position in the text part where z[i] equals the pattern length marks a full occurrence."
+        ],
+        "complexity": {
+          "time": "O(n + m)",
+          "space": "O(n + m)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<int> zfunc(const string& s) {\n        int n = s.size(); vector<int> z(n, 0); z[0] = n;\n        for (int i = 1, l = 0, r = 0; i < n; i++) {\n            if (i < r) z[i] = min(r - i, z[i - l]);\n            while (i + z[i] < n && s[z[i]] == s[i + z[i]]) z[i]++;\n            if (i + z[i] > r) { l = i; r = i + z[i]; }\n        }\n        return z;\n    }\npublic:\n    int strStr(string h, string n) {\n        if (n.empty()) return 0;\n        string s = n + \"#\" + h;\n        auto z = zfunc(s); int m = n.size();\n        for (int i = m + 1; i < (int)s.size(); i++)\n            if (z[i] >= m) return i - m - 1;\n        return -1;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def strStr(self, h: str, n: str) -> int:\n        if not n:\n            return 0\n        s = n + \"#\" + h\n        z = [0] * len(s)\n        z[0] = len(s)\n        l = r = 0\n        for i in range(1, len(s)):\n            if i < r:\n                z[i] = min(r - i, z[i - l])\n            while i + z[i] < len(s) and s[z[i]] == s[i + z[i]]:\n                z[i] += 1\n            if i + z[i] > r:\n                l, r = i, i + z[i]\n        m = len(n)\n        for i in range(m + 1, len(s)):\n            if z[i] >= m:\n                return i - m - 1\n        return -1"
+          }
+        ]
+      }
     },
     {
       "id": "z2",
@@ -111,7 +133,29 @@
       "statement": "Longest prefix that is also a suffix.",
       "hint": "Largest i with i + z[i] == n.",
       "tests": "Z for borders.",
-      "link": "https://leetcode.com/problems/longest-happy-prefix/"
+      "link": "https://leetcode.com/problems/longest-happy-prefix/",
+      "solution": {
+        "approach": [
+          "A happy prefix is a proper prefix that's also a suffix. Compute the Z-array; at position i, if z[i] == n - i then the suffix starting at i equals a prefix — a candidate.",
+          "Take the longest such suffix (smallest i) and return that prefix."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    string longestPrefix(string s) {\n        int n = s.size(); vector<int> z(n, 0); z[0] = n;\n        for (int i = 1, l = 0, r = 0; i < n; i++) {\n            if (i < r) z[i] = min(r - i, z[i - l]);\n            while (i + z[i] < n && s[z[i]] == s[i + z[i]]) z[i]++;\n            if (i + z[i] > r) { l = i; r = i + z[i]; }\n        }\n        for (int i = 1; i < n; i++) if (z[i] == n - i) return s.substr(0, z[i]);\n        return \"\";\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def longestPrefix(self, s: str) -> str:\n        n = len(s)\n        z = [0] * n\n        z[0] = n\n        l = r = 0\n        for i in range(1, n):\n            if i < r:\n                z[i] = min(r - i, z[i - l])\n            while i + z[i] < n and s[z[i]] == s[i + z[i]]:\n                z[i] += 1\n            if i + z[i] > r:\n                l, r = i, i + z[i]\n        for i in range(1, n):\n            if z[i] == n - i:\n                return s[:z[i]]\n        return "
+          }
+        ]
+      }
     },
     {
       "id": "z3",
@@ -120,7 +164,29 @@
       "statement": "Sum of prefix-match scores for all suffixes.",
       "hint": "Directly sum the Z-array (+ n).",
       "tests": "Z-array aggregation.",
-      "link": "https://leetcode.com/problems/sum-of-scores-of-built-strings/"
+      "link": "https://leetcode.com/problems/sum-of-scores-of-built-strings/",
+      "solution": {
+        "approach": [
+          "The 'score' of the i-th built string (the suffix starting at i) is the length of its longest prefix shared with the whole string — exactly z[i].",
+          "Compute the Z-array (with z[0] = n) and sum all values."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    long long sumScores(string s) {\n        int n = s.size(); vector<int> z(n, 0); z[0] = n;\n        for (int i = 1, l = 0, r = 0; i < n; i++) {\n            if (i < r) z[i] = min(r - i, z[i - l]);\n            while (i + z[i] < n && s[z[i]] == s[i + z[i]]) z[i]++;\n            if (i + z[i] > r) { l = i; r = i + z[i]; }\n        }\n        long long sum = 0;\n        for (int x : z) sum += x;\n        return sum;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def sumScores(self, s: str) -> int:\n        n = len(s)\n        z = [0] * n\n        z[0] = n\n        l = r = 0\n        for i in range(1, n):\n            if i < r:\n                z[i] = min(r - i, z[i - l])\n            while i + z[i] < n and s[z[i]] == s[i + z[i]]:\n                z[i] += 1\n            if i + z[i] > r:\n                l, r = i, i + z[i]\n        return sum(z)"
+          }
+        ]
+      }
     },
     {
       "id": "z4",
@@ -129,7 +195,29 @@
       "statement": "Count substrings of form t+t.",
       "hint": "Z-function / hashing to detect repeats.",
       "tests": "Repeat detection.",
-      "link": "https://leetcode.com/problems/distinct-echo-substrings/"
+      "link": "https://leetcode.com/problems/distinct-echo-substrings/",
+      "solution": {
+        "approach": [
+          "An echo substring is t+t. Using prefix hashes, for each half-length L and start i compare the two halves in O(1).",
+          "Collect distinct echoes by hash. (The Z-array can also detect equal halves; hashing keeps it simple.)"
+        ],
+        "complexity": {
+          "time": "O(n^2) average",
+          "space": "O(n^2)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int distinctEchoSubstrings(string text) {\n        int n = text.size();\n        const long long MOD = (1LL << 61) - 1, B = 131;\n        vector<long long> h(n + 1, 0), pw(n + 1, 1);\n        for (int i = 0; i < n; i++) { h[i+1] = ((__int128)h[i] * B + text[i]) % MOD; pw[i+1] = (__int128)pw[i] * B % MOD; }\n        auto sub = [&](int l, int r){ return (h[r] - (__int128)h[l] * pw[r - l] % MOD + MOD) % MOD; };\n        unordered_set<long long> seen;\n        for (int len = 1; 2 * len <= n; len++)\n            for (int i = 0; i + 2 * len <= n; i++)\n                if (sub(i, i + len) == sub(i + len, i + 2 * len)) seen.insert(sub(i, i + 2 * len));\n        return seen.size();\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def distinctEchoSubstrings(self, text: str) -> int:\n        n = len(text)\n        MOD, B = (1 << 61) - 1, 131\n        h = [0] * (n + 1)\n        pw = [1] * (n + 1)\n        for i in range(n):\n            h[i+1] = (h[i] * B + ord(text[i])) % MOD\n            pw[i+1] = pw[i] * B % MOD\n        def sub(l, r):\n            return (h[r] - h[l] * pw[r - l]) % MOD\n        seen = set()\n        for length in range(1, n // 2 + 1):\n            for i in range(n - 2 * length + 1):\n                if sub(i, i + length) == sub(i + length, i + 2 * length):\n                    seen.add(sub(i, i + 2 * length))\n        return len(seen)"
+          }
+        ]
+      }
     },
     {
       "id": "z5",
@@ -138,7 +226,29 @@
       "statement": "Which words are substrings of others.",
       "hint": "Z-algorithm or simple matching.",
       "tests": "Substring checks.",
-      "link": "https://leetcode.com/problems/string-matching-in-an-array/"
+      "link": "https://leetcode.com/problems/string-matching-in-an-array/",
+      "solution": {
+        "approach": [
+          "A word is counted if it appears as a substring of any other word.",
+          "For each word, check whether it is contained in any other (built-in substring search / Z-matching). Collect those that are."
+        ],
+        "complexity": {
+          "time": "O(n^2 · L)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<string> stringMatching(vector<string>& words) {\n        vector<string> res;\n        for (int i = 0; i < (int)words.size(); i++)\n            for (int j = 0; j < (int)words.size(); j++)\n                if (i != j && words[j].find(words[i]) != string::npos) { res.push_back(words[i]); break; }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def stringMatching(self, words: list[str]) -> list[str]:\n        res = []\n        for i, w in enumerate(words):\n            if any(i != j and w in other for j, other in enumerate(words)):\n                res.append(w)\n        return res"
+          }
+        ]
+      }
     }
   ]
 }

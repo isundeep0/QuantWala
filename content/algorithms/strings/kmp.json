@@ -102,7 +102,29 @@
       "statement": "Find the first occurrence of a needle in a haystack.",
       "hint": "Direct KMP (or Z-algorithm).",
       "tests": "Core pattern matching.",
-      "link": "https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/"
+      "link": "https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/",
+      "solution": {
+        "approach": [
+          "KMP avoids re-checking matched characters. Precompute the failure (longest-proper-prefix-that-is-also-suffix) array of the pattern.",
+          "Scan the text once; on a mismatch, fall back via the failure array instead of restarting. O(n+m)."
+        ],
+        "complexity": {
+          "time": "O(n + m)",
+          "space": "O(m)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int strStr(string h, string n) {\n        if (n.empty()) return 0;\n        int m = n.size();\n        vector<int> lps(m, 0);\n        for (int i = 1, len = 0; i < m; ) {\n            if (n[i] == n[len]) lps[i++] = ++len;\n            else if (len) len = lps[len - 1];\n            else lps[i++] = 0;\n        }\n        for (int i = 0, j = 0; i < (int)h.size(); ) {\n            if (h[i] == n[j]) { i++; j++; if (j == m) return i - m; }\n            else if (j) j = lps[j - 1];\n            else i++;\n        }\n        return -1;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def strStr(self, h: str, n: str) -> int:\n        if not n:\n            return 0\n        m = len(n)\n        lps = [0] * m\n        length = 0\n        i = 1\n        while i < m:\n            if n[i] == n[length]:\n                length += 1; lps[i] = length; i += 1\n            elif length:\n                length = lps[length - 1]\n            else:\n                lps[i] = 0; i += 1\n        i = j = 0\n        while i < len(h):\n            if h[i] == n[j]:\n                i += 1; j += 1\n                if j == m:\n                    return i - m\n            elif j:\n                j = lps[j - 1]\n            else:\n                i += 1\n        return -1"
+          }
+        ]
+      }
     },
     {
       "id": "kmp2",
@@ -111,7 +133,29 @@
       "statement": "Fewest repeats of A so that B is a substring.",
       "hint": "KMP search of B in repeated A.",
       "tests": "KMP on a built text.",
-      "link": "https://leetcode.com/problems/repeated-string-match/"
+      "link": "https://leetcode.com/problems/repeated-string-match/",
+      "solution": {
+        "approach": [
+          "If b is a substring of a repeated k times, k is at least ceil(len(b)/len(a)); one extra copy covers an offset overflow.",
+          "Repeat a until its length >= len(b), test with KMP/find, then try one more repeat. If still absent, return -1."
+        ],
+        "complexity": {
+          "time": "O(n + m)",
+          "space": "O(n + m)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int repeatedStringMatch(string a, string b) {\n        string s = a;\n        int count = 1;\n        while ((int)s.size() < (int)b.size()) { s += a; count++; }\n        if (s.find(b) != string::npos) return count;\n        s += a;\n        if (s.find(b) != string::npos) return count + 1;\n        return -1;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def repeatedStringMatch(self, a: str, b: str) -> int:\n        s = a\n        count = 1\n        while len(s) < len(b):\n            s += a; count += 1\n        if b in s:\n            return count\n        if b in s + a:\n            return count + 1\n        return -1"
+          }
+        ]
+      }
     },
     {
       "id": "kmp3",
@@ -120,7 +164,29 @@
       "statement": "Prepend characters to make the shortest palindrome.",
       "hint": "lps of s + '#' + reverse(s) gives the longest palindromic prefix.",
       "tests": "Prefix-function trick.",
-      "link": "https://leetcode.com/problems/shortest-palindrome/"
+      "link": "https://leetcode.com/problems/shortest-palindrome/",
+      "solution": {
+        "approach": [
+          "We prepend the fewest characters to make s a palindrome — equivalent to finding the longest palindromic prefix of s.",
+          "Build the string s + '#' + reverse(s) and compute its KMP failure value; that value is the longest prefix of s that is also a suffix of reverse(s) — i.e. the longest palindromic prefix. Prepend the rest reversed."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    string shortestPalindrome(string s) {\n        string rev(s.rbegin(), s.rend());\n        string t = s + \"#\" + rev;\n        int m = t.size();\n        vector<int> lps(m, 0);\n        for (int i = 1, len = 0; i < m; ) {\n            if (t[i] == t[len]) lps[i++] = ++len;\n            else if (len) len = lps[len - 1];\n            else lps[i++] = 0;\n        }\n        int pal = lps[m - 1];\n        return rev.substr(0, s.size() - pal) + s;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def shortestPalindrome(self, s: str) -> str:\n        rev = s[::-1]\n        t = s + \"#\" + rev\n        m = len(t)\n        lps = [0] * m\n        length = 0\n        for i in range(1, m):\n            while length and t[i] != t[length]:\n                length = lps[length - 1]\n            if t[i] == t[length]:\n                length += 1\n            lps[i] = length\n        pal = lps[-1]\n        return rev[:len(s) - pal] + s"
+          }
+        ]
+      }
     },
     {
       "id": "kmp4",
@@ -129,7 +195,29 @@
       "statement": "Longest non-trivial prefix that is also a suffix.",
       "hint": "It's simply lps[n−1].",
       "tests": "Direct lps application.",
-      "link": "https://leetcode.com/problems/longest-happy-prefix/"
+      "link": "https://leetcode.com/problems/longest-happy-prefix/",
+      "solution": {
+        "approach": [
+          "The longest happy prefix is the longest proper prefix that is also a suffix — exactly lps[n-1] from KMP.",
+          "Compute the failure array of the whole string; the answer is the prefix of that length."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    string longestPrefix(string s) {\n        int n = s.size();\n        vector<int> lps(n, 0);\n        for (int i = 1, len = 0; i < n; ) {\n            if (s[i] == s[len]) lps[i++] = ++len;\n            else if (len) len = lps[len - 1];\n            else lps[i++] = 0;\n        }\n        return s.substr(0, lps[n - 1]);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def longestPrefix(self, s: str) -> str:\n        n = len(s)\n        lps = [0] * n\n        length = 0\n        for i in range(1, n):\n            while length and s[i] != s[length]:\n                length = lps[length - 1]\n            if s[i] == s[length]:\n                length += 1\n            lps[i] = length\n        return s[:lps[-1]]"
+          }
+        ]
+      }
     },
     {
       "id": "kmp5",
@@ -138,7 +226,29 @@
       "statement": "Find anagram start indices.",
       "hint": "Sliding window of counts (contrast with exact KMP matching).",
       "tests": "Matching vs anagram distinction.",
-      "link": "https://leetcode.com/problems/find-all-anagrams-in-a-string/"
+      "link": "https://leetcode.com/problems/find-all-anagrams-in-a-string/",
+      "solution": {
+        "approach": [
+          "An anagram is a fixed-length window whose character counts match p's. Slide a window of length |p| over s maintaining a frequency array.",
+          "Track how many of the 26 counts match; record a start index whenever all match. (KMP doesn't apply here — anagram matching is a counting window, included to contrast pattern-matching tools.)"
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> findAnagrams(string s, string p) {\n        if (p.size() > s.size()) return {};\n        vector<int> need(26, 0), win(26, 0); vector<int> res;\n        for (char c : p) need[c - 'a']++;\n        int k = p.size();\n        for (int i = 0; i < (int)s.size(); i++) {\n            win[s[i] - 'a']++;\n            if (i >= k) win[s[i - k] - 'a']--;\n            if (i >= k - 1 && win == need) res.push_back(i - k + 1);\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findAnagrams(self, s: str, p: str) -> list[int]:\n        if len(p) > len(s):\n            return []\n        need = [0] * 26\n        win = [0] * 26\n        for c in p:\n            need[ord(c) - 97] += 1\n        k = len(p)\n        res = []\n        for i, c in enumerate(s):\n            win[ord(c) - 97] += 1\n            if i >= k:\n                win[ord(s[i - k]) - 97] -= 1\n            if i >= k - 1 and win == need:\n                res.append(i - k + 1)\n        return res"
+          }
+        ]
+      }
     }
   ]
 }

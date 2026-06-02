@@ -5,7 +5,7 @@
   "title": "Merge Sorted Linked Lists",
   "tagline": "Zip two sorted lists into one with a dummy head — the merge step of merge sort, on pointers.",
   "estMinutes": 14,
-  "simulator": null,
+  "simulator": "merge-linked-lists",
   "complexity": {
     "time": "O(n + m)",
     "space": "O(1)"
@@ -107,7 +107,29 @@
       "statement": "Merge two sorted linked lists into one sorted list.",
       "hint": "Dummy head + compare fronts.",
       "tests": "Core two-way merge.",
-      "link": "https://leetcode.com/problems/merge-two-sorted-lists/"
+      "link": "https://leetcode.com/problems/merge-two-sorted-lists/",
+      "solution": {
+        "approach": [
+          "Use a dummy head and a tail pointer. Repeatedly attach the smaller of the two current nodes and advance that list.",
+          "When one list runs out, attach the remainder of the other. O(n+m), O(1) extra."
+        ],
+        "complexity": {
+          "time": "O(n + m)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    ListNode* mergeTwoLists(ListNode* a, ListNode* b) {\n        ListNode dummy, *t = &dummy;\n        while (a && b) {\n            if (a->val <= b->val) { t->next = a; a = a->next; }\n            else { t->next = b; b = b->next; }\n            t = t->next;\n        }\n        t->next = a ? a : b;\n        return dummy.next;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def mergeTwoLists(self, a, b):\n        dummy = tail = ListNode()\n        while a and b:\n            if a.val <= b.val:\n                tail.next, a = a, a.next\n            else:\n                tail.next, b = b, b.next\n            tail = tail.next\n        tail.next = a or b\n        return dummy.next"
+          }
+        ]
+      }
     },
     {
       "id": "ml2",
@@ -116,7 +138,29 @@
       "statement": "Merge k sorted lists into one.",
       "hint": "Pairwise merge in a tournament, or use a min-heap of k heads.",
       "tests": "Generalising merge to k inputs.",
-      "link": "https://leetcode.com/problems/merge-k-sorted-lists/"
+      "link": "https://leetcode.com/problems/merge-k-sorted-lists/",
+      "solution": {
+        "approach": [
+          "Keep a min-heap of the current head of each list. Pop the smallest, append it, and push its successor.",
+          "Each of the n nodes is pushed/popped once at O(log k), giving O(n log k)."
+        ],
+        "complexity": {
+          "time": "O(n log k)",
+          "space": "O(k)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    ListNode* mergeKLists(vector<ListNode*>& lists) {\n        auto cmp = [](ListNode* a, ListNode* b){ return a->val > b->val; };\n        priority_queue<ListNode*, vector<ListNode*>, decltype(cmp)> pq(cmp);\n        for (auto* l : lists) if (l) pq.push(l);\n        ListNode dummy, *t = &dummy;\n        while (!pq.empty()) {\n            ListNode* n = pq.top(); pq.pop();\n            t->next = n; t = n;\n            if (n->next) pq.push(n->next);\n        }\n        return dummy.next;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def mergeKLists(self, lists):\n        heap = []\n        for i, node in enumerate(lists):\n            if node:\n                heapq.heappush(heap, (node.val, i, node))\n        dummy = tail = ListNode()\n        while heap:\n            _, i, node = heapq.heappop(heap)\n            tail.next = node\n            tail = node\n            if node.next:\n                heapq.heappush(heap, (node.next.val, i, node.next))\n        return dummy.next"
+          }
+        ]
+      }
     },
     {
       "id": "ml3",
@@ -125,7 +169,29 @@
       "statement": "Sort a linked list in O(n log n).",
       "hint": "Split with fast/slow, sort halves, merge.",
       "tests": "Merge step inside merge sort.",
-      "link": "https://leetcode.com/problems/sort-list/"
+      "link": "https://leetcode.com/problems/sort-list/",
+      "solution": {
+        "approach": [
+          "Top-down merge sort on the list: split at the middle (slow/fast), sort both halves, and merge.",
+          "Pointer rewiring keeps space at O(log n) recursion only; guaranteed O(n log n)."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(log n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    ListNode* merge(ListNode* a, ListNode* b) {\n        ListNode d, *t = &d;\n        while (a && b) { if (a->val <= b->val) { t->next = a; a = a->next; } else { t->next = b; b = b->next; } t = t->next; }\n        t->next = a ? a : b; return d.next;\n    }\npublic:\n    ListNode* sortList(ListNode* head) {\n        if (!head || !head->next) return head;\n        ListNode *slow = head, *fast = head->next;\n        while (fast && fast->next) { slow = slow->next; fast = fast->next->next; }\n        ListNode* mid = slow->next; slow->next = nullptr;\n        return merge(sortList(head), sortList(mid));\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def sortList(self, head):\n        if not head or not head.next:\n            return head\n        slow, fast = head, head.next\n        while fast and fast.next:\n            slow, fast = slow.next, fast.next.next\n        mid, slow.next = slow.next, None\n        left, right = self.sortList(head), self.sortList(mid)\n        dummy = tail = ListNode()\n        while left and right:\n            if left.val <= right.val:\n                tail.next, left = left, left.next\n            else:\n                tail.next, right = right, right.next\n            tail = tail.next\n        tail.next = left or right\n        return dummy.next"
+          }
+        ]
+      }
     },
     {
       "id": "ml4",
@@ -134,7 +200,29 @@
       "statement": "Merge two sorted arrays in-place into the first.",
       "hint": "Fill from the back to avoid overwriting unprocessed elements.",
       "tests": "Merge logic on arrays, back-to-front.",
-      "link": "https://leetcode.com/problems/merge-sorted-array/"
+      "link": "https://leetcode.com/problems/merge-sorted-array/",
+      "solution": {
+        "approach": [
+          "Merge in place from the back so we never overwrite unmerged values of nums1. Three pointers: ends of the real data in nums1, nums2, and the write position.",
+          "Place the larger of the two tails at the write pointer and step backward. O(m+n)."
+        ],
+        "complexity": {
+          "time": "O(m + n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    void merge(vector<int>& a, int m, vector<int>& b, int n) {\n        int i = m - 1, j = n - 1, k = m + n - 1;\n        while (j >= 0) {\n            if (i >= 0 && a[i] > b[j]) a[k--] = a[i--];\n            else a[k--] = b[j--];\n        }\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def merge(self, a: list[int], m: int, b: list[int], n: int) -> None:\n        i, j, k = m - 1, n - 1, m + n - 1\n        while j >= 0:\n            if i >= 0 and a[i] > b[j]:\n                a[k] = a[i]; i -= 1\n            else:\n                a[k] = b[j]; j -= 1\n            k -= 1"
+          }
+        ]
+      }
     },
     {
       "id": "ml5",
@@ -143,7 +231,29 @@
       "statement": "Add two numbers stored as linked lists (least-significant first).",
       "hint": "Walk both lists together with a carry, building the result with a dummy head.",
       "tests": "Dummy-head construction while traversing two lists.",
-      "link": "https://leetcode.com/problems/add-two-numbers/"
+      "link": "https://leetcode.com/problems/add-two-numbers/",
+      "solution": {
+        "approach": [
+          "Digits are stored in reverse, so we can add front-to-back like grade-school addition, carrying as we go.",
+          "Use a dummy head; at each step sum the two current digits plus carry, create a node with sum%10, carry sum/10. Continue while either list or carry remains."
+        ],
+        "complexity": {
+          "time": "O(max(n, m))",
+          "space": "O(max(n, m))"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    ListNode* addTwoNumbers(ListNode* a, ListNode* b) {\n        ListNode dummy, *t = &dummy; int carry = 0;\n        while (a || b || carry) {\n            int s = carry + (a ? a->val : 0) + (b ? b->val : 0);\n            carry = s / 10;\n            t->next = new ListNode(s % 10); t = t->next;\n            if (a) a = a->next;\n            if (b) b = b->next;\n        }\n        return dummy.next;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def addTwoNumbers(self, a, b):\n        dummy = tail = ListNode()\n        carry = 0\n        while a or b or carry:\n            s = carry + (a.val if a else 0) + (b.val if b else 0)\n            carry = s // 10\n            tail.next = ListNode(s % 10)\n            tail = tail.next\n            a = a.next if a else None\n            b = b.next if b else None\n        return dummy.next"
+          }
+        ]
+      }
     }
   ]
 }

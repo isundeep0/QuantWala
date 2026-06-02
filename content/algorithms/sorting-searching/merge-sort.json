@@ -102,7 +102,29 @@
       "statement": "Sort an integer array without using built-in sort.",
       "hint": "Implement the merge-sort template directly.",
       "tests": "Core divide-and-merge.",
-      "link": "https://leetcode.com/problems/sort-an-array/"
+      "link": "https://leetcode.com/problems/sort-an-array/",
+      "solution": {
+        "approach": [
+          "Textbook merge sort: split in half, sort each half recursively, then merge the two sorted halves in linear time.",
+          "It is stable and guaranteed O(n log n) regardless of input, at the cost of O(n) auxiliary space for merging."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    void msort(vector<int>& a, int l, int r, vector<int>& tmp) {\n        if (r - l <= 1) return;\n        int m = (l + r) / 2;\n        msort(a, l, m, tmp); msort(a, m, r, tmp);\n        int i = l, j = m, k = l;\n        while (i < m && j < r) tmp[k++] = (a[i] <= a[j]) ? a[i++] : a[j++];\n        while (i < m) tmp[k++] = a[i++];\n        while (j < r) tmp[k++] = a[j++];\n        for (int t = l; t < r; t++) a[t] = tmp[t];\n    }\npublic:\n    vector<int> sortArray(vector<int>& a) {\n        vector<int> tmp(a.size());\n        msort(a, 0, a.size(), tmp);\n        return a;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def sortArray(self, a: list[int]) -> list[int]:\n        def msort(arr):\n            if len(arr) <= 1:\n                return arr\n            mid = len(arr) // 2\n            left, right = msort(arr[:mid]), msort(arr[mid:])\n            res, i, j = [], 0, 0\n            while i < len(left) and j < len(right):\n                if left[i] <= right[j]:\n                    res.append(left[i]); i += 1\n                else:\n                    res.append(right[j]); j += 1\n            res.extend(left[i:]); res.extend(right[j:])\n            return res\n        return msort(a)"
+          }
+        ]
+      }
     },
     {
       "id": "ms2",
@@ -111,7 +133,29 @@
       "statement": "For each element, count how many elements to its right are smaller.",
       "hint": "During merge, when you take an element from the right half, every remaining left element is greater — count those crossings.",
       "tests": "Counting inversions inside the merge step.",
-      "link": "https://leetcode.com/problems/count-of-smaller-numbers-after-self/"
+      "link": "https://leetcode.com/problems/count-of-smaller-numbers-after-self/",
+      "solution": {
+        "approach": [
+          "While merging, every time an element from the right half is placed before remaining left-half elements, those left elements are all greater and were originally to its left — a counting opportunity.",
+          "Sort indices (not values) so we can record counts per original position. When we take a left element, add the number of right elements already merged."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<int> cnt, idx, tmp;\n    void msort(vector<int>& a, int l, int r) {\n        if (r - l <= 1) return;\n        int m = (l + r) / 2;\n        msort(a, l, m); msort(a, m, r);\n        int i = l, j = m, k = l, right = 0;\n        while (i < m && j < r) {\n            if (a[idx[j]] < a[idx[i]]) { right++; tmp[k++] = idx[j++]; }\n            else { cnt[idx[i]] += right; tmp[k++] = idx[i++]; }\n        }\n        while (i < m) { cnt[idx[i]] += right; tmp[k++] = idx[i++]; }\n        while (j < r) tmp[k++] = idx[j++];\n        for (int t = l; t < r; t++) idx[t] = tmp[t];\n    }\npublic:\n    vector<int> countSmaller(vector<int>& a) {\n        int n = a.size();\n        cnt.assign(n, 0); idx.resize(n); tmp.resize(n);\n        for (int i = 0; i < n; i++) idx[i] = i;\n        msort(a, 0, n);\n        return cnt;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def countSmaller(self, a: list[int]) -> list[int]:\n        n = len(a)\n        cnt = [0] * n\n        idx = list(range(n))\n        def msort(l, r):\n            if r - l <= 1:\n                return\n            m = (l + r) // 2\n            msort(l, m); msort(m, r)\n            merged, i, j, right = [], l, m, 0\n            while i < m and j < r:\n                if a[idx[j]] < a[idx[i]]:\n                    right += 1; merged.append(idx[j]); j += 1\n                else:\n                    cnt[idx[i]] += right; merged.append(idx[i]); i += 1\n            while i < m:\n                cnt[idx[i]] += right; merged.append(idx[i]); i += 1\n            while j < r:\n                merged.append(idx[j]); j += 1\n            idx[l:r] = merged\n        msort(0, n)\n        return cnt"
+          }
+        ]
+      }
     },
     {
       "id": "ms3",
@@ -120,7 +164,29 @@
       "statement": "Count pairs (i, j) with i < j and a[i] > 2·a[j].",
       "hint": "Add a counting pass before merging each level, using the two sorted halves.",
       "tests": "Modified merge for a custom inversion condition.",
-      "link": "https://leetcode.com/problems/reverse-pairs/"
+      "link": "https://leetcode.com/problems/reverse-pairs/",
+      "solution": {
+        "approach": [
+          "A reverse pair is i < j with a[i] > 2*a[j]. Count them during merge sort: before merging two sorted halves, for each left element count right elements it dominates.",
+          "Because both halves are sorted, the count pointer only moves forward, so the extra counting pass is linear per merge."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<int> tmp;\n    long long msort(vector<int>& a, int l, int r) {\n        if (r - l <= 1) return 0;\n        int m = (l + r) / 2;\n        long long c = msort(a, l, m) + msort(a, m, r);\n        int j = m;\n        for (int i = l; i < m; i++) { while (j < r && a[i] > 2LL * a[j]) j++; c += j - m; }\n        int x = l, y = m, k = l;\n        while (x < m && y < r) tmp[k++] = (a[x] <= a[y]) ? a[x++] : a[y++];\n        while (x < m) tmp[k++] = a[x++];\n        while (y < r) tmp[k++] = a[y++];\n        for (int t = l; t < r; t++) a[t] = tmp[t];\n        return c;\n    }\npublic:\n    int reversePairs(vector<int>& a) {\n        tmp.resize(a.size());\n        return (int)msort(a, 0, a.size());\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def reversePairs(self, a: list[int]) -> int:\n        def msort(l, r):\n            if r - l <= 1:\n                return 0\n            m = (l + r) // 2\n            c = msort(l, m) + msort(m, r)\n            j = m\n            for i in range(l, m):\n                while j < r and a[i] > 2 * a[j]:\n                    j += 1\n                c += j - m\n            a[l:r] = sorted(a[l:r])\n            return c\n        return msort(0, len(a))"
+          }
+        ]
+      }
     },
     {
       "id": "ms4",
@@ -129,7 +195,29 @@
       "statement": "Merge k sorted linked lists into one sorted list.",
       "hint": "Divide and conquer: pair up lists and merge them, halving the count each round.",
       "tests": "Generalising the merge step to k inputs.",
-      "link": "https://leetcode.com/problems/merge-k-sorted-lists/"
+      "link": "https://leetcode.com/problems/merge-k-sorted-lists/",
+      "solution": {
+        "approach": [
+          "Merging k lists pairwise from the front is O(kn); instead apply divide and conquer — merge lists in pairs so the number of lists halves each round.",
+          "log k rounds, each touching all n nodes once, gives O(n log k). Each pairwise merge is the standard two-list merge."
+        ],
+        "complexity": {
+          "time": "O(n log k)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    ListNode* merge2(ListNode* a, ListNode* b) {\n        ListNode dummy, *t = &dummy;\n        while (a && b) { if (a->val <= b->val) { t->next = a; a = a->next; } else { t->next = b; b = b->next; } t = t->next; }\n        t->next = a ? a : b;\n        return dummy.next;\n    }\npublic:\n    ListNode* mergeKLists(vector<ListNode*>& lists) {\n        if (lists.empty()) return nullptr;\n        int n = lists.size();\n        while (n > 1) {\n            int k = (n + 1) / 2;\n            for (int i = 0; i < n / 2; i++) lists[i] = merge2(lists[i], lists[i + k]);\n            n = k;\n        }\n        return lists[0];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def mergeKLists(self, lists):\n        def merge2(a, b):\n            dummy = tail = ListNode()\n            while a and b:\n                if a.val <= b.val:\n                    tail.next, a = a, a.next\n                else:\n                    tail.next, b = b, b.next\n                tail = tail.next\n            tail.next = a or b\n            return dummy.next\n        if not lists:\n            return None\n        while len(lists) > 1:\n            merged = []\n            for i in range(0, len(lists), 2):\n                a = lists[i]\n                b = lists[i + 1] if i + 1 < len(lists) else None\n                merged.append(merge2(a, b))\n            lists = merged\n        return lists[0]"
+          }
+        ]
+      }
     },
     {
       "id": "ms5",
@@ -138,7 +226,29 @@
       "statement": "Sort a linked list in O(n log n) and O(1) extra space (besides recursion).",
       "hint": "Use fast/slow pointers to split the list, then merge — merge sort is ideal for linked lists.",
       "tests": "Merge sort adapted to linked lists.",
-      "link": "https://leetcode.com/problems/sort-list/"
+      "link": "https://leetcode.com/problems/sort-list/",
+      "solution": {
+        "approach": [
+          "Merge sort is the natural O(n log n) sort for a linked list: it needs no random access and only O(1) pointer rewiring to merge.",
+          "Find the middle with slow/fast pointers, cut the list in two, sort each half recursively, then merge the two sorted halves."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(log n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    ListNode* merge2(ListNode* a, ListNode* b) {\n        ListNode dummy, *t = &dummy;\n        while (a && b) { if (a->val <= b->val) { t->next = a; a = a->next; } else { t->next = b; b = b->next; } t = t->next; }\n        t->next = a ? a : b;\n        return dummy.next;\n    }\npublic:\n    ListNode* sortList(ListNode* head) {\n        if (!head || !head->next) return head;\n        ListNode *slow = head, *fast = head->next;\n        while (fast && fast->next) { slow = slow->next; fast = fast->next->next; }\n        ListNode* mid = slow->next; slow->next = nullptr;\n        return merge2(sortList(head), sortList(mid));\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def sortList(self, head):\n        if not head or not head.next:\n            return head\n        slow, fast = head, head.next\n        while fast and fast.next:\n            slow, fast = slow.next, fast.next.next\n        mid, slow.next = slow.next, None\n        left, right = self.sortList(head), self.sortList(mid)\n        dummy = tail = ListNode()\n        while left and right:\n            if left.val <= right.val:\n                tail.next, left = left, left.next\n            else:\n                tail.next, right = right, right.next\n            tail = tail.next\n        tail.next = left or right\n        return dummy.next"
+          }
+        ]
+      }
     }
   ]
 }

@@ -5,7 +5,7 @@
   "title": "Minimum Spanning Tree — Kruskal",
   "tagline": "Sort edges, add the cheapest that doesn't form a cycle — greedy MST with union-find.",
   "estMinutes": 16,
-  "simulator": null,
+  "simulator": "mst-kruskal",
   "complexity": {
     "time": "O(E log E)",
     "space": "O(V)"
@@ -102,7 +102,29 @@
       "statement": "Connect all points with minimum total Manhattan distance.",
       "hint": "Build edges, Kruskal with DSU (or Prim).",
       "tests": "Core MST.",
-      "link": "https://leetcode.com/problems/min-cost-to-connect-all-points/"
+      "link": "https://leetcode.com/problems/min-cost-to-connect-all-points/",
+      "solution": {
+        "approach": [
+          "Build a complete graph where each edge weight is the Manhattan distance between two points, then find the MST.",
+          "Kruskal sorts all O(n^2) edges and unions endpoints with DSU, skipping edges that would form a cycle, until n-1 edges are chosen."
+        ],
+        "complexity": {
+          "time": "O(n^2 log n)",
+          "space": "O(n^2)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "struct DSU { vector<int> p, r; DSU(int n):p(n),r(n,0){iota(p.begin(),p.end(),0);} \n    int find(int x){return p[x]==x?x:p[x]=find(p[x]);}\n    bool uni(int a,int b){a=find(a);b=find(b);if(a==b)return false;if(r[a]<r[b])swap(a,b);p[b]=a;if(r[a]==r[b])r[a]++;return true;} };\nclass Solution {\npublic:\n    int minCostConnectPoints(vector<vector<int>>& pts) {\n        int n = pts.size();\n        vector<array<int,3>> edges;\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n; j++)\n                edges.push_back({abs(pts[i][0]-pts[j][0]) + abs(pts[i][1]-pts[j][1]), i, j});\n        sort(edges.begin(), edges.end());\n        DSU dsu(n); int cost = 0, used = 0;\n        for (auto& [w, u, v] : edges) {\n            if (dsu.uni(u, v)) { cost += w; if (++used == n - 1) break; }\n        }\n        return cost;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def minCostConnectPoints(self, pts: list[list[int]]) -> int:\n        n = len(pts)\n        parent = list(range(n))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]; x = parent[x]\n            return x\n        edges = []\n        for i in range(n):\n            for j in range(i + 1, n):\n                w = abs(pts[i][0]-pts[j][0]) + abs(pts[i][1]-pts[j][1])\n                edges.append((w, i, j))\n        edges.sort()\n        cost = used = 0\n        for w, u, v in edges:\n            ru, rv = find(u), find(v)\n            if ru != rv:\n                parent[ru] = rv; cost += w; used += 1\n                if used == n - 1:\n                    break\n        return cost"
+          }
+        ]
+      }
     },
     {
       "id": "kr2",
@@ -111,7 +133,29 @@
       "statement": "Minimum cost to connect all cities, or -1.",
       "hint": "Kruskal; check full connectivity at the end.",
       "tests": "MST + connectivity check.",
-      "link": "https://leetcode.com/problems/connecting-cities-with-minimum-cost/"
+      "link": "https://leetcode.com/problems/connecting-cities-with-minimum-cost/",
+      "solution": {
+        "approach": [
+          "Classic MST: connect all cities at minimum total cost. Sort edges ascending and union endpoints with DSU.",
+          "If after processing we used fewer than n-1 edges, the graph is disconnected → return -1."
+        ],
+        "complexity": {
+          "time": "O(E log E)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "struct DSU { vector<int> p; DSU(int n):p(n){iota(p.begin(),p.end(),0);} int find(int x){return p[x]==x?x:p[x]=find(p[x]);} bool uni(int a,int b){a=find(a);b=find(b);if(a==b)return false;p[a]=b;return true;} };\nclass Solution {\npublic:\n    int minimumCost(int n, vector<vector<int>>& conns) {\n        sort(conns.begin(), conns.end(), [](auto& a, auto& b){ return a[2] < b[2]; });\n        DSU dsu(n + 1); int cost = 0, used = 0;\n        for (auto& c : conns) if (dsu.uni(c[0], c[1])) { cost += c[2]; used++; }\n        return used == n - 1 ? cost : -1;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def minimumCost(self, n: int, connections: list[list[int]]) -> int:\n        parent = list(range(n + 1))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]; x = parent[x]\n            return x\n        connections.sort(key=lambda c: c[2])\n        cost = used = 0\n        for a, b, w in connections:\n            ra, rb = find(a), find(b)\n            if ra != rb:\n                parent[ra] = rb; cost += w; used += 1\n        return cost if used == n - 1 else -1"
+          }
+        ]
+      }
     },
     {
       "id": "kr3",
@@ -120,7 +164,29 @@
       "statement": "Minimise cost to supply water via wells or pipes.",
       "hint": "Model wells as edges to a virtual node, then MST.",
       "tests": "MST with a virtual source.",
-      "link": "https://leetcode.com/problems/optimize-water-distribution-in-a-village/"
+      "link": "https://leetcode.com/problems/optimize-water-distribution-in-a-village/",
+      "solution": {
+        "approach": [
+          "Digging a well in a house is modelled as an edge from a virtual node 0 to that house with the well's cost.",
+          "Now every house is either connected to a neighbour by a pipe or to the 'water source' node 0. Run Kruskal on all these edges to get the cheapest way to supply water everywhere."
+        ],
+        "complexity": {
+          "time": "O(E log E)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "struct DSU { vector<int> p; DSU(int n):p(n){iota(p.begin(),p.end(),0);} int find(int x){return p[x]==x?x:p[x]=find(p[x]);} bool uni(int a,int b){a=find(a);b=find(b);if(a==b)return false;p[a]=b;return true;} };\nclass Solution {\npublic:\n    int minCostToSupplyWater(int n, vector<int>& wells, vector<vector<int>>& pipes) {\n        vector<array<int,3>> edges;\n        for (int i = 0; i < n; i++) edges.push_back({wells[i], 0, i + 1});\n        for (auto& p : pipes) edges.push_back({p[2], p[0], p[1]});\n        sort(edges.begin(), edges.end());\n        DSU dsu(n + 1); int cost = 0;\n        for (auto& [w, u, v] : edges) if (dsu.uni(u, v)) cost += w;\n        return cost;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def minCostToSupplyWater(self, n, wells, pipes):\n        parent = list(range(n + 1))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]; x = parent[x]\n            return x\n        edges = [(w, 0, i + 1) for i, w in enumerate(wells)]\n        edges += [(w, u, v) for u, v, w in pipes]\n        edges.sort()\n        cost = 0\n        for w, u, v in edges:\n            ru, rv = find(u), find(v)\n            if ru != rv:\n                parent[ru] = rv; cost += w\n        return cost"
+          }
+        ]
+      }
     },
     {
       "id": "kr4",
@@ -129,7 +195,29 @@
       "statement": "Classify MST edges as critical/pseudo-critical.",
       "hint": "Compare MST weights with each edge forced in/out.",
       "tests": "MST sensitivity analysis.",
-      "link": "https://leetcode.com/problems/find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree/"
+      "link": "https://leetcode.com/problems/find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree/",
+      "solution": {
+        "approach": [
+          "An edge is critical if removing it increases the MST weight (or disconnects the graph); pseudo-critical if it can appear in some MST but is not critical.",
+          "Compute the base MST weight. For each edge: test criticality by skipping it and rebuilding; test pseudo-criticality by forcing it in first. Sort edges but keep original indices."
+        ],
+        "complexity": {
+          "time": "O(E^2 α)",
+          "space": "O(E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "struct DSU { vector<int> p; int cnt; DSU(int n):p(n),cnt(n){iota(p.begin(),p.end(),0);} int find(int x){return p[x]==x?x:p[x]=find(p[x]);} bool uni(int a,int b){a=find(a);b=find(b);if(a==b)return false;p[a]=b;cnt--;return true;} };\nclass Solution {\n    int build(int n, vector<vector<int>>& e, int skip, int force) {\n        DSU dsu(n); int w = 0;\n        if (force >= 0) { dsu.uni(e[force][0], e[force][1]); w += e[force][2]; }\n        for (int i = 0; i < (int)e.size(); i++) {\n            if (i == skip) continue;\n            if (dsu.uni(e[i][0], e[i][1])) w += e[i][2];\n        }\n        return dsu.cnt == 1 ? w : INT_MAX;\n    }\npublic:\n    vector<vector<int>> findCriticalAndPseudoCriticalEdges(int n, vector<vector<int>>& edges) {\n        int m = edges.size();\n        for (int i = 0; i < m; i++) edges[i].push_back(i);\n        sort(edges.begin(), edges.end(), [](auto& a, auto& b){ return a[2] < b[2]; });\n        int base = build(n, edges, -1, -1);\n        vector<int> crit, pseudo;\n        for (int i = 0; i < m; i++) {\n            if (build(n, edges, i, -1) > base) crit.push_back(edges[i][3]);\n            else if (build(n, edges, -1, i) == base) pseudo.push_back(edges[i][3]);\n        }\n        return {crit, pseudo};\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findCriticalAndPseudoCriticalEdges(self, n, edges):\n        for i, e in enumerate(edges):\n            e.append(i)\n        order = sorted(range(len(edges)), key=lambda i: edges[i][2])\n        def build(skip, force):\n            parent = list(range(n)); cnt = [n]\n            def find(x):\n                while parent[x] != x:\n                    parent[x] = parent[parent[x]]; x = parent[x]\n                return x\n            def uni(a, b):\n                ra, rb = find(a), find(b)\n                if ra == rb: return False\n                parent[ra] = rb; cnt[0] -= 1; return True\n            w = 0\n            if force >= 0:\n                u, v, ww, _ = edges[force]\n                uni(u, v); w += ww\n            for i in order:\n                if i == skip: continue\n                u, v, ww, _ = edges[i]\n                if uni(u, v): w += ww\n            return w if cnt[0] == 1 else float('inf')\n        base = build(-1, -1)\n        crit, pseudo = [], []\n        for i in range(len(edges)):\n            if build(i, -1) > base:\n                crit.append(edges[i][3])\n            elif build(-1, i) == base:\n                pseudo.append(edges[i][3])\n        return [crit, pseudo]"
+          }
+        ]
+      }
     },
     {
       "id": "kr5",
@@ -138,7 +226,29 @@
       "statement": "Process edges by weight to answer connectivity queries.",
       "hint": "Offline DSU by increasing weight (Kruskal-style).",
       "tests": "Kruskal reconstruction order.",
-      "link": "https://cses.fi/problemset/task/1676"
+      "link": "https://cses.fi/problemset/task/1676",
+      "solution": {
+        "approach": [
+          "Offline trick: queries 'is there a path between p and q using only edges with weight < limit' are answered by adding edges in increasing weight and unioning.",
+          "Sort both edges and queries by weight/limit. Process each query after unioning all lighter edges; the answer is whether the endpoints share a DSU root."
+        ],
+        "complexity": {
+          "time": "O((E + Q) log)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "struct DSU { vector<int> p; DSU(int n):p(n){iota(p.begin(),p.end(),0);} int find(int x){return p[x]==x?x:p[x]=find(p[x]);} void uni(int a,int b){p[find(a)]=find(b);} };\nclass Solution {\npublic:\n    vector<bool> distanceLimitedPathsExist(int n, vector<vector<int>>& edges, vector<vector<int>>& queries) {\n        sort(edges.begin(), edges.end(), [](auto& a, auto& b){ return a[2] < b[2]; });\n        int q = queries.size();\n        vector<int> order(q); iota(order.begin(), order.end(), 0);\n        sort(order.begin(), order.end(), [&](int a, int b){ return queries[a][2] < queries[b][2]; });\n        DSU dsu(n); vector<bool> res(q); int ei = 0;\n        for (int idx : order) {\n            int limit = queries[idx][2];\n            while (ei < (int)edges.size() && edges[ei][2] < limit) dsu.uni(edges[ei][0], edges[ei][1]), ei++;\n            res[idx] = dsu.find(queries[idx][0]) == dsu.find(queries[idx][1]);\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def distanceLimitedPathsExist(self, n, edges, queries):\n        edges.sort(key=lambda e: e[2])\n        parent = list(range(n))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]; x = parent[x]\n            return x\n        res = [False] * len(queries)\n        order = sorted(range(len(queries)), key=lambda i: queries[i][2])\n        ei = 0\n        for idx in order:\n            p, q, limit = queries[idx]\n            while ei < len(edges) and edges[ei][2] < limit:\n                parent[find(edges[ei][0])] = find(edges[ei][1]); ei += 1\n            res[idx] = find(p) == find(q)\n        return res"
+          }
+        ]
+      }
     }
   ]
 }

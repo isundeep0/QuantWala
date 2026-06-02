@@ -111,7 +111,29 @@
       "statement": "For each element of nums1, find its next greater element in nums2.",
       "hint": "Monotonic stack over nums2 builds a map of answers.",
       "tests": "Core next-greater.",
-      "link": "https://leetcode.com/problems/next-greater-element-i/"
+      "link": "https://leetcode.com/problems/next-greater-element-i/",
+      "solution": {
+        "approach": [
+          "Precompute the next greater element for every value in nums2 using a decreasing monotonic stack: when a bigger number arrives, it resolves all smaller ones on the stack.",
+          "Store results in a hash map, then answer each query from nums1 in O(1)."
+        ],
+        "complexity": {
+          "time": "O(n + m)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> nextGreaterElement(vector<int>& q, vector<int>& nums) {\n        unordered_map<int,int> nge; stack<int> st;\n        for (int x : nums) {\n            while (!st.empty() && st.top() < x) { nge[st.top()] = x; st.pop(); }\n            st.push(x);\n        }\n        vector<int> res;\n        for (int x : q) res.push_back(nge.count(x) ? nge[x] : -1);\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def nextGreaterElement(self, q: list[int], nums: list[int]) -> list[int]:\n        nge, st = {}, []\n        for x in nums:\n            while st and st[-1] < x:\n                nge[st.pop()] = x\n            st.append(x)\n        return [nge.get(x, -1) for x in q]"
+          }
+        ]
+      }
     },
     {
       "id": "mst2",
@@ -120,7 +142,29 @@
       "statement": "For each day, how many days until a warmer temperature?",
       "hint": "Decreasing stack of indices; on a pop, the distance is i − poppedIndex.",
       "tests": "Next-greater with distances.",
-      "link": "https://leetcode.com/problems/daily-temperatures/"
+      "link": "https://leetcode.com/problems/daily-temperatures/",
+      "solution": {
+        "approach": [
+          "Keep a stack of indices with decreasing temperatures. When a warmer day arrives, it answers every colder day still on the stack.",
+          "Pop and record the gap (current index - stored index) for each resolved day. O(n)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> dailyTemperatures(vector<int>& t) {\n        int n = t.size(); vector<int> res(n, 0); stack<int> st;\n        for (int i = 0; i < n; i++) {\n            while (!st.empty() && t[st.top()] < t[i]) { res[st.top()] = i - st.top(); st.pop(); }\n            st.push(i);\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def dailyTemperatures(self, t: list[int]) -> list[int]:\n        res, st = [0] * len(t), []\n        for i, temp in enumerate(t):\n            while st and t[st[-1]] < temp:\n                j = st.pop()\n                res[j] = i - j\n            st.append(i)\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "mst3",
@@ -129,7 +173,29 @@
       "statement": "Largest rectangle area in a bar histogram.",
       "hint": "Increasing stack; when a shorter bar appears, pop and compute areas using width gaps.",
       "tests": "Monotonic stack for spans.",
-      "link": "https://leetcode.com/problems/largest-rectangle-in-histogram/"
+      "link": "https://leetcode.com/problems/largest-rectangle-in-histogram/",
+      "solution": {
+        "approach": [
+          "For each bar, the largest rectangle using it as the height extends until a shorter bar on each side. A monotonic-increasing stack of indices finds those boundaries in one pass.",
+          "When a bar shorter than the stack top arrives, pop it and compute its area using the new top as the left boundary. A sentinel 0 at the end flushes the stack."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int largestRectangleArea(vector<int>& h) {\n        h.push_back(0); stack<int> st; int best = 0;\n        for (int i = 0; i < (int)h.size(); i++) {\n            while (!st.empty() && h[st.top()] > h[i]) {\n                int height = h[st.top()]; st.pop();\n                int width = st.empty() ? i : i - st.top() - 1;\n                best = max(best, height * width);\n            }\n            st.push(i);\n        }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def largestRectangleArea(self, h: list[int]) -> int:\n        h = h + [0]\n        st, best = [], 0\n        for i, height in enumerate(h):\n            while st and h[st[-1]] > height:\n                top = st.pop()\n                width = i if not st else i - st[-1] - 1\n                best = max(best, h[top] * width)\n            st.append(i)\n        return best"
+          }
+        ]
+      }
     },
     {
       "id": "mst4",
@@ -138,7 +204,29 @@
       "statement": "Water trapped between bars.",
       "hint": "Decreasing stack; each pop forms a basin bounded by the new bar and the new top.",
       "tests": "Monotonic stack basins.",
-      "link": "https://leetcode.com/problems/trapping-rain-water/"
+      "link": "https://leetcode.com/problems/trapping-rain-water/",
+      "solution": {
+        "approach": [
+          "A monotonic-decreasing stack of indices captures left walls. When a taller bar arrives it forms a basin with the bar below the popped one.",
+          "Trapped water for each popped layer is width × (min(left, right) - bottom). O(n)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int trap(vector<int>& h) {\n        stack<int> st; int water = 0;\n        for (int i = 0; i < (int)h.size(); i++) {\n            while (!st.empty() && h[i] > h[st.top()]) {\n                int bottom = st.top(); st.pop();\n                if (st.empty()) break;\n                int width = i - st.top() - 1;\n                int bounded = min(h[i], h[st.top()]) - h[bottom];\n                water += width * bounded;\n            }\n            st.push(i);\n        }\n        return water;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def trap(self, h: list[int]) -> int:\n        st, water = [], 0\n        for i, x in enumerate(h):\n            while st and x > h[st[-1]]:\n                bottom = st.pop()\n                if not st:\n                    break\n                width = i - st[-1] - 1\n                bounded = min(x, h[st[-1]]) - h[bottom]\n                water += width * bounded\n            st.append(i)\n        return water"
+          }
+        ]
+      }
     },
     {
       "id": "mst5",
@@ -147,7 +235,29 @@
       "statement": "Remove k digits to make the smallest possible number.",
       "hint": "Increasing stack: pop larger leading digits while you still have removals left.",
       "tests": "Greedy monotonic stack on digits.",
-      "link": "https://leetcode.com/problems/remove-k-digits/"
+      "link": "https://leetcode.com/problems/remove-k-digits/",
+      "solution": {
+        "approach": [
+          "To make the smallest number, greedily remove a digit whenever it is larger than the next one — that earlier bigger digit hurts most. A monotonic-increasing stack does exactly this.",
+          "Pop while the top exceeds the current digit and budget k remains. Trim leftover k from the end, strip leading zeros."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    string removeKdigits(string num, int k) {\n        string st;\n        for (char c : num) {\n            while (!st.empty() && k > 0 && st.back() > c) { st.pop_back(); k--; }\n            st.push_back(c);\n        }\n        st.resize(st.size() - k);\n        int i = 0; while (i < (int)st.size() && st[i] == '0') i++;\n        string res = st.substr(i);\n        return res.empty() ? \"0\" : res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def removeKdigits(self, num: str, k: int) -> str:\n        st = []\n        for c in num:\n            while st and k > 0 and st[-1] > c:\n                st.pop(); k -= 1\n            st.append(c)\n        st = st[:len(st) - k] if k else st\n        res = ''.join(st).lstrip('0')\n        return res or '0'"
+          }
+        ]
+      }
     }
   ]
 }

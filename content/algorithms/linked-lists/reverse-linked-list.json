@@ -5,7 +5,7 @@
   "title": "Reverse a Linked List",
   "tagline": "Flip every 'next' pointer in one pass — the building block of dozens of list problems.",
   "estMinutes": 14,
-  "simulator": null,
+  "simulator": "reverse-linked-list",
   "complexity": {
     "time": "O(n)",
     "space": "O(1)"
@@ -102,7 +102,29 @@
       "statement": "Reverse a singly linked list.",
       "hint": "The three-pointer template.",
       "tests": "Core reversal.",
-      "link": "https://leetcode.com/problems/reverse-linked-list/"
+      "link": "https://leetcode.com/problems/reverse-linked-list/",
+      "solution": {
+        "approach": [
+          "Walk the list once, flipping each node's next pointer to its predecessor. Keep prev, cur, and a saved next.",
+          "When cur becomes null, prev is the new head. O(1) space."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    ListNode* reverseList(ListNode* head) {\n        ListNode* prev = nullptr;\n        while (head) { ListNode* nxt = head->next; head->next = prev; prev = head; head = nxt; }\n        return prev;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def reverseList(self, head):\n        prev = None\n        while head:\n            nxt = head.next\n            head.next = prev\n            prev = head\n            head = nxt\n        return prev"
+          }
+        ]
+      }
     },
     {
       "id": "rl2",
@@ -111,7 +133,29 @@
       "statement": "Reverse the nodes between positions left and right.",
       "hint": "Walk to position left-1, reverse the sublist, then reconnect both ends.",
       "tests": "Partial reversal with boundary stitching.",
-      "link": "https://leetcode.com/problems/reverse-linked-list-ii/"
+      "link": "https://leetcode.com/problems/reverse-linked-list-ii/",
+      "solution": {
+        "approach": [
+          "Use a dummy node and advance to the node just before position left. From there, repeatedly pull the node after the cursor to the front of the sublist (head-insertion).",
+          "This reverses positions left..right in one pass without recursion."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    ListNode* reverseBetween(ListNode* head, int left, int right) {\n        ListNode dummy(0, head), *prev = &dummy;\n        for (int i = 1; i < left; i++) prev = prev->next;\n        ListNode* cur = prev->next;\n        for (int i = 0; i < right - left; i++) {\n            ListNode* mv = cur->next;\n            cur->next = mv->next;\n            mv->next = prev->next;\n            prev->next = mv;\n        }\n        return dummy.next;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def reverseBetween(self, head, left, right):\n        dummy = ListNode(0, head)\n        prev = dummy\n        for _ in range(left - 1):\n            prev = prev.next\n        cur = prev.next\n        for _ in range(right - left):\n            mv = cur.next\n            cur.next = mv.next\n            mv.next = prev.next\n            prev.next = mv\n        return dummy.next"
+          }
+        ]
+      }
     },
     {
       "id": "rl3",
@@ -120,7 +164,29 @@
       "statement": "Check if a linked list reads the same forwards and backwards.",
       "hint": "Find the middle, reverse the second half, compare.",
       "tests": "Reversal + midpoint.",
-      "link": "https://leetcode.com/problems/palindrome-linked-list/"
+      "link": "https://leetcode.com/problems/palindrome-linked-list/",
+      "solution": {
+        "approach": [
+          "Find the middle with slow/fast, reverse the second half in place, then compare it node-by-node against the first half.",
+          "This achieves O(1) space (vs copying values to an array). Restoring the list afterward is optional."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    bool isPalindrome(ListNode* head) {\n        ListNode *slow = head, *fast = head;\n        while (fast && fast->next) { slow = slow->next; fast = fast->next->next; }\n        ListNode* prev = nullptr;\n        while (slow) { ListNode* nxt = slow->next; slow->next = prev; prev = slow; slow = nxt; }\n        while (prev) { if (prev->val != head->val) return false; prev = prev->next; head = head->next; }\n        return true;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def isPalindrome(self, head) -> bool:\n        slow = fast = head\n        while fast and fast.next:\n            slow, fast = slow.next, fast.next.next\n        prev = None\n        while slow:\n            nxt = slow.next\n            slow.next = prev\n            prev = slow\n            slow = nxt\n        while prev:\n            if prev.val != head.val:\n                return False\n            prev = prev.next\n            head = head.next\n        return True"
+          }
+        ]
+      }
     },
     {
       "id": "rl4",
@@ -129,7 +195,29 @@
       "statement": "Reverse the list in groups of k nodes.",
       "hint": "Reverse each block of k, then link blocks together; leave a trailing remainder untouched.",
       "tests": "Block-wise reversal.",
-      "link": "https://leetcode.com/problems/reverse-nodes-in-k-group/"
+      "link": "https://leetcode.com/problems/reverse-nodes-in-k-group/",
+      "solution": {
+        "approach": [
+          "Process the list in blocks of k. For each block first check that k nodes remain; if not, leave the tail as-is.",
+          "Reverse each full block with the standard three-pointer reversal and stitch the reversed blocks together with a dummy node."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    ListNode* reverseKGroup(ListNode* head, int k) {\n        ListNode dummy(0, head), *groupPrev = &dummy;\n        while (true) {\n            ListNode* kth = groupPrev;\n            for (int i = 0; i < k && kth; i++) kth = kth->next;\n            if (!kth) break;\n            ListNode* groupNext = kth->next;\n            ListNode *prev = groupNext, *cur = groupPrev->next;\n            while (cur != groupNext) { ListNode* nxt = cur->next; cur->next = prev; prev = cur; cur = nxt; }\n            ListNode* tmp = groupPrev->next;\n            groupPrev->next = kth;\n            groupPrev = tmp;\n        }\n        return dummy.next;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def reverseKGroup(self, head, k):\n        dummy = ListNode(0, head)\n        group_prev = dummy\n        while True:\n            kth = group_prev\n            for _ in range(k):\n                kth = kth.next\n                if not kth:\n                    return dummy.next\n            group_next = kth.next\n            prev, cur = group_next, group_prev.next\n            while cur is not group_next:\n                nxt = cur.next\n                cur.next = prev\n                prev = cur\n                cur = nxt\n            tmp = group_prev.next\n            group_prev.next = kth\n            group_prev = tmp"
+          }
+        ]
+      }
     },
     {
       "id": "rl5",
@@ -138,7 +226,29 @@
       "statement": "Add two numbers stored as linked lists, most-significant digit first.",
       "hint": "Reverse both lists (or use stacks) so you can add from the least-significant end.",
       "tests": "Reversal to align digit order.",
-      "link": "https://leetcode.com/problems/add-two-numbers-ii/"
+      "link": "https://leetcode.com/problems/add-two-numbers-ii/",
+      "solution": {
+        "approach": [
+          "Digits are stored most-significant first, so we cannot add front-to-back directly. Push both lists onto stacks (or reverse them) to access least-significant digits first.",
+          "Pop in tandem, summing with carry, and build the result by head-insertion so the output stays most-significant first."
+        ],
+        "complexity": {
+          "time": "O(n + m)",
+          "space": "O(n + m)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    ListNode* addTwoNumbers(ListNode* a, ListNode* b) {\n        stack<int> s1, s2;\n        for (; a; a = a->next) s1.push(a->val);\n        for (; b; b = b->next) s2.push(b->val);\n        ListNode* head = nullptr; int carry = 0;\n        while (!s1.empty() || !s2.empty() || carry) {\n            int s = carry;\n            if (!s1.empty()) { s += s1.top(); s1.pop(); }\n            if (!s2.empty()) { s += s2.top(); s2.pop(); }\n            carry = s / 10;\n            head = new ListNode(s % 10, head);\n        }\n        return head;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def addTwoNumbers(self, a, b):\n        s1, s2 = [], []\n        while a: s1.append(a.val); a = a.next\n        while b: s2.append(b.val); b = b.next\n        head, carry = None, 0\n        while s1 or s2 or carry:\n            s = carry + (s1.pop() if s1 else 0) + (s2.pop() if s2 else 0)\n            carry = s // 10\n            head = ListNode(s % 10, head)\n        return head"
+          }
+        ]
+      }
     }
   ]
 }

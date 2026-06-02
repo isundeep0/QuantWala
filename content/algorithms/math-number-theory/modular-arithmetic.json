@@ -5,7 +5,7 @@
   "title": "Modular Arithmetic",
   "tagline": "Keep numbers small under a modulus — addition, multiplication, and division (inverses).",
   "estMinutes": 16,
-  "simulator": null,
+  "simulator": "modular-arithmetic",
   "complexity": {
     "time": "O(1) – O(log m)",
     "space": "O(1)"
@@ -97,7 +97,29 @@
       "statement": "Compute inverses under a prime modulus.",
       "hint": "Fermat's little theorem via fast power.",
       "tests": "Inverse computation.",
-      "link": "https://cses.fi/problemset/task/1712"
+      "link": "https://cses.fi/problemset/task/1712",
+      "solution": {
+        "approach": [
+          "Under a prime modulus, the inverse of a is a^(p-2) by Fermat's little theorem.",
+          "Fast exponentiation computes it in O(log p)."
+        ],
+        "complexity": {
+          "time": "O(log p)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    long long modInverse(long long a, long long p) {\n        long long r = 1, b = p - 2; a %= p;\n        while (b) { if (b & 1) r = r * a % p; a = a * a % p; b >>= 1; }\n        return r;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def modInverse(self, a: int, p: int) -> int:\n        return pow(a, p - 2, p)"
+          }
+        ]
+      }
     },
     {
       "id": "ma2",
@@ -106,7 +128,29 @@
       "statement": "Compute nCr mod p for many queries.",
       "hint": "Precompute factorials and inverse factorials.",
       "tests": "Inverse factorials.",
-      "link": "https://cses.fi/problemset/task/1079"
+      "link": "https://cses.fi/problemset/task/1079",
+      "solution": {
+        "approach": [
+          "Precompute factorials and inverse factorials modulo p, then C(n,k) = fact[n]·invFact[k]·invFact[n-k].",
+          "Inverse factorials are obtained from invFact[n] = inv(fact[n]) and a backward recurrence, or directly via Fermat."
+        ],
+        "complexity": {
+          "time": "O(n) precompute, O(1) per query",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    const long long MOD = 1e9 + 7;\n    long long power(long long a, long long b) { long long r = 1; a %= MOD; while (b) { if (b & 1) r = r * a % MOD; a = a * a % MOD; b >>= 1; } return r; }\npublic:\n    int nCr(int n, int k) {\n        if (k < 0 || k > n) return 0;\n        vector<long long> fact(n + 1, 1), inv(n + 1, 1);\n        for (int i = 1; i <= n; i++) fact[i] = fact[i-1] * i % MOD;\n        inv[n] = power(fact[n], MOD - 2);\n        for (int i = n; i > 0; i--) inv[i-1] = inv[i] * i % MOD;\n        return (int)(fact[n] * inv[k] % MOD * inv[n-k] % MOD);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def nCr(self, n: int, k: int) -> int:\n        MOD = 10**9 + 7\n        if k < 0 or k > n:\n            return 0\n        fact = [1] * (n + 1)\n        for i in range(1, n + 1):\n            fact[i] = fact[i-1] * i % MOD\n        inv = [1] * (n + 1)\n        inv[n] = pow(fact[n], MOD - 2, MOD)\n        for i in range(n, 0, -1):\n            inv[i-1] = inv[i] * i % MOD\n        return fact[n] * inv[k] % MOD * inv[n-k] % MOD"
+          }
+        ]
+      }
     },
     {
       "id": "ma3",
@@ -115,7 +159,29 @@
       "statement": "Count digit strings under modular rules.",
       "hint": "Modular fast power on a closed form.",
       "tests": "Modular exponent in counting.",
-      "link": "https://leetcode.com/problems/count-good-numbers/"
+      "link": "https://leetcode.com/problems/count-good-numbers/",
+      "solution": {
+        "approach": [
+          "Even positions need an even digit (5 choices), odd positions a prime digit (4 choices).",
+          "Answer = 5^ceil(n/2) · 4^floor(n/2) mod 1e9+7, using modular fast exponentiation."
+        ],
+        "complexity": {
+          "time": "O(log n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    const long long MOD = 1e9 + 7;\n    long long power(long long a, long long b) { long long r = 1; a %= MOD; while (b) { if (b & 1) r = r * a % MOD; a = a * a % MOD; b >>= 1; } return r; }\npublic:\n    int countGoodNumbers(long long n) {\n        return (int)(power(5, (n + 1) / 2) * power(4, n / 2) % MOD);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def countGoodNumbers(self, n: int) -> int:\n        MOD = 10**9 + 7\n        return pow(5, (n + 1) // 2, MOD) * pow(4, n // 2, MOD) % MOD"
+          }
+        ]
+      }
     },
     {
       "id": "ma4",
@@ -124,7 +190,29 @@
       "statement": "Apply affine transforms with modular inverses.",
       "hint": "Track (a, b) so value = a·x + b mod p; invert on getIndex.",
       "tests": "Modular inverse in design.",
-      "link": "https://leetcode.com/problems/fancy-sequence/"
+      "link": "https://leetcode.com/problems/fancy-sequence/",
+      "solution": {
+        "approach": [
+          "Maintain the sequence plus two lazy transforms: a global multiplier `mul` and adder `add`, so the real value of element i is raw[i]·mul + add.",
+          "addAll/multAll just update add and mul. append(v) stores the raw value (v - add)·inv(mul) so it reads back as v. getIndex applies the transform with a modular inverse of mul."
+        ],
+        "complexity": {
+          "time": "O(1) per op (amortised)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Fancy {\n    const long long MOD = 1e9 + 7;\n    vector<long long> seq; long long mul = 1, add = 0;\n    long long power(long long a, long long b) { long long r = 1; a %= MOD; while (b) { if (b & 1) r = r * a % MOD; a = a * a % MOD; b >>= 1; } return r; }\npublic:\n    Fancy() {}\n    void append(int val) { seq.push_back((((val - add) % MOD + MOD) % MOD) * power(mul, MOD - 2) % MOD); }\n    void addAll(int inc) { add = (add + inc) % MOD; }\n    void multAll(int m) { mul = mul * m % MOD; add = add * m % MOD; }\n    int getIndex(int idx) {\n        if (idx >= (int)seq.size()) return -1;\n        return (int)((seq[idx] * mul + add) % MOD);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Fancy:\n    def __init__(self):\n        self.MOD = 10**9 + 7\n        self.seq = []\n        self.mul = 1\n        self.add = 0\n    def append(self, val: int) -> None:\n        inv = pow(self.mul, self.MOD - 2, self.MOD)\n        self.seq.append((val - self.add) * inv % self.MOD)\n    def addAll(self, inc: int) -> None:\n        self.add = (self.add + inc) % self.MOD\n    def multAll(self, m: int) -> None:\n        self.mul = self.mul * m % self.MOD\n        self.add = self.add * m % self.MOD\n    def getIndex(self, idx: int) -> int:\n        if idx >= len(self.seq):\n            return -1\n        return (self.seq[idx] * self.mul + self.add) % self.MOD"
+          }
+        ]
+      }
     },
     {
       "id": "ma5",
@@ -133,7 +221,29 @@
       "statement": "Count orderings producing the same BST, mod p.",
       "hint": "Combinatorics with modular inverse factorials.",
       "tests": "nCr mod p in practice.",
-      "link": "https://leetcode.com/problems/number-of-ways-to-reorder-array-to-get-same-bst/"
+      "link": "https://leetcode.com/problems/number-of-ways-to-reorder-array-to-get-same-bst/",
+      "solution": {
+        "approach": [
+          "The first value is the BST root; smaller values form the left subtree, larger the right, and their orders interleave in C(L+R, L) ways.",
+          "ways(tree) = C(L+R, L) · ways(left) · ways(right) modulo 1e9+7; subtract 1 for the original ordering. Use precomputed binomials."
+        ],
+        "complexity": {
+          "time": "O(n^2)",
+          "space": "O(n^2)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    const long long MOD = 1e9 + 7;\n    vector<vector<long long>> C;\n    long long dfs(vector<int>& a) {\n        int n = a.size();\n        if (n <= 2) return 1;\n        vector<int> l, r;\n        for (int i = 1; i < n; i++) (a[i] < a[0] ? l : r).push_back(a[i]);\n        return C[n-1][l.size()] * dfs(l) % MOD * dfs(r) % MOD;\n    }\npublic:\n    int numOfWays(vector<int>& nums) {\n        int n = nums.size();\n        C.assign(n + 1, vector<long long>(n + 1, 0));\n        for (int i = 0; i <= n; i++) { C[i][0] = 1; for (int j = 1; j <= i; j++) C[i][j] = (C[i-1][j-1] + C[i-1][j]) % MOD; }\n        return (int)((dfs(nums) - 1 + MOD) % MOD);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from math import comb\nclass Solution:\n    def numOfWays(self, nums: list[int]) -> int:\n        MOD = 10**9 + 7\n        def dfs(a):\n            if len(a) <= 2:\n                return 1\n            root = a[0]\n            left = [x for x in a[1:] if x < root]\n            right = [x for x in a[1:] if x > root]\n            return comb(len(left) + len(right), len(left)) * dfs(left) % MOD * dfs(right) % MOD\n        return (dfs(nums) - 1) % MOD"
+          }
+        ]
+      }
     }
   ]
 }

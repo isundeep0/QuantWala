@@ -5,7 +5,7 @@
   "title": "Bellman-Ford",
   "tagline": "Shortest paths that tolerate negative edges — and detect negative cycles.",
   "estMinutes": 16,
-  "simulator": null,
+  "simulator": "bellman-ford",
   "complexity": {
     "time": "O(V·E)",
     "space": "O(V)"
@@ -97,7 +97,29 @@
       "statement": "Cheapest price with at most K stops.",
       "hint": "Bellman-Ford limited to K+1 relaxation rounds.",
       "tests": "Bounded-edge relaxation.",
-      "link": "https://leetcode.com/problems/cheapest-flights-within-k-stops/"
+      "link": "https://leetcode.com/problems/cheapest-flights-within-k-stops/",
+      "solution": {
+        "approach": [
+          "We want the cheapest price using at most K stops, i.e. at most K+1 edges. Bellman-Ford naturally bounds the number of edges by the number of relaxation rounds.",
+          "Run K+1 rounds; in each round relax every flight using costs from the previous round only (snapshot), so a path never uses more than the allowed number of edges."
+        ],
+        "complexity": {
+          "time": "O(K · E)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int findCheapestPrice(int n, vector<vector<int>>& flights, int src, int dst, int K) {\n        const int INF = 1e9;\n        vector<int> dist(n, INF); dist[src] = 0;\n        for (int i = 0; i <= K; i++) {\n            vector<int> tmp = dist;\n            for (auto& f : flights)\n                if (dist[f[0]] != INF) tmp[f[1]] = min(tmp[f[1]], dist[f[0]] + f[2]);\n            dist = tmp;\n        }\n        return dist[dst] == INF ? -1 : dist[dst];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findCheapestPrice(self, n, flights, src, dst, K):\n        INF = float('inf')\n        dist = [INF] * n\n        dist[src] = 0\n        for _ in range(K + 1):\n            tmp = dist[:]\n            for u, v, w in flights:\n                if dist[u] + w < tmp[v]:\n                    tmp[v] = dist[u] + w\n            dist = tmp\n        return -1 if dist[dst] == INF else dist[dst]"
+          }
+        ]
+      }
     },
     {
       "id": "bf2",
@@ -106,7 +128,29 @@
       "statement": "Time to reach all nodes from a source.",
       "hint": "Bellman-Ford also solves it (slower than Dijkstra).",
       "tests": "Single-source shortest path.",
-      "link": "https://leetcode.com/problems/network-delay-time/"
+      "link": "https://leetcode.com/problems/network-delay-time/",
+      "solution": {
+        "approach": [
+          "Single-source shortest path from node k; the answer is the maximum finishing distance (or -1 if some node is unreachable).",
+          "Bellman-Ford relaxes all edges V-1 times. The signal time is the largest shortest-distance over all nodes."
+        ],
+        "complexity": {
+          "time": "O(V · E)",
+          "space": "O(V)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int networkDelayTime(vector<vector<int>>& times, int n, int k) {\n        const int INF = 1e9;\n        vector<int> dist(n + 1, INF); dist[k] = 0;\n        for (int i = 1; i < n; i++)\n            for (auto& t : times)\n                if (dist[t[0]] != INF) dist[t[1]] = min(dist[t[1]], dist[t[0]] + t[2]);\n        int ans = 0;\n        for (int i = 1; i <= n; i++) ans = max(ans, dist[i]);\n        return ans == INF ? -1 : ans;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def networkDelayTime(self, times, n, k):\n        INF = float('inf')\n        dist = [INF] * (n + 1)\n        dist[k] = 0\n        for _ in range(n - 1):\n            for u, v, w in times:\n                if dist[u] + w < dist[v]:\n                    dist[v] = dist[u] + w\n        ans = max(dist[1:])\n        return -1 if ans == INF else ans"
+          }
+        ]
+      }
     },
     {
       "id": "bf3",
@@ -115,7 +159,29 @@
       "statement": "Determine if a weighted digraph has a negative cycle.",
       "hint": "Run the extra relaxation round.",
       "tests": "Negative-cycle detection.",
-      "link": "https://www.spoj.com/problems/NEGCYC/"
+      "link": "https://www.spoj.com/problems/NEGCYC/",
+      "solution": {
+        "approach": [
+          "After V-1 rounds of relaxation all shortest paths are settled if there is no negative cycle. A Vth round that still relaxes an edge proves a reachable negative cycle exists.",
+          "Start all distances at 0 (a virtual source connected to every node) so the detection covers the whole graph."
+        ],
+        "complexity": {
+          "time": "O(V · E)",
+          "space": "O(V)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    bool hasNegativeCycle(int n, vector<vector<int>>& edges) {\n        vector<long long> dist(n, 0);          // virtual source to all\n        for (int i = 0; i < n - 1; i++)\n            for (auto& e : edges)\n                if (dist[e[0]] + e[2] < dist[e[1]]) dist[e[1]] = dist[e[0]] + e[2];\n        for (auto& e : edges)\n            if (dist[e[0]] + e[2] < dist[e[1]]) return true;   // still relaxes\n        return false;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def hasNegativeCycle(self, n, edges):\n        dist = [0] * n\n        for _ in range(n - 1):\n            for u, v, w in edges:\n                if dist[u] + w < dist[v]:\n                    dist[v] = dist[u] + w\n        for u, v, w in edges:\n            if dist[u] + w < dist[v]:\n                return True\n        return False"
+          }
+        ]
+      }
     },
     {
       "id": "bf4",
@@ -124,7 +190,29 @@
       "statement": "Detect profitable currency arbitrage.",
       "hint": "Use −log(rate) as weights; a negative cycle means arbitrage.",
       "tests": "Modeling with log weights.",
-      "link": "https://open.kattis.com/problems/arbitrage"
+      "link": "https://open.kattis.com/problems/arbitrage",
+      "solution": {
+        "approach": [
+          "An arbitrage cycle multiplies rates to > 1. Take negative logarithms of rates: a product > 1 becomes a sum < 0, so arbitrage is exactly a negative cycle.",
+          "Run Bellman-Ford on the -log(rate) graph and detect a negative cycle."
+        ],
+        "complexity": {
+          "time": "O(V · E)",
+          "space": "O(V)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "#include <cmath>\nclass Solution {\npublic:\n    bool arbitrage(int n, vector<vector<double>>& rates) {  // rates: {u, v, rate}\n        vector<double> dist(n, 0.0);\n        vector<array<double,3>> edges;\n        for (auto& r : rates) edges.push_back({r[0], r[1], -log(r[2])});\n        for (int i = 0; i < n - 1; i++)\n            for (auto& e : edges) {\n                int u = (int)e[0], v = (int)e[1];\n                if (dist[u] + e[2] < dist[v] - 1e-9) dist[v] = dist[u] + e[2];\n            }\n        for (auto& e : edges) {\n            int u = (int)e[0], v = (int)e[1];\n            if (dist[u] + e[2] < dist[v] - 1e-9) return true;\n        }\n        return false;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import math\nclass Solution:\n    def arbitrage(self, n, rates):   # rates: list of (u, v, rate)\n        dist = [0.0] * n\n        edges = [(u, v, -math.log(r)) for u, v, r in rates]\n        for _ in range(n - 1):\n            for u, v, w in edges:\n                if dist[u] + w < dist[v] - 1e-9:\n                    dist[v] = dist[u] + w\n        for u, v, w in edges:\n            if dist[u] + w < dist[v] - 1e-9:\n                return True\n        return False"
+          }
+        ]
+      }
     },
     {
       "id": "bf5",
@@ -133,7 +221,29 @@
       "statement": "Single-source shortest paths allowing negatives.",
       "hint": "Direct Bellman-Ford.",
       "tests": "General relaxation.",
-      "link": "https://cses.fi/problemset/task/1673"
+      "link": "https://cses.fi/problemset/task/1673",
+      "solution": {
+        "approach": [
+          "When edges may be negative (but no negative cycle), Dijkstra is invalid; Bellman-Ford is the right tool.",
+          "Relax all edges V-1 times from the source; distances converge because any shortest path has at most V-1 edges."
+        ],
+        "complexity": {
+          "time": "O(V · E)",
+          "space": "O(V)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<long long> shortestPaths(int n, vector<vector<int>>& edges, int src) {\n        const long long INF = 1e18;\n        vector<long long> dist(n, INF); dist[src] = 0;\n        for (int i = 0; i < n - 1; i++)\n            for (auto& e : edges)\n                if (dist[e[0]] != INF && dist[e[0]] + e[2] < dist[e[1]])\n                    dist[e[1]] = dist[e[0]] + e[2];\n        return dist;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def shortestPaths(self, n, edges, src):\n        INF = float('inf')\n        dist = [INF] * n\n        dist[src] = 0\n        for _ in range(n - 1):\n            for u, v, w in edges:\n                if dist[u] != INF and dist[u] + w < dist[v]:\n                    dist[v] = dist[u] + w\n        return dist"
+          }
+        ]
+      }
     }
   ]
 }

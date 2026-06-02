@@ -40,15 +40,26 @@ export default function GraphView({
         const st = stateOf(e.u, e.v);
         const active = st !== "default";
         const c = active ? colorFor(st).bg : "rgb(var(--border-strong))";
-        const mx = (a.x + b.x) / 2;
-        const my = (a.y + b.y) / 2;
+        // Clip endpoints to the node radius so arrowheads stay visible.
+        const NR = 22;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const ux = dx / len;
+        const uy = dy / len;
+        const ax = a.x + ux * NR;
+        const ay = a.y + uy * NR;
+        const bx = b.x - ux * NR;
+        const by = b.y - uy * NR;
+        const mx = (ax + bx) / 2;
+        const my = (ay + by) / 2;
         return (
           <g key={i}>
             <motion.line
-              x1={a.x}
-              y1={a.y}
-              x2={b.x}
-              y2={b.y}
+              x1={ax}
+              y1={ay}
+              x2={bx}
+              y2={by}
               stroke={c}
               strokeWidth={active ? 3.5 : 2}
               markerEnd={directed ? "url(#arrow)" : undefined}

@@ -102,7 +102,29 @@
       "statement": "Count connected components in a friendship matrix.",
       "hint": "DFS/union-find over the adjacency.",
       "tests": "Connected components.",
-      "link": "https://leetcode.com/problems/number-of-provinces/"
+      "link": "https://leetcode.com/problems/number-of-provinces/",
+      "solution": {
+        "approach": [
+          "Provinces are connected components of the friendship graph given as an adjacency matrix.",
+          "DFS from each unvisited city, marking all reachable cities; each DFS launch is one province."
+        ],
+        "complexity": {
+          "time": "O(n^2)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    void dfs(int u, vector<vector<int>>& M, vector<bool>& seen) {\n        seen[u] = true;\n        for (int v = 0; v < (int)M.size(); v++)\n            if (M[u][v] && !seen[v]) dfs(v, M, seen);\n    }\npublic:\n    int findCircleNum(vector<vector<int>>& M) {\n        int n = M.size(), count = 0;\n        vector<bool> seen(n, false);\n        for (int i = 0; i < n; i++) if (!seen[i]) { count++; dfs(i, M, seen); }\n        return count;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findCircleNum(self, M: list[list[int]]) -> int:\n        n = len(M)\n        seen = [False] * n\n        def dfs(u):\n            seen[u] = True\n            for v in range(n):\n                if M[u][v] and not seen[v]:\n                    dfs(v)\n        count = 0\n        for i in range(n):\n            if not seen[i]:\n                count += 1\n                dfs(i)\n        return count"
+          }
+        ]
+      }
     },
     {
       "id": "dfs2",
@@ -111,7 +133,29 @@
       "statement": "Detect if prerequisites contain a cycle.",
       "hint": "DFS with gray/black colouring detects a back edge (cycle).",
       "tests": "Directed cycle detection.",
-      "link": "https://leetcode.com/problems/course-schedule/"
+      "link": "https://leetcode.com/problems/course-schedule/",
+      "solution": {
+        "approach": [
+          "Courses are takeable iff the prerequisite graph is a DAG. Detect a cycle with DFS three-colouring (white/grey/black).",
+          "If DFS reaches a grey (in-progress) node, there is a back edge → cycle → impossible."
+        ],
+        "complexity": {
+          "time": "O(V + E)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<vector<int>> adj; vector<int> state; // 0 white,1 grey,2 black\n    bool cycle(int u) {\n        state[u] = 1;\n        for (int v : adj[u]) {\n            if (state[v] == 1) return true;\n            if (state[v] == 0 && cycle(v)) return true;\n        }\n        state[u] = 2; return false;\n    }\npublic:\n    bool canFinish(int n, vector<vector<int>>& pre) {\n        adj.assign(n, {}); state.assign(n, 0);\n        for (auto& p : pre) adj[p[1]].push_back(p[0]);\n        for (int i = 0; i < n; i++) if (state[i] == 0 && cycle(i)) return false;\n        return true;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def canFinish(self, n, prerequisites):\n        adj = [[] for _ in range(n)]\n        for a, b in prerequisites:\n            adj[b].append(a)\n        state = [0] * n\n        def cycle(u):\n            state[u] = 1\n            for v in adj[u]:\n                if state[v] == 1 or (state[v] == 0 and cycle(v)):\n                    return True\n            state[u] = 2\n            return False\n        return not any(state[i] == 0 and cycle(i) for i in range(n))"
+          }
+        ]
+      }
     },
     {
       "id": "dfs3",
@@ -120,7 +164,29 @@
       "statement": "Cells from which water can reach both oceans.",
       "hint": "DFS inward from each ocean's border.",
       "tests": "Multi-start DFS on grids.",
-      "link": "https://leetcode.com/problems/pacific-atlantic-water-flow/"
+      "link": "https://leetcode.com/problems/pacific-atlantic-water-flow/",
+      "solution": {
+        "approach": [
+          "Water flows to an ocean if there is a non-increasing path to its border. Reverse the question: from each ocean's border, climb to cells with height >= current.",
+          "DFS inward from Pacific borders and Atlantic borders separately; cells reachable from both can drain to both oceans."
+        ],
+        "complexity": {
+          "time": "O(R·C)",
+          "space": "O(R·C)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int R, C;\n    void dfs(int r, int c, vector<vector<int>>& h, vector<vector<bool>>& ocean) {\n        ocean[r][c] = true;\n        int dx[] = {0,0,1,-1}, dy[] = {1,-1,0,0};\n        for (int d = 0; d < 4; d++) {\n            int nr = r + dx[d], nc = c + dy[d];\n            if (nr >= 0 && nc >= 0 && nr < R && nc < C && !ocean[nr][nc] && h[nr][nc] >= h[r][c])\n                dfs(nr, nc, h, ocean);\n        }\n    }\npublic:\n    vector<vector<int>> pacificAtlantic(vector<vector<int>>& h) {\n        R = h.size(); C = h[0].size();\n        vector<vector<bool>> pac(R, vector<bool>(C, false)), atl(R, vector<bool>(C, false));\n        for (int i = 0; i < R; i++) { dfs(i, 0, h, pac); dfs(i, C - 1, h, atl); }\n        for (int j = 0; j < C; j++) { dfs(0, j, h, pac); dfs(R - 1, j, h, atl); }\n        vector<vector<int>> res;\n        for (int i = 0; i < R; i++) for (int j = 0; j < C; j++)\n            if (pac[i][j] && atl[i][j]) res.push_back({i, j});\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def pacificAtlantic(self, h):\n        R, C = len(h), len(h[0])\n        pac = [[False] * C for _ in range(R)]\n        atl = [[False] * C for _ in range(R)]\n        def dfs(r, c, ocean):\n            ocean[r][c] = True\n            for nr, nc in ((r,c+1),(r,c-1),(r+1,c),(r-1,c)):\n                if 0 <= nr < R and 0 <= nc < C and not ocean[nr][nc] and h[nr][nc] >= h[r][c]:\n                    dfs(nr, nc, ocean)\n        for i in range(R):\n            dfs(i, 0, pac); dfs(i, C - 1, atl)\n        for j in range(C):\n            dfs(0, j, pac); dfs(R - 1, j, atl)\n        return [[i, j] for i in range(R) for j in range(C) if pac[i][j] and atl[i][j]]"
+          }
+        ]
+      }
     },
     {
       "id": "dfs4",
@@ -129,7 +195,29 @@
       "statement": "Deep-copy a connected undirected graph.",
       "hint": "DFS with a map from original to clone.",
       "tests": "DFS with memoised construction.",
-      "link": "https://leetcode.com/problems/clone-graph/"
+      "link": "https://leetcode.com/problems/clone-graph/",
+      "solution": {
+        "approach": [
+          "Deep-copy the graph with DFS, keeping a map from original node to its clone to handle cycles and shared neighbours.",
+          "On first visit, create the clone, then recurse to clone and attach each neighbour."
+        ],
+        "complexity": {
+          "time": "O(V + E)",
+          "space": "O(V)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    unordered_map<Node*, Node*> seen;\npublic:\n    Node* cloneGraph(Node* node) {\n        if (!node) return nullptr;\n        if (seen.count(node)) return seen[node];\n        Node* copy = new Node(node->val);\n        seen[node] = copy;\n        for (Node* nb : node->neighbors) copy->neighbors.push_back(cloneGraph(nb));\n        return copy;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def cloneGraph(self, node):\n        seen = {}\n        def dfs(n):\n            if not n:\n                return None\n            if n in seen:\n                return seen[n]\n            copy = Node(n.val)\n            seen[n] = copy\n            copy.neighbors = [dfs(nb) for nb in n.neighbors]\n            return copy\n        return dfs(node)"
+          }
+        ]
+      }
     },
     {
       "id": "dfs5",
@@ -138,7 +226,29 @@
       "statement": "Find all bridges in a network.",
       "hint": "DFS with discovery times and low-link values (Tarjan).",
       "tests": "DFS timing for bridges.",
-      "link": "https://leetcode.com/problems/critical-connections-in-a-network/"
+      "link": "https://leetcode.com/problems/critical-connections-in-a-network/",
+      "solution": {
+        "approach": [
+          "A bridge (critical connection) is an edge that lies on no cycle. Tarjan's DFS assigns each node a discovery time and a low-link = earliest reachable time.",
+          "Edge (u, v) is a bridge iff low[v] > disc[u], meaning v's subtree cannot reach u or earlier without that edge."
+        ],
+        "complexity": {
+          "time": "O(V + E)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<vector<int>> adj; vector<int> disc, low; int timer = 0;\n    vector<vector<int>> bridges;\n    void dfs(int u, int parent) {\n        disc[u] = low[u] = ++timer;\n        for (int v : adj[u]) {\n            if (v == parent) continue;\n            if (!disc[v]) {\n                dfs(v, u);\n                low[u] = min(low[u], low[v]);\n                if (low[v] > disc[u]) bridges.push_back({u, v});\n            } else low[u] = min(low[u], disc[v]);\n        }\n    }\npublic:\n    vector<vector<int>> criticalConnections(int n, vector<vector<int>>& connections) {\n        adj.assign(n, {}); disc.assign(n, 0); low.assign(n, 0);\n        for (auto& e : connections) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); }\n        for (int i = 0; i < n; i++) if (!disc[i]) dfs(i, -1);\n        return bridges;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import sys\nclass Solution:\n    def criticalConnections(self, n, connections):\n        sys.setrecursionlimit(10**6)\n        adj = [[] for _ in range(n)]\n        for a, b in connections:\n            adj[a].append(b); adj[b].append(a)\n        disc = [0] * n\n        low = [0] * n\n        self.timer = 0\n        bridges = []\n        def dfs(u, parent):\n            self.timer += 1\n            disc[u] = low[u] = self.timer\n            for v in adj[u]:\n                if v == parent:\n                    continue\n                if not disc[v]:\n                    dfs(v, u)\n                    low[u] = min(low[u], low[v])\n                    if low[v] > disc[u]:\n                        bridges.append([u, v])\n                else:\n                    low[u] = min(low[u], disc[v])\n        for i in range(n):\n            if not disc[i]:\n                dfs(i, -1)\n        return bridges"
+          }
+        ]
+      }
     }
   ]
 }

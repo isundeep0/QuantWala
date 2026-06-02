@@ -128,6 +128,9 @@ export default function AlgorithmDetail() {
             {algo.complexity?.space && (
               <span className="chip surface-sunken font-mono">▢ {algo.complexity.space}</span>
             )}
+            {algo.logic?.codes?.length > 1 && (
+              <span className="chip surface-sunken">C++ · Python</span>
+            )}
             {(algo.tags || []).map((t) => (
               <span key={t} className="chip surface-sunken">
                 {t}

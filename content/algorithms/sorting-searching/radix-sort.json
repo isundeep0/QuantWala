@@ -5,7 +5,7 @@
   "title": "Radix Sort",
   "tagline": "Sort big integers by stacking stable counting sorts, one digit at a time.",
   "estMinutes": 16,
-  "simulator": null,
+  "simulator": "radix-sort",
   "complexity": {
     "time": "O(d·(n + b))",
     "space": "O(n + b)"
@@ -97,7 +97,29 @@
       "statement": "Find the largest gap between consecutive sorted elements in linear time.",
       "hint": "Radix or bucket sort gives the needed linear-time ordering.",
       "tests": "Linear-time integer sorting.",
-      "link": "https://leetcode.com/problems/maximum-gap/"
+      "link": "https://leetcode.com/problems/maximum-gap/",
+      "solution": {
+        "approach": [
+          "Sort in linear time with LSD radix sort (or bucketing), then a single scan finds the largest gap between consecutive elements.",
+          "Radix sort processes digits from least to most significant using stable counting passes, so the total cost is O(d·n) with d the number of digits — effectively O(n)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int maximumGap(vector<int>& a) {\n        int n = a.size();\n        if (n < 2) return 0;\n        int mx = *max_element(a.begin(), a.end());\n        vector<int> buf(n);\n        for (long long exp = 1; mx / exp > 0; exp *= 10) {\n            vector<int> cnt(10, 0);\n            for (int x : a) cnt[(x / exp) % 10]++;\n            for (int i = 1; i < 10; i++) cnt[i] += cnt[i - 1];\n            for (int i = n - 1; i >= 0; i--) buf[--cnt[(a[i] / exp) % 10]] = a[i];\n            a = buf;\n        }\n        int gap = 0;\n        for (int i = 1; i < n; i++) gap = max(gap, a[i] - a[i - 1]);\n        return gap;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def maximumGap(self, a: list[int]) -> int:\n        n = len(a)\n        if n < 2:\n            return 0\n        mx = max(a)\n        exp = 1\n        while mx // exp > 0:\n            cnt = [0] * 10\n            for x in a:\n                cnt[(x // exp) % 10] += 1\n            for i in range(1, 10):\n                cnt[i] += cnt[i - 1]\n            buf = [0] * n\n            for x in reversed(a):\n                d = (x // exp) % 10\n                cnt[d] -= 1\n                buf[cnt[d]] = x\n            a = buf\n            exp *= 10\n        return max(a[i] - a[i - 1] for i in range(1, n))"
+          }
+        ]
+      }
     },
     {
       "id": "rs2",
@@ -106,7 +128,29 @@
       "statement": "Sort integers; try a base-256 radix sort.",
       "hint": "Mask bytes with shifts; 4 passes for 32-bit ints.",
       "tests": "Radix sort implementation.",
-      "link": "https://leetcode.com/problems/sort-an-array/"
+      "link": "https://leetcode.com/problems/sort-an-array/",
+      "solution": {
+        "approach": [
+          "Radix sort needs non-negative keys, so offset every value by -min so the smallest becomes 0, sort, then shift back.",
+          "Run stable counting-sort passes over base-10 (or larger base) digits from least to most significant."
+        ],
+        "complexity": {
+          "time": "O(d·n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> sortArray(vector<int>& a) {\n        if (a.empty()) return a;\n        int mn = *min_element(a.begin(), a.end());\n        for (int& x : a) x -= mn;\n        int mx = *max_element(a.begin(), a.end());\n        int n = a.size();\n        vector<int> buf(n);\n        for (long long exp = 1; mx / exp > 0; exp *= 10) {\n            vector<int> cnt(10, 0);\n            for (int x : a) cnt[(x / exp) % 10]++;\n            for (int i = 1; i < 10; i++) cnt[i] += cnt[i - 1];\n            for (int i = n - 1; i >= 0; i--) buf[--cnt[(a[i] / exp) % 10]] = a[i];\n            a = buf;\n        }\n        for (int& x : a) x += mn;\n        return a;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def sortArray(self, a: list[int]) -> list[int]:\n        if not a:\n            return a\n        mn = min(a)\n        a = [x - mn for x in a]\n        mx = max(a)\n        exp = 1\n        while mx // exp > 0:\n            cnt = [0] * 10\n            for x in a:\n                cnt[(x // exp) % 10] += 1\n            for i in range(1, 10):\n                cnt[i] += cnt[i - 1]\n            buf = [0] * len(a)\n            for x in reversed(a):\n                d = (x // exp) % 10\n                cnt[d] -= 1\n                buf[cnt[d]] = x\n            a = buf\n            exp *= 10\n        return [x + mn for x in a]"
+          }
+        ]
+      }
     },
     {
       "id": "rs3",
@@ -115,7 +159,29 @@
       "statement": "Answer kth-smallest queries over numbers trimmed to their rightmost digits.",
       "hint": "Repeated stable sorting by trailing digits mirrors radix sort.",
       "tests": "Stable sort by digit suffixes.",
-      "link": "https://leetcode.com/problems/query-kth-smallest-trimmed-number/"
+      "link": "https://leetcode.com/problems/query-kth-smallest-trimmed-number/",
+      "solution": {
+        "approach": [
+          "For each query (index, trim), we rank numbers by their last `trim` characters. A stable LSD radix sort over those trailing digits reproduces the required ordering while keeping original indices on ties.",
+          "Process the trimmed suffix digit by digit from the rightmost; stability preserves earlier order so equal trimmed values stay in original index order."
+        ],
+        "complexity": {
+          "time": "O(q·n·L)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> smallestTrimmedNumbers(vector<string>& nums, vector<vector<int>>& queries) {\n        int n = nums.size(), L = nums[0].size();\n        vector<int> res;\n        for (auto& q : queries) {\n            int k = q[0], trim = q[1];\n            vector<int> idx(n);\n            for (int i = 0; i < n; i++) idx[i] = i;\n            for (int pos = L - 1; pos >= L - trim; pos--) {\n                vector<int> cnt(10, 0), out(n);\n                for (int i : idx) cnt[nums[i][pos] - '0']++;\n                for (int d = 1; d < 10; d++) cnt[d] += cnt[d - 1];\n                for (int i = n - 1; i >= 0; i--) { int d = nums[idx[i]][pos] - '0'; out[--cnt[d]] = idx[i]; }\n                idx = out;\n            }\n            res.push_back(idx[k - 1]);\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def smallestTrimmedNumbers(self, nums, queries):\n        n, L = len(nums), len(nums[0])\n        res = []\n        for k, trim in queries:\n            idx = list(range(n))\n            for pos in range(L - 1, L - trim - 1, -1):\n                cnt = [0] * 10\n                for i in idx:\n                    cnt[ord(nums[i][pos]) - 48] += 1\n                for d in range(1, 10):\n                    cnt[d] += cnt[d - 1]\n                out = [0] * n\n                for i in reversed(idx):\n                    d = ord(nums[i][pos]) - 48\n                    cnt[d] -= 1\n                    out[cnt[d]] = i\n                idx = out\n            res.append(idx[k - 1])\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "rs4",
@@ -124,7 +190,29 @@
       "statement": "Sort by popcount, ties by value.",
       "hint": "A stable sort by primary then secondary key echoes radix layering.",
       "tests": "Multi-key stable sorting.",
-      "link": "https://leetcode.com/problems/sort-integers-by-the-number-of-1-bits/"
+      "link": "https://leetcode.com/problems/sort-integers-by-the-number-of-1-bits/",
+      "solution": {
+        "approach": [
+          "Sort by a composite key (popcount, value). This is a stable multi-key sort — exactly what radix/bucket sorting expresses naturally.",
+          "Simplest correct form: key each number by bit-count*100000 + value (values <= 10^4), then sort. Equal popcounts fall back to numeric order."
+        ],
+        "complexity": {
+          "time": "O(n log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> sortByBits(vector<int>& a) {\n        sort(a.begin(), a.end(), [](int x, int y){\n            int bx = __builtin_popcount(x), by = __builtin_popcount(y);\n            return bx != by ? bx < by : x < y;\n        });\n        return a;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def sortByBits(self, a: list[int]) -> list[int]:\n        return sorted(a, key=lambda x: (bin(x).count('1'), x))"
+          }
+        ]
+      }
     },
     {
       "id": "rs5",
@@ -133,7 +221,29 @@
       "statement": "Arrange numbers to form the largest concatenation.",
       "hint": "Custom comparator; understand why a stable, well-defined ordering matters.",
       "tests": "Ordering semantics.",
-      "link": "https://leetcode.com/problems/largest-number/"
+      "link": "https://leetcode.com/problems/largest-number/",
+      "solution": {
+        "approach": [
+          "Arrange numbers so their concatenation is largest. Sort with a custom comparator: a before b iff a+b > b+a (string concatenation).",
+          "After sorting descending by that rule, join. Guard the all-zeros case so the result is \"0\" not \"00…0\"."
+        ],
+        "complexity": {
+          "time": "O(n log n · L)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    string largestNumber(vector<int>& nums) {\n        vector<string> s;\n        for (int x : nums) s.push_back(to_string(x));\n        sort(s.begin(), s.end(), [](const string& a, const string& b){ return a + b > b + a; });\n        if (s[0] == \"0\") return \"0\";\n        string res;\n        for (auto& x : s) res += x;\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from functools import cmp_to_key\nclass Solution:\n    def largestNumber(self, nums: list[int]) -> str:\n        s = list(map(str, nums))\n        s.sort(key=cmp_to_key(lambda a, b: (a + b < b + a) - (a + b > b + a)))\n        res = ''.join(s)\n        return '0' if res[0] == '0' else res"
+          }
+        ]
+      }
     }
   ]
 }

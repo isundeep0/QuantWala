@@ -107,7 +107,29 @@
       "statement": "Detect whether a linked list has a cycle.",
       "hint": "Tortoise and hare; meeting means a cycle.",
       "tests": "Cycle detection.",
-      "link": "https://leetcode.com/problems/linked-list-cycle/"
+      "link": "https://leetcode.com/problems/linked-list-cycle/",
+      "solution": {
+        "approach": [
+          "Floyd's tortoise and hare: a slow pointer moves one step, a fast pointer two. If there is a cycle the fast pointer eventually laps the slow one and they meet.",
+          "If fast reaches null, the list is acyclic. O(1) extra space, unlike a hash-set approach."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    bool hasCycle(ListNode* head) {\n        ListNode *slow = head, *fast = head;\n        while (fast && fast->next) {\n            slow = slow->next; fast = fast->next->next;\n            if (slow == fast) return true;\n        }\n        return false;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def hasCycle(self, head) -> bool:\n        slow = fast = head\n        while fast and fast.next:\n            slow = slow.next\n            fast = fast.next.next\n            if slow is fast:\n                return True\n        return False"
+          }
+        ]
+      }
     },
     {
       "id": "fs2",
@@ -116,7 +138,29 @@
       "statement": "Return the node where the cycle begins, or null.",
       "hint": "After meeting, move one pointer to head; advance both by one until they meet again.",
       "tests": "Cycle-start phase of Floyd's.",
-      "link": "https://leetcode.com/problems/linked-list-cycle-ii/"
+      "link": "https://leetcode.com/problems/linked-list-cycle-ii/",
+      "solution": {
+        "approach": [
+          "First detect a meeting point with Floyd's algorithm. Then reset one pointer to the head and advance both one step at a time.",
+          "By the cycle-length math, the distance from head to the cycle entry equals the distance from the meeting point to the entry, so they meet exactly at the cycle start."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    ListNode* detectCycle(ListNode* head) {\n        ListNode *slow = head, *fast = head;\n        while (fast && fast->next) {\n            slow = slow->next; fast = fast->next->next;\n            if (slow == fast) {\n                ListNode* p = head;\n                while (p != slow) { p = p->next; slow = slow->next; }\n                return p;\n            }\n        }\n        return nullptr;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def detectCycle(self, head):\n        slow = fast = head\n        while fast and fast.next:\n            slow = slow.next\n            fast = fast.next.next\n            if slow is fast:\n                p = head\n                while p is not slow:\n                    p = p.next\n                    slow = slow.next\n                return p\n        return None"
+          }
+        ]
+      }
     },
     {
       "id": "fs3",
@@ -125,7 +169,29 @@
       "statement": "Return the middle node of a linked list.",
       "hint": "When fast reaches the end, slow is at the middle.",
       "tests": "Midpoint finding.",
-      "link": "https://leetcode.com/problems/middle-of-the-linked-list/"
+      "link": "https://leetcode.com/problems/middle-of-the-linked-list/",
+      "solution": {
+        "approach": [
+          "Advance slow by one and fast by two. When fast falls off the end, slow sits at the middle.",
+          "For even length this returns the second of the two middle nodes, matching the problem's requirement."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    ListNode* middleNode(ListNode* head) {\n        ListNode *slow = head, *fast = head;\n        while (fast && fast->next) { slow = slow->next; fast = fast->next->next; }\n        return slow;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def middleNode(self, head):\n        slow = fast = head\n        while fast and fast.next:\n            slow = slow.next\n            fast = fast.next.next\n        return slow"
+          }
+        ]
+      }
     },
     {
       "id": "fs4",
@@ -134,7 +200,29 @@
       "statement": "Detect if repeatedly summing squared digits reaches 1.",
       "hint": "The sequence is a 'linked list' of numbers; use fast/slow to detect the loop.",
       "tests": "Floyd's on an implicit sequence.",
-      "link": "https://leetcode.com/problems/happy-number/"
+      "link": "https://leetcode.com/problems/happy-number/",
+      "solution": {
+        "approach": [
+          "Repeatedly replacing n by the sum of squares of its digits either reaches 1 (happy) or loops forever. The sequence behaves like a linked list, so cycle detection applies.",
+          "Use slow/fast on the digit-square function; if they meet at 1 it is happy, otherwise they meet inside a cycle."
+        ],
+        "complexity": {
+          "time": "O(log n) per step",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    int sq(int n) { int s = 0; while (n) { int d = n % 10; s += d * d; n /= 10; } return s; }\npublic:\n    bool isHappy(int n) {\n        int slow = n, fast = n;\n        do { slow = sq(slow); fast = sq(sq(fast)); } while (slow != fast);\n        return slow == 1;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def isHappy(self, n: int) -> bool:\n        def sq(x):\n            return sum(int(c) ** 2 for c in str(x))\n        slow, fast = n, sq(n)\n        while slow != fast:\n            slow = sq(slow)\n            fast = sq(sq(fast))\n        return slow == 1"
+          }
+        ]
+      }
     },
     {
       "id": "fs5",
@@ -143,7 +231,29 @@
       "statement": "Find the duplicate in n+1 numbers from 1..n without modifying the array.",
       "hint": "Treat values as next-pointers; the duplicate creates a cycle whose entrance is the answer.",
       "tests": "Cycle-start trick on an array as a function graph.",
-      "link": "https://leetcode.com/problems/find-the-duplicate-number/"
+      "link": "https://leetcode.com/problems/find-the-duplicate-number/",
+      "solution": {
+        "approach": [
+          "Treat the array as a function i -> nums[i]. Because values are in [1, n] and one is duplicated, this functional graph contains a cycle whose entry is the duplicate.",
+          "Apply Floyd's cycle detection on the index sequence, then find the entry point — that index value is the repeated number. O(1) space, no array modification."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int findDuplicate(vector<int>& nums) {\n        int slow = nums[0], fast = nums[0];\n        do { slow = nums[slow]; fast = nums[nums[fast]]; } while (slow != fast);\n        slow = nums[0];\n        while (slow != fast) { slow = nums[slow]; fast = nums[fast]; }\n        return slow;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findDuplicate(self, nums: list[int]) -> int:\n        slow = fast = nums[0]\n        while True:\n            slow = nums[slow]\n            fast = nums[nums[fast]]\n            if slow == fast:\n                break\n        slow = nums[0]\n        while slow != fast:\n            slow = nums[slow]\n            fast = nums[fast]\n        return slow"
+          }
+        ]
+      }
     }
   ]
 }

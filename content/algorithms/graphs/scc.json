@@ -5,7 +5,7 @@
   "title": "Strongly Connected Components",
   "tagline": "Collapse mutually-reachable groups in a digraph — Kosaraju and Tarjan.",
   "estMinutes": 20,
-  "simulator": null,
+  "simulator": "scc",
   "complexity": {
     "time": "O(V + E)",
     "space": "O(V)"
@@ -102,7 +102,29 @@
       "statement": "Find all bridges in a graph.",
       "hint": "Tarjan-style low-link DFS.",
       "tests": "Low-link technique.",
-      "link": "https://leetcode.com/problems/critical-connections-in-a-network/"
+      "link": "https://leetcode.com/problems/critical-connections-in-a-network/",
+      "solution": {
+        "approach": [
+          "Critical connections are bridges. Tarjan's DFS computes disc[u] (discovery time) and low[u] (earliest reachable discovery time).",
+          "Edge (u, v) is a bridge iff low[v] > disc[u]: v's subtree cannot reach u or above without that edge."
+        ],
+        "complexity": {
+          "time": "O(V + E)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<vector<int>> adj; vector<int> disc, low; int timer = 0; vector<vector<int>> res;\n    void dfs(int u, int parent) {\n        disc[u] = low[u] = ++timer;\n        for (int v : adj[u]) {\n            if (v == parent) continue;\n            if (!disc[v]) { dfs(v, u); low[u] = min(low[u], low[v]); if (low[v] > disc[u]) res.push_back({u, v}); }\n            else low[u] = min(low[u], disc[v]);\n        }\n    }\npublic:\n    vector<vector<int>> criticalConnections(int n, vector<vector<int>>& conns) {\n        adj.assign(n, {}); disc.assign(n, 0); low.assign(n, 0);\n        for (auto& e : conns) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); }\n        for (int i = 0; i < n; i++) if (!disc[i]) dfs(i, -1);\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import sys\nclass Solution:\n    def criticalConnections(self, n, connections):\n        sys.setrecursionlimit(10**6)\n        adj = [[] for _ in range(n)]\n        for a, b in connections:\n            adj[a].append(b); adj[b].append(a)\n        disc = [0]*n; low = [0]*n; self.t = 0; res = []\n        def dfs(u, p):\n            self.t += 1; disc[u] = low[u] = self.t\n            for v in adj[u]:\n                if v == p: continue\n                if not disc[v]:\n                    dfs(v, u); low[u] = min(low[u], low[v])\n                    if low[v] > disc[u]: res.append([u, v])\n                else:\n                    low[u] = min(low[u], disc[v])\n        for i in range(n):\n            if not disc[i]: dfs(i, -1)\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "scc2",
@@ -111,7 +133,29 @@
       "statement": "Count/label SCCs of a directed graph.",
       "hint": "Kosaraju or Tarjan.",
       "tests": "Core SCC.",
-      "link": "https://cses.fi/problemset/task/1683"
+      "link": "https://cses.fi/problemset/task/1683",
+      "solution": {
+        "approach": [
+          "Kosaraju's algorithm: run a DFS pushing nodes onto a stack by finish time, then DFS the transpose graph in reverse-finish order.",
+          "Each DFS tree in the second pass is one strongly connected component."
+        ],
+        "complexity": {
+          "time": "O(V + E)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<vector<int>> stronglyConnectedComponents(int n, vector<vector<int>>& edges) {\n        vector<vector<int>> g(n), gt(n);\n        for (auto& e : edges) { g[e[0]].push_back(e[1]); gt[e[1]].push_back(e[0]); }\n        vector<bool> seen(n, false); vector<int> order;\n        function<void(int)> dfs1 = [&](int u){ seen[u]=true; for(int v:g[u]) if(!seen[v]) dfs1(v); order.push_back(u); };\n        for (int i = 0; i < n; i++) if (!seen[i]) dfs1(i);\n        vector<vector<int>> comps; vector<bool> seen2(n, false);\n        function<void(int,vector<int>&)> dfs2 = [&](int u, vector<int>& c){ seen2[u]=true; c.push_back(u); for(int v:gt[u]) if(!seen2[v]) dfs2(v, c); };\n        for (int i = n - 1; i >= 0; i--) {\n            int u = order[i];\n            if (!seen2[u]) { vector<int> c; dfs2(u, c); comps.push_back(c); }\n        }\n        return comps;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import sys\nclass Solution:\n    def stronglyConnectedComponents(self, n, edges):\n        sys.setrecursionlimit(10**6)\n        g = [[] for _ in range(n)]; gt = [[] for _ in range(n)]\n        for u, v in edges:\n            g[u].append(v); gt[v].append(u)\n        seen = [False]*n; order = []\n        def dfs1(u):\n            seen[u] = True\n            for v in g[u]:\n                if not seen[v]: dfs1(v)\n            order.append(u)\n        for i in range(n):\n            if not seen[i]: dfs1(i)\n        comps = []; seen2 = [False]*n\n        def dfs2(u, c):\n            seen2[u] = True; c.append(u)\n            for v in gt[u]:\n                if not seen2[v]: dfs2(v, c)\n        for u in reversed(order):\n            if not seen2[u]:\n                c = []; dfs2(u, c); comps.append(c)\n        return comps"
+          }
+        ]
+      }
     },
     {
       "id": "scc3",
@@ -120,7 +164,29 @@
       "statement": "Decide satisfiability of a 2-CNF formula.",
       "hint": "Build the implication graph; a variable and its negation must not share an SCC.",
       "tests": "SCC application to logic.",
-      "link": "https://cses.fi/problemset/task/1684"
+      "link": "https://cses.fi/problemset/task/1684",
+      "solution": {
+        "approach": [
+          "Each clause (a ∨ b) forces two implications: ¬a ⇒ b and ¬b ⇒ a. Build this implication graph over 2n literal-nodes.",
+          "The formula is satisfiable iff no variable x has x and ¬x in the same SCC. Tarjan numbers SCCs in reverse topological order, so set x true when its true-literal's component comes later."
+        ],
+        "complexity": {
+          "time": "O(n + m)",
+          "space": "O(n + m)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class TwoSAT {\n    int n; vector<vector<int>> adj; vector<int> comp, order; vector<bool> seen;\n    void dfs1(int u){ seen[u]=true; for(int v:adj[u]) if(!seen[v]) dfs1(v); order.push_back(u); }\n    vector<vector<int>> adjT;\n    void dfs2(int u, int c){ comp[u]=c; for(int v:adjT[u]) if(comp[v]==-1) dfs2(v, c); }\npublic:\n    TwoSAT(int vars): n(vars), adj(2*vars), adjT(2*vars) {}\n    // literal (i, val): node = 2*i + (val?0:1); neg flips the low bit\n    void addOr(int i, bool vi, int j, bool vj) {\n        int a = 2*i + (vi?0:1), b = 2*j + (vj?0:1);\n        adj[a^1].push_back(b); adj[b^1].push_back(a);\n        adjT[b].push_back(a^1); adjT[a].push_back(b^1);\n    }\n    bool solve(vector<bool>& assign) {\n        seen.assign(2*n, false);\n        for (int i = 0; i < 2*n; i++) if (!seen[i]) dfs1(i);\n        comp.assign(2*n, -1); int c = 0;\n        for (int i = 2*n - 1; i >= 0; i--) if (comp[order[i]] == -1) dfs2(order[i], c++);\n        assign.assign(n, false);\n        for (int i = 0; i < n; i++) {\n            if (comp[2*i] == comp[2*i+1]) return false;\n            assign[i] = comp[2*i] > comp[2*i+1];\n        }\n        return true;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import sys\nclass TwoSAT:\n    def __init__(self, vars):\n        self.n = vars\n        self.adj = [[] for _ in range(2*vars)]\n        self.adjT = [[] for _ in range(2*vars)]\n    def add_or(self, i, vi, j, vj):       # (xi=vi) OR (xj=vj)\n        a = 2*i + (0 if vi else 1)\n        b = 2*j + (0 if vj else 1)\n        self.adj[a ^ 1].append(b); self.adj[b ^ 1].append(a)\n        self.adjT[b].append(a ^ 1); self.adjT[a].append(b ^ 1)\n    def solve(self):\n        sys.setrecursionlimit(10**6)\n        N = 2 * self.n\n        seen = [False]*N; order = []\n        def dfs1(u):\n            seen[u] = True\n            for v in self.adj[u]:\n                if not seen[v]: dfs1(v)\n            order.append(u)\n        for i in range(N):\n            if not seen[i]: dfs1(i)\n        comp = [-1]*N; c = 0\n        def dfs2(u, cid):\n            comp[u] = cid\n            for v in self.adjT[u]:\n                if comp[v] == -1: dfs2(v, cid)\n        for u in reversed(order):\n            if comp[u] == -1:\n                dfs2(u, c); c += 1\n        assign = [False]*self.n\n        for i in range(self.n):\n            if comp[2*i] == comp[2*i+1]:\n                return None\n            assign[i] = comp[2*i] > comp[2*i+1]\n        return assign"
+          }
+        ]
+      }
     },
     {
       "id": "scc4",
@@ -129,7 +195,29 @@
       "statement": "Find a vertex from which all others are reachable.",
       "hint": "Last-finished DFS vertex is the candidate; verify with one DFS.",
       "tests": "Finish-time reasoning.",
-      "link": "https://www.geeksforgeeks.org/find-a-mother-vertex-in-a-graph/"
+      "link": "https://www.geeksforgeeks.org/find-a-mother-vertex-in-a-graph/",
+      "solution": {
+        "approach": [
+          "A mother vertex can reach every other vertex. The last vertex to finish in a DFS over all components is the only candidate (it lies in a source SCC of the condensation).",
+          "Run DFS recording finish order; take the last-finished node and verify it reaches all vertices with one more DFS."
+        ],
+        "complexity": {
+          "time": "O(V + E)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<vector<int>> adj; vector<bool> seen;\n    void dfs(int u){ seen[u]=true; for(int v:adj[u]) if(!seen[v]) dfs(v); }\npublic:\n    int findMotherVertex(int n, vector<vector<int>>& edges) {\n        adj.assign(n, {});\n        for (auto& e : edges) adj[e[0]].push_back(e[1]);\n        seen.assign(n, false); int last = 0;\n        for (int i = 0; i < n; i++) if (!seen[i]) { dfs(i); last = i; }\n        seen.assign(n, false); dfs(last);\n        for (int i = 0; i < n; i++) if (!seen[i]) return -1;\n        return last;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import sys\nclass Solution:\n    def findMotherVertex(self, n, edges):\n        sys.setrecursionlimit(10**6)\n        adj = [[] for _ in range(n)]\n        for u, v in edges:\n            adj[u].append(v)\n        seen = [False]*n\n        def dfs(u):\n            seen[u] = True\n            for v in adj[u]:\n                if not seen[v]: dfs(v)\n        last = 0\n        for i in range(n):\n            if not seen[i]:\n                dfs(i); last = i\n        seen = [False]*n\n        dfs(last)\n        return last if all(seen) else -1"
+          }
+        ]
+      }
     },
     {
       "id": "scc5",
@@ -138,7 +226,29 @@
       "statement": "Reachability queries via the condensation DAG.",
       "hint": "Condense SCCs, then DP/reachability on the DAG.",
       "tests": "Condensation + DAG DP.",
-      "link": "https://cses.fi/problemset/task/1750"
+      "link": "https://cses.fi/problemset/task/1750",
+      "solution": {
+        "approach": [
+          "Condense each SCC into a single super-node; the result is a DAG. Reachability between original nodes reduces to reachability between their components.",
+          "Find SCCs (Kosaraju), map each node to its component id, build the condensation DAG, and answer reachability with a DAG traversal or transitive closure."
+        ],
+        "complexity": {
+          "time": "O(V + E)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> componentIds(int n, vector<vector<int>>& edges) {\n        vector<vector<int>> g(n), gt(n);\n        for (auto& e : edges) { g[e[0]].push_back(e[1]); gt[e[1]].push_back(e[0]); }\n        vector<bool> seen(n, false); vector<int> order;\n        function<void(int)> dfs1 = [&](int u){ seen[u]=true; for(int v:g[u]) if(!seen[v]) dfs1(v); order.push_back(u); };\n        for (int i = 0; i < n; i++) if (!seen[i]) dfs1(i);\n        vector<int> comp(n, -1); int c = 0;\n        function<void(int)> dfs2 = [&](int u){ comp[u]=c; for(int v:gt[u]) if(comp[v]==-1) dfs2(v); };\n        for (int i = n - 1; i >= 0; i--) if (comp[order[i]] == -1) { dfs2(order[i]); c++; }\n        return comp;     // nodes with equal id are mutually reachable\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import sys\nclass Solution:\n    def componentIds(self, n, edges):\n        sys.setrecursionlimit(10**6)\n        g = [[] for _ in range(n)]; gt = [[] for _ in range(n)]\n        for u, v in edges:\n            g[u].append(v); gt[v].append(u)\n        seen = [False]*n; order = []\n        def dfs1(u):\n            seen[u] = True\n            for v in g[u]:\n                if not seen[v]: dfs1(v)\n            order.append(u)\n        for i in range(n):\n            if not seen[i]: dfs1(i)\n        comp = [-1]*n; c = 0\n        def dfs2(u, cid):\n            comp[u] = cid\n            for v in gt[u]:\n                if comp[v] == -1: dfs2(v, cid)\n        for u in reversed(order):\n            if comp[u] == -1:\n                dfs2(u, c); c += 1\n        return comp"
+          }
+        ]
+      }
     }
   ]
 }

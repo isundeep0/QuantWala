@@ -106,7 +106,29 @@
       "statement": "Find the contiguous subarray of length k with the maximum average.",
       "hint": "Fixed-size window sum; slide and track the max.",
       "tests": "Fixed-size window.",
-      "link": "https://leetcode.com/problems/maximum-average-subarray-i/"
+      "link": "https://leetcode.com/problems/maximum-average-subarray-i/",
+      "solution": {
+        "approach": [
+          "Fixed-size window of length k: compute the first window's sum, then slide by adding the entering element and removing the leaving one.",
+          "Track the max average = max window sum / k. O(n) with O(1) memory."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    double findMaxAverage(vector<int>& a, int k) {\n        double sum = 0;\n        for (int i = 0; i < k; i++) sum += a[i];\n        double best = sum;\n        for (int i = k; i < (int)a.size(); i++) { sum += a[i] - a[i - k]; best = max(best, sum); }\n        return best / k;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findMaxAverage(self, a: list[int], k: int) -> float:\n        s = sum(a[:k])\n        best = s\n        for i in range(k, len(a)):\n            s += a[i] - a[i - k]\n            best = max(best, s)\n        return best / k"
+          }
+        ]
+      }
     },
     {
       "id": "sw2",
@@ -115,7 +137,29 @@
       "statement": "Length of the longest substring with all distinct characters.",
       "hint": "Variable window; jump left past the last duplicate position.",
       "tests": "Variable window with a last-seen map.",
-      "link": "https://leetcode.com/problems/longest-substring-without-repeating-characters/"
+      "link": "https://leetcode.com/problems/longest-substring-without-repeating-characters/",
+      "solution": {
+        "approach": [
+          "Grow a window [l, r]; track the last index each character appeared. When a repeat is inside the window, jump l past the previous occurrence.",
+          "The answer is the maximum window width seen. Each index is visited once, O(n)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(min(n, charset))"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int lengthOfLongestSubstring(string s) {\n        vector<int> last(128, -1);\n        int l = 0, best = 0;\n        for (int r = 0; r < (int)s.size(); r++) {\n            if (last[s[r]] >= l) l = last[s[r]] + 1;\n            last[s[r]] = r;\n            best = max(best, r - l + 1);\n        }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def lengthOfLongestSubstring(self, s: str) -> int:\n        last = {}\n        l = best = 0\n        for r, c in enumerate(s):\n            if c in last and last[c] >= l:\n                l = last[c] + 1\n            last[c] = r\n            best = max(best, r - l + 1)\n        return best"
+          }
+        ]
+      }
     },
     {
       "id": "sw3",
@@ -124,7 +168,29 @@
       "statement": "Smallest length of a subarray with sum ≥ target.",
       "hint": "Expand right to grow the sum; shrink left while sum ≥ target.",
       "tests": "Shrinking window for a minimum.",
-      "link": "https://leetcode.com/problems/minimum-size-subarray-sum/"
+      "link": "https://leetcode.com/problems/minimum-size-subarray-sum/",
+      "solution": {
+        "approach": [
+          "Expand the right edge adding to a running sum. Whenever sum >= target, shrink from the left while it still holds, recording the minimum window length.",
+          "Each index enters and leaves the window once, so it is O(n) despite the nested shrink loop."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int minSubArrayLen(int target, vector<int>& a) {\n        int l = 0, sum = 0, best = INT_MAX;\n        for (int r = 0; r < (int)a.size(); r++) {\n            sum += a[r];\n            while (sum >= target) { best = min(best, r - l + 1); sum -= a[l++]; }\n        }\n        return best == INT_MAX ? 0 : best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def minSubArrayLen(self, target: int, a: list[int]) -> int:\n        l = s = 0\n        best = float('inf')\n        for r, x in enumerate(a):\n            s += x\n            while s >= target:\n                best = min(best, r - l + 1)\n                s -= a[l]; l += 1\n        return 0 if best == float('inf') else best"
+          }
+        ]
+      }
     },
     {
       "id": "sw4",
@@ -133,7 +199,29 @@
       "statement": "Does s2 contain a permutation of s1 as a substring?",
       "hint": "Fixed window of size |s1|; compare frequency counts.",
       "tests": "Fixed window + frequency matching.",
-      "link": "https://leetcode.com/problems/permutation-in-string/"
+      "link": "https://leetcode.com/problems/permutation-in-string/",
+      "solution": {
+        "approach": [
+          "We seek a window of length len(s1) in s2 whose character counts match s1's exactly. Maintain a fixed-size sliding window of frequency counts.",
+          "Track how many of the 26 letters currently match the target count; the window is a permutation when all 26 match."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    bool checkInclusion(string s1, string s2) {\n        if (s1.size() > s2.size()) return false;\n        vector<int> need(26, 0), win(26, 0);\n        for (char c : s1) need[c - 'a']++;\n        int k = s1.size();\n        for (int i = 0; i < (int)s2.size(); i++) {\n            win[s2[i] - 'a']++;\n            if (i >= k) win[s2[i - k] - 'a']--;\n            if (i >= k - 1 && win == need) return true;\n        }\n        return false;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def checkInclusion(self, s1: str, s2: str) -> bool:\n        if len(s1) > len(s2):\n            return False\n        need = [0] * 26\n        win = [0] * 26\n        for c in s1:\n            need[ord(c) - 97] += 1\n        k = len(s1)\n        for i, c in enumerate(s2):\n            win[ord(c) - 97] += 1\n            if i >= k:\n                win[ord(s2[i - k]) - 97] -= 1\n            if i >= k - 1 and win == need:\n                return True\n        return False"
+          }
+        ]
+      }
     },
     {
       "id": "sw5",
@@ -142,7 +230,29 @@
       "statement": "Smallest window in s containing all characters of t.",
       "hint": "Expand to satisfy all required counts, then shrink to minimise while still valid.",
       "tests": "Variable window with a 'need/have' counter.",
-      "link": "https://leetcode.com/problems/minimum-window-substring/"
+      "link": "https://leetcode.com/problems/minimum-window-substring/",
+      "solution": {
+        "approach": [
+          "Keep a `need` count of t's characters and a `missing` counter. Expand right, decrementing missing when a needed char is covered.",
+          "Once missing hits 0, shrink from the left to drop unnecessary characters, recording the smallest valid window. O(n)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(charset)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    string minWindow(string s, string t) {\n        vector<int> need(128, 0);\n        for (char c : t) need[c]++;\n        int missing = t.size(), l = 0, bestLen = INT_MAX, bestL = 0;\n        for (int r = 0; r < (int)s.size(); r++) {\n            if (need[s[r]]-- > 0) missing--;\n            while (missing == 0) {\n                if (r - l + 1 < bestLen) { bestLen = r - l + 1; bestL = l; }\n                if (++need[s[l++]] > 0) missing++;\n            }\n        }\n        return bestLen == INT_MAX ? \"\" : s.substr(bestL, bestLen);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import Counter\nclass Solution:\n    def minWindow(self, s: str, t: str) -> str:\n        need = Counter(t)\n        missing = len(t)\n        l = best_l = 0\n        best_len = float('inf')\n        for r, c in enumerate(s):\n            if need[c] > 0:\n                missing -= 1\n            need[c] -= 1\n            while missing == 0:\n                if r - l + 1 < best_len:\n                    best_len, best_l = r - l + 1, l\n                need[s[l]] += 1\n                if need[s[l]] > 0:\n                    missing += 1\n                l += 1\n        return \"\" if best_len == float('inf') else s[best_l:best_l + best_len]"
+          }
+        ]
+      }
     }
   ]
 }

@@ -97,7 +97,29 @@
       "statement": "Answer many range-sum queries on a fixed array.",
       "hint": "Build a prefix array in the constructor; query in O(1).",
       "tests": "Core prefix-sum array.",
-      "link": "https://leetcode.com/problems/range-sum-query-immutable/"
+      "link": "https://leetcode.com/problems/range-sum-query-immutable/",
+      "solution": {
+        "approach": [
+          "Precompute pre[i] = a[0]+...+a[i-1]. Any range sum [l, r] is pre[r+1] - pre[l] in O(1).",
+          "Build the prefix array once in the constructor; each query is a single subtraction."
+        ],
+        "complexity": {
+          "time": "O(n) build, O(1) query",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class NumArray {\n    vector<long long> pre;\npublic:\n    NumArray(vector<int>& a) {\n        pre.assign(a.size() + 1, 0);\n        for (int i = 0; i < (int)a.size(); i++) pre[i + 1] = pre[i] + a[i];\n    }\n    int sumRange(int l, int r) { return (int)(pre[r + 1] - pre[l]); }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from itertools import accumulate\nclass NumArray:\n    def __init__(self, a: list[int]):\n        self.pre = [0] + list(accumulate(a))\n    def sumRange(self, l: int, r: int) -> int:\n        return self.pre[r + 1] - self.pre[l]"
+          }
+        ]
+      }
     },
     {
       "id": "ps2",
@@ -106,7 +128,29 @@
       "statement": "Count subarrays summing exactly to k.",
       "hint": "Prefix sum + hash map of seen prefix counts.",
       "tests": "Prefix sums combined with hashing.",
-      "link": "https://leetcode.com/problems/subarray-sum-equals-k/"
+      "link": "https://leetcode.com/problems/subarray-sum-equals-k/",
+      "solution": {
+        "approach": [
+          "A subarray sums to k iff pre[j] - pre[i] = k, i.e. pre[i] = pre[j] - k. Count, with a hash map, how many earlier prefixes equal pre[j] - k.",
+          "Stream the prefix sum, look up (prefix - k) in the map, then record the current prefix. O(n)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int subarraySum(vector<int>& a, int k) {\n        unordered_map<int,int> cnt{{0, 1}};\n        int pre = 0, ans = 0;\n        for (int x : a) { pre += x; ans += cnt[pre - k]; cnt[pre]++; }\n        return ans;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import defaultdict\nclass Solution:\n    def subarraySum(self, a: list[int], k: int) -> int:\n        cnt = defaultdict(int); cnt[0] = 1\n        pre = ans = 0\n        for x in a:\n            pre += x\n            ans += cnt[pre - k]\n            cnt[pre] += 1\n        return ans"
+          }
+        ]
+      }
     },
     {
       "id": "ps3",
@@ -115,7 +159,29 @@
       "statement": "Longest subarray with equal 0s and 1s.",
       "hint": "Treat 0 as -1; equal counts means equal prefix sums — store first occurrence.",
       "tests": "Prefix transform + first-seen map.",
-      "link": "https://leetcode.com/problems/contiguous-array/"
+      "link": "https://leetcode.com/problems/contiguous-array/",
+      "solution": {
+        "approach": [
+          "Map 0 -> -1 and 1 -> +1; then a subarray with equal 0s and 1s has prefix sum difference 0, i.e. two equal prefix sums.",
+          "Store the first index where each prefix value appears; the longest span is the current index minus that earliest index."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int findMaxLength(vector<int>& a) {\n        unordered_map<int,int> first{{0, -1}};\n        int pre = 0, best = 0;\n        for (int i = 0; i < (int)a.size(); i++) {\n            pre += a[i] ? 1 : -1;\n            if (first.count(pre)) best = max(best, i - first[pre]);\n            else first[pre] = i;\n        }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def findMaxLength(self, a: list[int]) -> int:\n        first = {0: -1}\n        pre = best = 0\n        for i, x in enumerate(a):\n            pre += 1 if x else -1\n            if pre in first:\n                best = max(best, i - first[pre])\n            else:\n                first[pre] = i\n        return best"
+          }
+        ]
+      }
     },
     {
       "id": "ps4",
@@ -124,7 +190,29 @@
       "statement": "Submatrix sum queries on a fixed matrix.",
       "hint": "2D prefix sums; inclusion-exclusion of four corners.",
       "tests": "2D prefix sums.",
-      "link": "https://leetcode.com/problems/range-sum-query-2d-immutable/"
+      "link": "https://leetcode.com/problems/range-sum-query-2d-immutable/",
+      "solution": {
+        "approach": [
+          "Build a 2D prefix where pre[i][j] is the sum of the rectangle from (0,0) to (i-1,j-1).",
+          "Any submatrix sum uses inclusion-exclusion: pre[r2+1][c2+1] - pre[r1][c2+1] - pre[r2+1][c1] + pre[r1][c1]."
+        ],
+        "complexity": {
+          "time": "O(mn) build, O(1) query",
+          "space": "O(mn)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class NumMatrix {\n    vector<vector<long long>> pre;\npublic:\n    NumMatrix(vector<vector<int>>& m) {\n        int R = m.size(), C = m[0].size();\n        pre.assign(R + 1, vector<long long>(C + 1, 0));\n        for (int i = 0; i < R; i++)\n            for (int j = 0; j < C; j++)\n                pre[i+1][j+1] = m[i][j] + pre[i][j+1] + pre[i+1][j] - pre[i][j];\n    }\n    int sumRegion(int r1, int c1, int r2, int c2) {\n        return (int)(pre[r2+1][c2+1] - pre[r1][c2+1] - pre[r2+1][c1] + pre[r1][c1]);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class NumMatrix:\n    def __init__(self, m: list[list[int]]):\n        R, C = len(m), len(m[0])\n        self.pre = [[0] * (C + 1) for _ in range(R + 1)]\n        for i in range(R):\n            for j in range(C):\n                self.pre[i+1][j+1] = m[i][j] + self.pre[i][j+1] + self.pre[i+1][j] - self.pre[i][j]\n    def sumRegion(self, r1, c1, r2, c2):\n        p = self.pre\n        return p[r2+1][c2+1] - p[r1][c2+1] - p[r2+1][c1] + p[r1][c1]"
+          }
+        ]
+      }
     },
     {
       "id": "ps5",
@@ -133,7 +221,29 @@
       "statement": "Longest subarray with sum exactly k.",
       "hint": "Store the earliest index for each prefix value; maximise length.",
       "tests": "Prefix sums for longest range.",
-      "link": "https://leetcode.com/problems/maximum-size-subarray-sum-equals-k/"
+      "link": "https://leetcode.com/problems/maximum-size-subarray-sum-equals-k/",
+      "solution": {
+        "approach": [
+          "Same identity as Subarray-Sum-Equals-K, but now maximise length: we need the earliest index with prefix value pre - k.",
+          "Record the first occurrence of each prefix sum only; for each j check if pre - k was seen and update the best length."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int maxSubArrayLen(vector<int>& a, int k) {\n        unordered_map<long long,int> first{{0, -1}};\n        long long pre = 0; int best = 0;\n        for (int i = 0; i < (int)a.size(); i++) {\n            pre += a[i];\n            if (first.count(pre - k)) best = max(best, i - first[pre - k]);\n            if (!first.count(pre)) first[pre] = i;\n        }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def maxSubArrayLen(self, a: list[int], k: int) -> int:\n        first = {0: -1}\n        pre = best = 0\n        for i, x in enumerate(a):\n            pre += x\n            if pre - k in first:\n                best = max(best, i - first[pre - k])\n            if pre not in first:\n                first[pre] = i\n        return best"
+          }
+        ]
+      }
     }
   ]
 }

@@ -5,7 +5,7 @@
   "title": "Topological Sort",
   "tagline": "Order a DAG so every edge points forward — the backbone of scheduling and build systems.",
   "estMinutes": 16,
-  "simulator": null,
+  "simulator": "topological-sort",
   "complexity": {
     "time": "O(V + E)",
     "space": "O(V)"
@@ -102,7 +102,29 @@
       "statement": "Return a valid course order, or empty if impossible.",
       "hint": "Kahn's algorithm; empty output means a cycle.",
       "tests": "Core topo sort.",
-      "link": "https://leetcode.com/problems/course-schedule-ii/"
+      "link": "https://leetcode.com/problems/course-schedule-ii/",
+      "solution": {
+        "approach": [
+          "Kahn's algorithm: compute in-degrees, start a queue with all zero in-degree courses, and repeatedly take a course, appending it to the order and decrementing its successors.",
+          "If the produced order has fewer than n courses, a cycle exists → return empty."
+        ],
+        "complexity": {
+          "time": "O(V + E)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> findOrder(int n, vector<vector<int>>& pre) {\n        vector<vector<int>> adj(n); vector<int> indeg(n, 0);\n        for (auto& p : pre) { adj[p[1]].push_back(p[0]); indeg[p[0]]++; }\n        queue<int> q;\n        for (int i = 0; i < n; i++) if (!indeg[i]) q.push(i);\n        vector<int> order;\n        while (!q.empty()) {\n            int u = q.front(); q.pop(); order.push_back(u);\n            for (int v : adj[u]) if (--indeg[v] == 0) q.push(v);\n        }\n        return (int)order.size() == n ? order : vector<int>{};\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def findOrder(self, n, prerequisites):\n        adj = [[] for _ in range(n)]\n        indeg = [0]*n\n        for a, b in prerequisites:\n            adj[b].append(a); indeg[a] += 1\n        q = deque(i for i in range(n) if indeg[i] == 0)\n        order = []\n        while q:\n            u = q.popleft(); order.append(u)\n            for v in adj[u]:\n                indeg[v] -= 1\n                if indeg[v] == 0: q.append(v)\n        return order if len(order) == n else []"
+          }
+        ]
+      }
     },
     {
       "id": "ts2",
@@ -111,7 +133,29 @@
       "statement": "Infer letter order from sorted alien words.",
       "hint": "Build precedence edges from adjacent word comparisons, then topo sort.",
       "tests": "Building a DAG then ordering.",
-      "link": "https://leetcode.com/problems/alien-dictionary/"
+      "link": "https://leetcode.com/problems/alien-dictionary/",
+      "solution": {
+        "approach": [
+          "Derive ordering constraints by comparing adjacent words: the first differing character gives an edge u → v. Watch the invalid prefix case (\"abc\" before \"ab\").",
+          "Topologically sort the letters with Kahn's algorithm; a cycle means no valid order."
+        ],
+        "complexity": {
+          "time": "O(total chars)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    string alienOrder(vector<string>& words) {\n        unordered_map<char, unordered_set<char>> adj;\n        unordered_map<char,int> indeg;\n        for (auto& w : words) for (char c : w) indeg[c] = 0;\n        for (int i = 0; i + 1 < (int)words.size(); i++) {\n            string& a = words[i]; string& b = words[i + 1];\n            int len = min(a.size(), b.size()), j = 0;\n            for (; j < len; j++) if (a[j] != b[j]) { if (!adj[a[j]].count(b[j])) { adj[a[j]].insert(b[j]); indeg[b[j]]++; } break; }\n            if (j == len && a.size() > b.size()) return \"\";\n        }\n        queue<char> q; for (auto& [c, d] : indeg) if (!d) q.push(c);\n        string res;\n        while (!q.empty()) {\n            char c = q.front(); q.pop(); res += c;\n            for (char nx : adj[c]) if (--indeg[nx] == 0) q.push(nx);\n        }\n        return res.size() == indeg.size() ? res : \"\";\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import defaultdict, deque\nclass Solution:\n    def alienOrder(self, words):\n        adj = defaultdict(set)\n        indeg = {c: 0 for w in words for c in w}\n        for a, b in zip(words, words[1:]):\n            for x, y in zip(a, b):\n                if x != y:\n                    if y not in adj[x]:\n                        adj[x].add(y); indeg[y] += 1\n                    break\n            else:\n                if len(a) > len(b):\n                    return \"\"\n        q = deque(c for c in indeg if indeg[c] == 0)\n        res = []\n        while q:\n            c = q.popleft(); res.append(c)\n            for nx in adj[c]:\n                indeg[nx] -= 1\n                if indeg[nx] == 0: q.append(nx)\n        return \"\".join(res) if len(res) == len(indeg) else "
+          }
+        ]
+      }
     },
     {
       "id": "ts3",
@@ -120,7 +164,29 @@
       "statement": "Minimum semesters to finish all courses.",
       "hint": "Topo sort by layers; the number of layers is the answer.",
       "tests": "Layered topo order.",
-      "link": "https://leetcode.com/problems/parallel-courses/"
+      "link": "https://leetcode.com/problems/parallel-courses/",
+      "solution": {
+        "approach": [
+          "Each Kahn BFS layer is one semester: all currently unblocked courses can be taken together.",
+          "Count layers until the queue empties; if some course never reaches in-degree 0, there is a cycle → -1."
+        ],
+        "complexity": {
+          "time": "O(V + E)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int minimumSemesters(int n, vector<vector<int>>& relations) {\n        vector<vector<int>> adj(n + 1); vector<int> indeg(n + 1, 0);\n        for (auto& r : relations) { adj[r[0]].push_back(r[1]); indeg[r[1]]++; }\n        queue<int> q;\n        for (int i = 1; i <= n; i++) if (!indeg[i]) q.push(i);\n        int sem = 0, taken = 0;\n        while (!q.empty()) {\n            sem++; int sz = q.size();\n            while (sz--) {\n                int u = q.front(); q.pop(); taken++;\n                for (int v : adj[u]) if (--indeg[v] == 0) q.push(v);\n            }\n        }\n        return taken == n ? sem : -1;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def minimumSemesters(self, n, relations):\n        adj = [[] for _ in range(n + 1)]\n        indeg = [0]*(n + 1)\n        for a, b in relations:\n            adj[a].append(b); indeg[b] += 1\n        q = deque(i for i in range(1, n + 1) if indeg[i] == 0)\n        sem = taken = 0\n        while q:\n            sem += 1\n            for _ in range(len(q)):\n                u = q.popleft(); taken += 1\n                for v in adj[u]:\n                    indeg[v] -= 1\n                    if indeg[v] == 0: q.append(v)\n        return sem if taken == n else -1"
+          }
+        ]
+      }
     },
     {
       "id": "ts4",
@@ -129,7 +195,29 @@
       "statement": "Order items respecting item and group dependencies.",
       "hint": "Two-level topological sort (groups, then within groups).",
       "tests": "Nested topo sorting.",
-      "link": "https://leetcode.com/problems/sort-items-by-groups-respecting-dependencies/"
+      "link": "https://leetcode.com/problems/sort-items-by-groups-respecting-dependencies/",
+      "solution": {
+        "approach": [
+          "Two-level topological sort: order items within each group, and order the groups among themselves, then concatenate.",
+          "Give every group-less item its own group. Build item-edges and group-edges from the before-lists, topo-sort both, then emit each group's items in their internal topo order following the group order."
+        ],
+        "complexity": {
+          "time": "O(V + E)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    vector<int> topo(vector<vector<int>>& adj, vector<int>& indeg) {\n        queue<int> q; for (int i = 0; i < (int)indeg.size(); i++) if (!indeg[i]) q.push(i);\n        vector<int> order;\n        while (!q.empty()) { int u = q.front(); q.pop(); order.push_back(u); for (int v : adj[u]) if (--indeg[v] == 0) q.push(v); }\n        return (int)order.size() == (int)indeg.size() ? order : vector<int>{};\n    }\npublic:\n    vector<int> sortItems(int n, int m, vector<int>& group, vector<vector<int>>& beforeItems) {\n        for (int i = 0; i < n; i++) if (group[i] == -1) group[i] = m++;\n        vector<vector<int>> itemAdj(n), groupAdj(m);\n        vector<int> itemIn(n, 0), groupIn(m, 0);\n        for (int i = 0; i < n; i++)\n            for (int b : beforeItems[i]) {\n                itemAdj[b].push_back(i); itemIn[i]++;\n                if (group[b] != group[i]) { groupAdj[group[b]].push_back(group[i]); groupIn[group[i]]++; }\n            }\n        vector<int> itemOrder = topo(itemAdj, itemIn), groupOrder = topo(groupAdj, groupIn);\n        if (itemOrder.empty() || groupOrder.empty()) return {};\n        vector<vector<int>> byGroup(m);\n        for (int it : itemOrder) byGroup[group[it]].push_back(it);\n        vector<int> res;\n        for (int g : groupOrder) for (int it : byGroup[g]) res.push_back(it);\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def sortItems(self, n, m, group, beforeItems):\n        for i in range(n):\n            if group[i] == -1:\n                group[i] = m; m += 1\n        item_adj = [[] for _ in range(n)]; item_in = [0]*n\n        group_adj = [[] for _ in range(m)]; group_in = [0]*m\n        for i in range(n):\n            for b in beforeItems[i]:\n                item_adj[b].append(i); item_in[i] += 1\n                if group[b] != group[i]:\n                    group_adj[group[b]].append(group[i]); group_in[group[i]] += 1\n        def topo(adj, indeg):\n            q = deque(i for i in range(len(indeg)) if indeg[i] == 0)\n            order = []\n            while q:\n                u = q.popleft(); order.append(u)\n                for v in adj[u]:\n                    indeg[v] -= 1\n                    if indeg[v] == 0: q.append(v)\n            return order if len(order) == len(indeg) else []\n        item_order = topo(item_adj, item_in)\n        group_order = topo(group_adj, group_in)\n        if not item_order or not group_order:\n            return []\n        by_group = [[] for _ in range(m)]\n        for it in item_order:\n            by_group[group[it]].append(it)\n        res = []\n        for g in group_order:\n            res.extend(by_group[g])\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "ts5",
@@ -138,7 +226,29 @@
       "statement": "Find the longest path in a DAG.",
       "hint": "DP in topological order.",
       "tests": "DP over a topo order.",
-      "link": "https://www.geeksforgeeks.org/longest-path-in-a-directed-acyclic-graph/"
+      "link": "https://www.geeksforgeeks.org/longest-path-in-a-directed-acyclic-graph/",
+      "solution": {
+        "approach": [
+          "On a DAG the longest path is found by relaxing edges in topological order: process nodes so all predecessors are done first.",
+          "dp[v] = max over incoming edges (dp[u] + w). Track the global maximum; topological order guarantees each dp is final when used."
+        ],
+        "complexity": {
+          "time": "O(V + E)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int longestPath(int n, vector<vector<int>>& edges) {\n        vector<vector<pair<int,int>>> adj(n); vector<int> indeg(n, 0);\n        for (auto& e : edges) { adj[e[0]].push_back({e[1], e[2]}); indeg[e[1]]++; }\n        queue<int> q; for (int i = 0; i < n; i++) if (!indeg[i]) q.push(i);\n        vector<int> dp(n, 0); int best = 0;\n        while (!q.empty()) {\n            int u = q.front(); q.pop();\n            for (auto& [v, w] : adj[u]) {\n                dp[v] = max(dp[v], dp[u] + w); best = max(best, dp[v]);\n                if (--indeg[v] == 0) q.push(v);\n            }\n        }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from collections import deque\nclass Solution:\n    def longestPath(self, n, edges):\n        adj = [[] for _ in range(n)]; indeg = [0]*n\n        for u, v, w in edges:\n            adj[u].append((v, w)); indeg[v] += 1\n        q = deque(i for i in range(n) if indeg[i] == 0)\n        dp = [0]*n; best = 0\n        while q:\n            u = q.popleft()\n            for v, w in adj[u]:\n                if dp[u] + w > dp[v]:\n                    dp[v] = dp[u] + w; best = max(best, dp[v])\n                indeg[v] -= 1\n                if indeg[v] == 0: q.append(v)\n        return best"
+          }
+        ]
+      }
     }
   ]
 }

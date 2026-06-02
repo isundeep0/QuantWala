@@ -5,7 +5,7 @@
   "title": "Lowest Common Ancestor",
   "tagline": "The deepest node that is an ancestor of both targets — via recursion or binary lifting.",
   "estMinutes": 18,
-  "simulator": null,
+  "simulator": "lca",
   "complexity": {
     "time": "O(n) one-shot, O(log n) with lifting",
     "space": "O(n log n)"
@@ -102,7 +102,29 @@
       "statement": "Find the LCA of two nodes in a binary tree.",
       "hint": "The recursive split-point method.",
       "tests": "Recursive LCA.",
-      "link": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree/"
+      "link": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree/",
+      "solution": {
+        "approach": [
+          "Recurse from the root. If the current node is null or equals p or q, return it.",
+          "Recurse left and right: if both sides return non-null, the current node is the split point (the LCA); otherwise propagate the single non-null side upward."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(h)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {\n        if (!root || root == p || root == q) return root;\n        TreeNode* L = lowestCommonAncestor(root->left, p, q);\n        TreeNode* R = lowestCommonAncestor(root->right, p, q);\n        if (L && R) return root;\n        return L ? L : R;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def lowestCommonAncestor(self, root, p, q):\n        if not root or root == p or root == q:\n            return root\n        L = self.lowestCommonAncestor(root.left, p, q)\n        R = self.lowestCommonAncestor(root.right, p, q)\n        if L and R:\n            return root\n        return L or R"
+          }
+        ]
+      }
     },
     {
       "id": "lca2",
@@ -111,7 +133,29 @@
       "statement": "Find the LCA in a binary search tree.",
       "hint": "Walk down: go left if both < node, right if both > node, else you're at the LCA.",
       "tests": "LCA using BST order.",
-      "link": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/"
+      "link": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/",
+      "solution": {
+        "approach": [
+          "In a BST the LCA is the first node where p and q split. Walk down from the root.",
+          "If both values are smaller go left, if both larger go right; otherwise the current node sits between them and is the LCA."
+        ],
+        "complexity": {
+          "time": "O(h)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {\n        while (root) {\n            if (p->val < root->val && q->val < root->val) root = root->left;\n            else if (p->val > root->val && q->val > root->val) root = root->right;\n            else return root;\n        }\n        return nullptr;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def lowestCommonAncestor(self, root, p, q):\n        while root:\n            if p.val < root.val and q.val < root.val:\n                root = root.left\n            elif p.val > root.val and q.val > root.val:\n                root = root.right\n            else:\n                return root\n        return None"
+          }
+        ]
+      }
     },
     {
       "id": "lca3",
@@ -120,7 +164,29 @@
       "statement": "Find LCA when nodes have parent pointers.",
       "hint": "Two-pointer technique like finding the intersection of two linked lists.",
       "tests": "Ancestor chains as lists.",
-      "link": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree-iii/"
+      "link": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree-iii/",
+      "solution": {
+        "approach": [
+          "With parent pointers, the LCA is the first common node on the two upward chains — exactly the linked-list intersection trick.",
+          "Two pointers walk up; when one hits the root, redirect it to the other node. They meet at the LCA after at most depth(p)+depth(q) steps."
+        ],
+        "complexity": {
+          "time": "O(h)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    Node* lowestCommonAncestor(Node* p, Node* q) {\n        Node *a = p, *b = q;\n        while (a != b) {\n            a = a ? a->parent : q;\n            b = b ? b->parent : p;\n        }\n        return a;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def lowestCommonAncestor(self, p, q):\n        a, b = p, q\n        while a is not b:\n            a = a.parent if a else q\n            b = b.parent if b else p\n        return a"
+          }
+        ]
+      }
     },
     {
       "id": "lca4",
@@ -129,7 +195,29 @@
       "statement": "Find the number of edges between two nodes.",
       "hint": "depth[u] + depth[v] − 2·depth[lca].",
       "tests": "LCA-based distance.",
-      "link": "https://www.geeksforgeeks.org/find-distance-between-two-nodes-of-a-binary-tree/"
+      "link": "https://www.geeksforgeeks.org/find-distance-between-two-nodes-of-a-binary-tree/",
+      "solution": {
+        "approach": [
+          "Distance(p, q) = depth(p) + depth(q) - 2·depth(lca), measuring edges through their lowest common ancestor.",
+          "Find the LCA, then the distance from it to each node by a short search. Equivalent to summing the two downward path lengths."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(h)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\n    TreeNode* lca(TreeNode* r, int p, int q) {\n        if (!r || r->val == p || r->val == q) return r;\n        TreeNode* L = lca(r->left, p, q); TreeNode* R = lca(r->right, p, q);\n        if (L && R) return r; return L ? L : R;\n    }\n    int depth(TreeNode* r, int target, int d) {\n        if (!r) return -1;\n        if (r->val == target) return d;\n        int l = depth(r->left, target, d + 1); if (l != -1) return l;\n        return depth(r->right, target, d + 1);\n    }\npublic:\n    int distanceBetween(TreeNode* root, int p, int q) {\n        TreeNode* a = lca(root, p, q);\n        return depth(a, p, 0) + depth(a, q, 0);\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def distanceBetween(self, root, p, q):\n        def lca(r):\n            if not r or r.val in (p, q):\n                return r\n            L, R = lca(r.left), lca(r.right)\n            if L and R:\n                return r\n            return L or R\n        def depth(r, target, d):\n            if not r:\n                return -1\n            if r.val == target:\n                return d\n            left = depth(r.left, target, d + 1)\n            return left if left != -1 else depth(r.right, target, d + 1)\n        a = lca(root)\n        return depth(a, p, 0) + depth(a, q, 0)"
+          }
+        ]
+      }
     },
     {
       "id": "lca5",
@@ -138,7 +226,29 @@
       "statement": "Answer queries for the k-th ancestor of a node.",
       "hint": "Binary lifting: decompose k into powers of two.",
       "tests": "Binary lifting table.",
-      "link": "https://leetcode.com/problems/kth-ancestor-of-a-tree-node/"
+      "link": "https://leetcode.com/problems/kth-ancestor-of-a-tree-node/",
+      "solution": {
+        "approach": [
+          "Binary lifting precomputes up[j][v] = the 2^j-th ancestor of v. Any kth ancestor is reached by jumping the set bits of k.",
+          "Building the table is O(n log n); each query decomposes k into powers of two for O(log k)."
+        ],
+        "complexity": {
+          "time": "O(n log n) build, O(log k) query",
+          "space": "O(n log n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class TreeAncestor {\n    vector<vector<int>> up; int LOG;\npublic:\n    TreeAncestor(int n, vector<int>& parent) {\n        LOG = 1; while ((1 << LOG) < n) LOG++;\n        up.assign(LOG, vector<int>(n, -1));\n        for (int v = 0; v < n; v++) up[0][v] = parent[v];\n        for (int j = 1; j < LOG; j++)\n            for (int v = 0; v < n; v++)\n                up[j][v] = up[j-1][v] == -1 ? -1 : up[j-1][up[j-1][v]];\n    }\n    int getKthAncestor(int node, int k) {\n        for (int j = 0; j < LOG && node != -1; j++)\n            if (k & (1 << j)) node = up[j][node];\n        return node;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class TreeAncestor:\n    def __init__(self, n: int, parent: list[int]):\n        self.LOG = max(1, (n).bit_length())\n        self.up = [[-1] * n for _ in range(self.LOG)]\n        self.up[0] = parent[:]\n        for j in range(1, self.LOG):\n            for v in range(n):\n                p = self.up[j - 1][v]\n                self.up[j][v] = -1 if p == -1 else self.up[j - 1][p]\n    def getKthAncestor(self, node: int, k: int) -> int:\n        j = 0\n        while k and node != -1:\n            if k & 1:\n                node = self.up[j][node]\n            k >>= 1\n            j += 1\n        return node"
+          }
+        ]
+      }
     }
   ]
 }

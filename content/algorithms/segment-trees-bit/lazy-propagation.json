@@ -5,7 +5,7 @@
   "title": "Lazy Propagation",
   "tagline": "Range updates in O(log n) by deferring work until a node is actually visited.",
   "estMinutes": 20,
-  "simulator": null,
+  "simulator": "lazy-propagation",
   "complexity": {
     "time": "O(log n) per range op",
     "space": "O(n)"
@@ -97,7 +97,29 @@
       "statement": "Add to a range; query range sums.",
       "hint": "Lazy segment tree with additive tags.",
       "tests": "Core lazy propagation.",
-      "link": "https://cses.fi/problemset/task/1735"
+      "link": "https://cses.fi/problemset/task/1735",
+      "solution": {
+        "approach": [
+          "Range add + range sum needs lazy propagation: each node stores its subtree sum and a pending 'add' to push down on demand.",
+          "On a range update, mark fully-covered nodes lazily (sum += add·len) instead of touching every leaf; push the lazy tag to children only when you must recurse deeper."
+        ],
+        "complexity": {
+          "time": "O(log n) per op",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class SegTree {\n    int n; vector<long long> sum, lazy;\n    void push(int node, int l, int r) {\n        if (!lazy[node]) return;\n        int mid = (l + r) / 2;\n        sum[2*node] += lazy[node] * (mid - l + 1); lazy[2*node] += lazy[node];\n        sum[2*node+1] += lazy[node] * (r - mid);   lazy[2*node+1] += lazy[node];\n        lazy[node] = 0;\n    }\n    void update(int node, int l, int r, int ql, int qr, long long v) {\n        if (qr < l || r < ql) return;\n        if (ql <= l && r <= qr) { sum[node] += v * (r - l + 1); lazy[node] += v; return; }\n        push(node, l, r); int mid = (l + r) / 2;\n        update(2*node, l, mid, ql, qr, v); update(2*node+1, mid+1, r, ql, qr, v);\n        sum[node] = sum[2*node] + sum[2*node+1];\n    }\n    long long query(int node, int l, int r, int ql, int qr) {\n        if (qr < l || r < ql) return 0;\n        if (ql <= l && r <= qr) return sum[node];\n        push(node, l, r); int mid = (l + r) / 2;\n        return query(2*node, l, mid, ql, qr) + query(2*node+1, mid+1, r, ql, qr);\n    }\npublic:\n    SegTree(int size) : n(size), sum(4*size, 0), lazy(4*size, 0) {}\n    void rangeAdd(int l, int r, long long v) { update(1, 0, n-1, l, r, v); }\n    long long rangeSum(int l, int r) { return query(1, 0, n-1, l, r); }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class SegTree:\n    def __init__(self, n: int):\n        self.n = n\n        self.sum = [0] * (4 * n)\n        self.lazy = [0] * (4 * n)\n    def _push(self, node, l, r):\n        if self.lazy[node]:\n            mid = (l + r) // 2\n            for child, lo, hi in ((2*node, l, mid), (2*node+1, mid+1, r)):\n                self.sum[child] += self.lazy[node] * (hi - lo + 1)\n                self.lazy[child] += self.lazy[node]\n            self.lazy[node] = 0\n    def _update(self, node, l, r, ql, qr, v):\n        if qr < l or r < ql:\n            return\n        if ql <= l and r <= qr:\n            self.sum[node] += v * (r - l + 1); self.lazy[node] += v; return\n        self._push(node, l, r)\n        mid = (l + r) // 2\n        self._update(2*node, l, mid, ql, qr, v)\n        self._update(2*node+1, mid+1, r, ql, qr, v)\n        self.sum[node] = self.sum[2*node] + self.sum[2*node+1]\n    def _query(self, node, l, r, ql, qr):\n        if qr < l or r < ql:\n            return 0\n        if ql <= l and r <= qr:\n            return self.sum[node]\n        self._push(node, l, r)\n        mid = (l + r) // 2\n        return self._query(2*node, l, mid, ql, qr) + self._query(2*node+1, mid+1, r, ql, qr)\n    def range_add(self, l, r, v):\n        self._update(1, 0, self.n - 1, l, r, v)\n    def range_sum(self, l, r):\n        return self._query(1, 0, self.n - 1, l, r)"
+          }
+        ]
+      }
     },
     {
       "id": "lp2",
@@ -106,7 +128,29 @@
       "statement": "Assign a value to a range; query sums.",
       "hint": "Lazy tag that overwrites rather than adds.",
       "tests": "Assignment-style lazy.",
-      "link": "https://cses.fi/problemset/task/1735"
+      "link": "https://cses.fi/problemset/task/1735",
+      "solution": {
+        "approach": [
+          "Range assignment (set every element in [l,r] to v) plus range sum. The lazy tag is now an assignment, not an increment.",
+          "A covered node's sum becomes v·len and its lazy is set to v. push() copies the assignment to children and clears it. Use a sentinel to distinguish 'no pending assignment'."
+        ],
+        "complexity": {
+          "time": "O(log n) per op",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class SegTree {\n    int n; vector<long long> sum; vector<long long> lazy; const long long NONE = LLONG_MIN;\n    void apply(int node, int l, int r, long long v) { sum[node] = v * (r - l + 1); lazy[node] = v; }\n    void push(int node, int l, int r) {\n        if (lazy[node] == NONE) return;\n        int mid = (l + r) / 2;\n        apply(2*node, l, mid, lazy[node]); apply(2*node+1, mid+1, r, lazy[node]);\n        lazy[node] = NONE;\n    }\n    void assign(int node, int l, int r, int ql, int qr, long long v) {\n        if (qr < l || r < ql) return;\n        if (ql <= l && r <= qr) { apply(node, l, r, v); return; }\n        push(node, l, r); int mid = (l + r) / 2;\n        assign(2*node, l, mid, ql, qr, v); assign(2*node+1, mid+1, r, ql, qr, v);\n        sum[node] = sum[2*node] + sum[2*node+1];\n    }\n    long long query(int node, int l, int r, int ql, int qr) {\n        if (qr < l || r < ql) return 0;\n        if (ql <= l && r <= qr) return sum[node];\n        push(node, l, r); int mid = (l + r) / 2;\n        return query(2*node, l, mid, ql, qr) + query(2*node+1, mid+1, r, ql, qr);\n    }\npublic:\n    SegTree(int size) : n(size), sum(4*size, 0), lazy(4*size, LLONG_MIN) {}\n    void rangeAssign(int l, int r, long long v) { assign(1, 0, n-1, l, r, v); }\n    long long rangeSum(int l, int r) { return query(1, 0, n-1, l, r); }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class SegTree:\n    NONE = None\n    def __init__(self, n: int):\n        self.n = n\n        self.sum = [0] * (4 * n)\n        self.lazy = [None] * (4 * n)\n    def _apply(self, node, l, r, v):\n        self.sum[node] = v * (r - l + 1)\n        self.lazy[node] = v\n    def _push(self, node, l, r):\n        if self.lazy[node] is not None:\n            mid = (l + r) // 2\n            self._apply(2*node, l, mid, self.lazy[node])\n            self._apply(2*node+1, mid+1, r, self.lazy[node])\n            self.lazy[node] = None\n    def _assign(self, node, l, r, ql, qr, v):\n        if qr < l or r < ql:\n            return\n        if ql <= l and r <= qr:\n            self._apply(node, l, r, v); return\n        self._push(node, l, r)\n        mid = (l + r) // 2\n        self._assign(2*node, l, mid, ql, qr, v)\n        self._assign(2*node+1, mid+1, r, ql, qr, v)\n        self.sum[node] = self.sum[2*node] + self.sum[2*node+1]\n    def _query(self, node, l, r, ql, qr):\n        if qr < l or r < ql:\n            return 0\n        if ql <= l and r <= qr:\n            return self.sum[node]\n        self._push(node, l, r)\n        mid = (l + r) // 2\n        return self._query(2*node, l, mid, ql, qr) + self._query(2*node+1, mid+1, r, ql, qr)\n    def range_assign(self, l, r, v):\n        self._assign(1, 0, self.n - 1, l, r, v)\n    def range_sum(self, l, r):\n        return self._query(1, 0, self.n - 1, l, r)"
+          }
+        ]
+      }
     },
     {
       "id": "lp3",
@@ -115,7 +159,29 @@
       "statement": "Max overlap of booked intervals.",
       "hint": "Range +1 with lazy propagation (or a difference array).",
       "tests": "Range increment + max.",
-      "link": "https://leetcode.com/problems/my-calendar-iii/"
+      "link": "https://leetcode.com/problems/my-calendar-iii/",
+      "solution": {
+        "approach": [
+          "We need the maximum number of simultaneously overlapping bookings (a k-booking). A difference-array over event points captures overlaps.",
+          "Increment a counter at each start and decrement at each end in an ordered map; sweep keeping a running sum and track its maximum. (A lazy segment tree over compressed coordinates achieves the same in O(log n) per booking.)"
+        ],
+        "complexity": {
+          "time": "O(n^2) sweep / O(n log n) ordered map",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class MyCalendarThree {\n    map<int,int> delta;\npublic:\n    int book(int start, int end) {\n        delta[start]++; delta[end]--;\n        int cur = 0, best = 0;\n        for (auto& [t, d] : delta) { cur += d; best = max(best, cur); }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from sortedcontainers import SortedDict\nclass MyCalendarThree:\n    def __init__(self):\n        self.delta = SortedDict()\n    def book(self, start: int, end: int) -> int:\n        self.delta[start] = self.delta.get(start, 0) + 1\n        self.delta[end] = self.delta.get(end, 0) - 1\n        cur = best = 0\n        for d in self.delta.values():\n            cur += d\n            best = max(best, cur)\n        return best"
+          }
+        ]
+      }
     },
     {
       "id": "lp4",
@@ -124,7 +190,29 @@
       "statement": "Track and query covered ranges.",
       "hint": "Segment tree with range assign + lazy, or interval set.",
       "tests": "Range assign queries.",
-      "link": "https://leetcode.com/problems/range-module/"
+      "link": "https://leetcode.com/problems/range-module/",
+      "solution": {
+        "approach": [
+          "Maintain a set of disjoint covered intervals in an ordered map keyed by start. addRange merges overlaps, removeRange splits them, queryRange checks containment.",
+          "This range-tracking is the same problem lazy segment trees solve; an ordered map is the clean balanced-tree implementation."
+        ],
+        "complexity": {
+          "time": "O(log n) amortised per op",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class RangeModule {\n    map<int,int> mp;   // start -> end of covered intervals\npublic:\n    void addRange(int left, int right) {\n        auto it = mp.upper_bound(left);\n        if (it != mp.begin() && prev(it)->second >= left) { --it; left = it->first; right = max(right, it->second); }\n        while (it != mp.end() && it->first <= right) { right = max(right, it->second); it = mp.erase(it); }\n        mp[left] = right;\n    }\n    bool queryRange(int left, int right) {\n        auto it = mp.upper_bound(left);\n        if (it == mp.begin()) return false;\n        return prev(it)->second >= right;\n    }\n    void removeRange(int left, int right) {\n        auto it = mp.upper_bound(left);\n        if (it != mp.begin() && prev(it)->second >= left) {\n            --it; int s = it->first, e = it->second; it = mp.erase(it);\n            if (s < left) mp[s] = left;\n            if (e > right) it = mp.emplace(right, e).first;\n            else it = mp.upper_bound(left);\n        }\n        while (it != mp.end() && it->first < right) {\n            int e = it->second; it = mp.erase(it);\n            if (e > right) { mp[right] = e; break; }\n        }\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "from sortedcontainers import SortedDict\nclass RangeModule:\n    def __init__(self):\n        self.mp = SortedDict()    # start -> end\n    def addRange(self, left: int, right: int) -> None:\n        idx = self.mp.bisect_right(left)\n        if idx and self.mp.values()[idx-1] >= left:\n            idx -= 1; left = self.mp.keys()[idx]\n            right = max(right, self.mp.values()[idx])\n        while idx < len(self.mp) and self.mp.keys()[idx] <= right:\n            right = max(right, self.mp.values()[idx])\n            del self.mp[self.mp.keys()[idx]]\n        self.mp[left] = right\n    def queryRange(self, left: int, right: int) -> bool:\n        idx = self.mp.bisect_right(left)\n        if idx == 0:\n            return False\n        return self.mp.values()[idx-1] >= right\n    def removeRange(self, left: int, right: int) -> None:\n        idx = self.mp.bisect_right(left)\n        segs = []\n        if idx and self.mp.values()[idx-1] > left:\n            idx -= 1\n        while idx < len(self.mp) and self.mp.keys()[idx] < right:\n            s, e = self.mp.keys()[idx], self.mp.values()[idx]\n            del self.mp[s]\n            if s < left:\n                segs.append((s, left))\n            if e > right:\n                segs.append((right, e))\n        for s, e in segs:\n            self.mp[s] = e"
+          }
+        ]
+      }
     },
     {
       "id": "lp5",
@@ -133,7 +221,29 @@
       "statement": "Count active intervals at query times.",
       "hint": "Difference-array/lazy counting over time.",
       "tests": "Range increment counting.",
-      "link": "https://leetcode.com/problems/number-of-flowers-in-full-bloom/"
+      "link": "https://leetcode.com/problems/number-of-flowers-in-full-bloom/",
+      "solution": {
+        "approach": [
+          "For each person at time t, the number of flowers in bloom is (flowers that started by t) - (flowers that ended before t).",
+          "Sort start times and end times separately. Each query is two binary searches: bisect_right(starts, t) - bisect_left(ends, t)."
+        ],
+        "complexity": {
+          "time": "O((n + q) log n)",
+          "space": "O(n)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> fullBloomFlowers(vector<vector<int>>& flowers, vector<int>& people) {\n        vector<int> starts, ends;\n        for (auto& f : flowers) { starts.push_back(f[0]); ends.push_back(f[1]); }\n        sort(starts.begin(), starts.end()); sort(ends.begin(), ends.end());\n        vector<int> res;\n        for (int t : people) {\n            int opened = upper_bound(starts.begin(), starts.end(), t) - starts.begin();\n            int closed = lower_bound(ends.begin(), ends.end(), t) - ends.begin();\n            res.push_back(opened - closed);\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import bisect\nclass Solution:\n    def fullBloomFlowers(self, flowers: list[list[int]], people: list[int]) -> list[int]:\n        starts = sorted(f[0] for f in flowers)\n        ends = sorted(f[1] for f in flowers)\n        res = []\n        for t in people:\n            opened = bisect.bisect_right(starts, t)\n            closed = bisect.bisect_left(ends, t)\n            res.append(opened - closed)\n        return res"
+          }
+        ]
+      }
     }
   ]
 }

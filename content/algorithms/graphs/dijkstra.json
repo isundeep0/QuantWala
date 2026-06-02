@@ -106,7 +106,29 @@
       "statement": "Time for a signal to reach all nodes from a source.",
       "hint": "Dijkstra; answer is the max finalised distance.",
       "tests": "Single-source shortest paths.",
-      "link": "https://leetcode.com/problems/network-delay-time/"
+      "link": "https://leetcode.com/problems/network-delay-time/",
+      "solution": {
+        "approach": [
+          "Non-negative weights, so Dijkstra is optimal. Use a min-heap keyed by distance from the source k.",
+          "Pop the closest unsettled node, relax its edges. The answer is the largest settled distance, or -1 if some node never settles."
+        ],
+        "complexity": {
+          "time": "O(E log V)",
+          "space": "O(V + E)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int networkDelayTime(vector<vector<int>>& times, int n, int k) {\n        vector<vector<pair<int,int>>> adj(n + 1);\n        for (auto& t : times) adj[t[0]].push_back({t[1], t[2]});\n        vector<int> dist(n + 1, INT_MAX); dist[k] = 0;\n        priority_queue<pair<int,int>, vector<pair<int,int>>, greater<>> pq;\n        pq.push({0, k});\n        while (!pq.empty()) {\n            auto [d, u] = pq.top(); pq.pop();\n            if (d > dist[u]) continue;\n            for (auto& [v, w] : adj[u])\n                if (d + w < dist[v]) { dist[v] = d + w; pq.push({dist[v], v}); }\n        }\n        int ans = 0;\n        for (int i = 1; i <= n; i++) ans = max(ans, dist[i]);\n        return ans == INT_MAX ? -1 : ans;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def networkDelayTime(self, times, n, k):\n        adj = [[] for _ in range(n + 1)]\n        for u, v, w in times:\n            adj[u].append((v, w))\n        dist = {k: 0}\n        pq = [(0, k)]\n        while pq:\n            d, u = heapq.heappop(pq)\n            if d > dist.get(u, float('inf')):\n                continue\n            for v, w in adj[u]:\n                if d + w < dist.get(v, float('inf')):\n                    dist[v] = d + w\n                    heapq.heappush(pq, (dist[v], v))\n        return max(dist.values()) if len(dist) == n else -1"
+          }
+        ]
+      }
     },
     {
       "id": "dij2",
@@ -115,7 +137,29 @@
       "statement": "Minimise the maximum height difference along a path.",
       "hint": "Dijkstra where 'distance' is the path's max edge (min-max).",
       "tests": "Dijkstra with a modified relaxation.",
-      "link": "https://leetcode.com/problems/path-with-minimum-effort/"
+      "link": "https://leetcode.com/problems/path-with-minimum-effort/",
+      "solution": {
+        "approach": [
+          "Edge 'cost' is the absolute height difference, and a path's cost is its largest single step. This is a min-max (bottleneck) shortest path — Dijkstra works with max instead of sum.",
+          "Key cells by the minimum possible effort to reach them; relax with effort = max(currentEffort, |height diff|)."
+        ],
+        "complexity": {
+          "time": "O(mn log(mn))",
+          "space": "O(mn)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int minimumEffortPath(vector<vector<int>>& h) {\n        int R = h.size(), C = h[0].size();\n        vector<vector<int>> eff(R, vector<int>(C, INT_MAX));\n        priority_queue<tuple<int,int,int>, vector<tuple<int,int,int>>, greater<>> pq;\n        pq.push({0, 0, 0}); eff[0][0] = 0;\n        int dx[] = {0,0,1,-1}, dy[] = {1,-1,0,0};\n        while (!pq.empty()) {\n            auto [e, r, c] = pq.top(); pq.pop();\n            if (r == R - 1 && c == C - 1) return e;\n            if (e > eff[r][c]) continue;\n            for (int d = 0; d < 4; d++) {\n                int nr = r + dx[d], nc = c + dy[d];\n                if (nr < 0 || nc < 0 || nr >= R || nc >= C) continue;\n                int ne = max(e, abs(h[nr][nc] - h[r][c]));\n                if (ne < eff[nr][nc]) { eff[nr][nc] = ne; pq.push({ne, nr, nc}); }\n            }\n        }\n        return 0;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def minimumEffortPath(self, h):\n        R, C = len(h), len(h[0])\n        eff = [[float('inf')] * C for _ in range(R)]\n        eff[0][0] = 0\n        pq = [(0, 0, 0)]\n        while pq:\n            e, r, c = heapq.heappop(pq)\n            if r == R - 1 and c == C - 1:\n                return e\n            if e > eff[r][c]:\n                continue\n            for nr, nc in ((r,c+1),(r,c-1),(r+1,c),(r-1,c)):\n                if 0 <= nr < R and 0 <= nc < C:\n                    ne = max(e, abs(h[nr][nc] - h[r][c]))\n                    if ne < eff[nr][nc]:\n                        eff[nr][nc] = ne\n                        heapq.heappush(pq, (ne, nr, nc))\n        return 0"
+          }
+        ]
+      }
     },
     {
       "id": "dij3",
@@ -124,7 +168,29 @@
       "statement": "Cheapest price with at most K stops.",
       "hint": "Dijkstra with a stop-count state, or Bellman-Ford limited to K+1 relaxations.",
       "tests": "Shortest path with a constraint.",
-      "link": "https://leetcode.com/problems/cheapest-flights-within-k-stops/"
+      "link": "https://leetcode.com/problems/cheapest-flights-within-k-stops/",
+      "solution": {
+        "approach": [
+          "State is (node, stops used). A node may be revisited if we reach it with fewer stops, so we cannot prune purely by cost.",
+          "Dijkstra-style heap ordered by cost; carry the stop count and only expand while stops <= K. The first time we pop the destination it is optimal."
+        ],
+        "complexity": {
+          "time": "O(E·K log(E·K))",
+          "space": "O(n·K)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int findCheapestPrice(int n, vector<vector<int>>& flights, int src, int dst, int K) {\n        vector<vector<pair<int,int>>> adj(n);\n        for (auto& f : flights) adj[f[0]].push_back({f[1], f[2]});\n        priority_queue<tuple<int,int,int>, vector<tuple<int,int,int>>, greater<>> pq;\n        pq.push({0, src, K + 1});\n        vector<int> bestStops(n, -1);\n        while (!pq.empty()) {\n            auto [cost, u, stops] = pq.top(); pq.pop();\n            if (u == dst) return cost;\n            if (stops <= 0 || stops <= bestStops[u]) continue;\n            bestStops[u] = stops;\n            for (auto& [v, w] : adj[u]) pq.push({cost + w, v, stops - 1});\n        }\n        return -1;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def findCheapestPrice(self, n, flights, src, dst, K):\n        adj = [[] for _ in range(n)]\n        for u, v, w in flights:\n            adj[u].append((v, w))\n        pq = [(0, src, K + 1)]\n        best_stops = [-1] * n\n        while pq:\n            cost, u, stops = heapq.heappop(pq)\n            if u == dst:\n                return cost\n            if stops <= 0 or stops <= best_stops[u]:\n                continue\n            best_stops[u] = stops\n            for v, w in adj[u]:\n                heapq.heappush(pq, (cost + w, v, stops - 1))\n        return -1"
+          }
+        ]
+      }
     },
     {
       "id": "dij4",
@@ -133,7 +199,29 @@
       "statement": "Least time to swim from corner to corner as water rises.",
       "hint": "Dijkstra/▢ over the grid minimising the maximum cell value on the path.",
       "tests": "Min-max path.",
-      "link": "https://leetcode.com/problems/swim-in-rising-water/"
+      "link": "https://leetcode.com/problems/swim-in-rising-water/",
+      "solution": {
+        "approach": [
+          "You can move once the water level reaches the higher of two adjacent cells. The cost of a path is the maximum cell value on it — a bottleneck shortest path.",
+          "Dijkstra from (0,0) keying each cell by the minimum possible 'time' (max elevation) to reach it; answer is that value at the bottom-right corner."
+        ],
+        "complexity": {
+          "time": "O(n^2 log n)",
+          "space": "O(n^2)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int swimInWater(vector<vector<int>>& g) {\n        int n = g.size();\n        vector<vector<int>> best(n, vector<int>(n, INT_MAX));\n        priority_queue<tuple<int,int,int>, vector<tuple<int,int,int>>, greater<>> pq;\n        pq.push({g[0][0], 0, 0}); best[0][0] = g[0][0];\n        int dx[] = {0,0,1,-1}, dy[] = {1,-1,0,0};\n        while (!pq.empty()) {\n            auto [t, r, c] = pq.top(); pq.pop();\n            if (r == n - 1 && c == n - 1) return t;\n            if (t > best[r][c]) continue;\n            for (int d = 0; d < 4; d++) {\n                int nr = r + dx[d], nc = c + dy[d];\n                if (nr < 0 || nc < 0 || nr >= n || nc >= n) continue;\n                int nt = max(t, g[nr][nc]);\n                if (nt < best[nr][nc]) { best[nr][nc] = nt; pq.push({nt, nr, nc}); }\n            }\n        }\n        return -1;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def swimInWater(self, g):\n        n = len(g)\n        best = [[float('inf')] * n for _ in range(n)]\n        best[0][0] = g[0][0]\n        pq = [(g[0][0], 0, 0)]\n        while pq:\n            t, r, c = heapq.heappop(pq)\n            if r == n - 1 and c == n - 1:\n                return t\n            if t > best[r][c]:\n                continue\n            for nr, nc in ((r,c+1),(r,c-1),(r+1,c),(r-1,c)):\n                if 0 <= nr < n and 0 <= nc < n:\n                    nt = max(t, g[nr][nc])\n                    if nt < best[nr][nc]:\n                        best[nr][nc] = nt\n                        heapq.heappush(pq, (nt, nr, nc))\n        return -1"
+          }
+        ]
+      }
     },
     {
       "id": "dij5",
@@ -142,7 +230,29 @@
       "statement": "Count shortest paths from 0 to n−1.",
       "hint": "Dijkstra while accumulating path counts on equal-distance relaxations.",
       "tests": "Counting shortest paths.",
-      "link": "https://leetcode.com/problems/number-of-ways-to-arrive-at-destination/"
+      "link": "https://leetcode.com/problems/number-of-ways-to-arrive-at-destination/",
+      "solution": {
+        "approach": [
+          "Run Dijkstra from 0, but additionally keep ways[v] = number of shortest paths to v.",
+          "When we find a strictly shorter distance, ways[v] = ways[u]; when we find an equally short one, ways[v] += ways[u]. Return ways[n-1] modulo 1e9+7."
+        ],
+        "complexity": {
+          "time": "O(E log V)",
+          "space": "O(V)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int countPaths(int n, vector<vector<int>>& roads) {\n        const long long MOD = 1e9 + 7;\n        vector<vector<pair<int,long long>>> adj(n);\n        for (auto& r : roads) { adj[r[0]].push_back({r[1], r[2]}); adj[r[1]].push_back({r[0], r[2]}); }\n        vector<long long> dist(n, LLONG_MAX), ways(n, 0);\n        priority_queue<pair<long long,int>, vector<pair<long long,int>>, greater<>> pq;\n        dist[0] = 0; ways[0] = 1; pq.push({0, 0});\n        while (!pq.empty()) {\n            auto [d, u] = pq.top(); pq.pop();\n            if (d > dist[u]) continue;\n            for (auto& [v, w] : adj[u]) {\n                if (d + w < dist[v]) { dist[v] = d + w; ways[v] = ways[u]; pq.push({dist[v], v}); }\n                else if (d + w == dist[v]) ways[v] = (ways[v] + ways[u]) % MOD;\n            }\n        }\n        return (int)ways[n - 1];\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "import heapq\nclass Solution:\n    def countPaths(self, n, roads):\n        MOD = 10**9 + 7\n        adj = [[] for _ in range(n)]\n        for u, v, w in roads:\n            adj[u].append((v, w)); adj[v].append((u, w))\n        dist = [float('inf')] * n\n        ways = [0] * n\n        dist[0], ways[0] = 0, 1\n        pq = [(0, 0)]\n        while pq:\n            d, u = heapq.heappop(pq)\n            if d > dist[u]:\n                continue\n            for v, w in adj[u]:\n                if d + w < dist[v]:\n                    dist[v] = d + w\n                    ways[v] = ways[u]\n                    heapq.heappush(pq, (dist[v], v))\n                elif d + w == dist[v]:\n                    ways[v] = (ways[v] + ways[u]) % MOD\n        return ways[n - 1] % MOD"
+          }
+        ]
+      }
     }
   ]
 }

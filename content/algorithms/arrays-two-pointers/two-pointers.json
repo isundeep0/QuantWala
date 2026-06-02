@@ -107,7 +107,29 @@
       "statement": "Return indices of two numbers in a sorted array that add to target.",
       "hint": "Opposite-ends pointers; move based on the sum.",
       "tests": "Core opposite-ends pattern.",
-      "link": "https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/"
+      "link": "https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/",
+      "solution": {
+        "approach": [
+          "Because the array is sorted, two pointers from both ends converge: if the pair sum is too small move left pointer right, if too big move right pointer left.",
+          "When the sum matches, return the 1-based indices. O(n) with no extra space."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& a, int target) {\n        int i = 0, j = a.size() - 1;\n        while (i < j) {\n            int s = a[i] + a[j];\n            if (s == target) return {i + 1, j + 1};\n            if (s < target) i++; else j--;\n        }\n        return {};\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def twoSum(self, a: list[int], target: int) -> list[int]:\n        i, j = 0, len(a) - 1\n        while i < j:\n            s = a[i] + a[j]\n            if s == target:\n                return [i + 1, j + 1]\n            if s < target:\n                i += 1\n            else:\n                j -= 1\n        return []"
+          }
+        ]
+      }
     },
     {
       "id": "tp2",
@@ -116,7 +138,29 @@
       "statement": "Check if a string is a palindrome considering only alphanumerics.",
       "hint": "Pointers from both ends, skip non-alphanumerics, compare.",
       "tests": "Converging pointers on strings.",
-      "link": "https://leetcode.com/problems/valid-palindrome/"
+      "link": "https://leetcode.com/problems/valid-palindrome/",
+      "solution": {
+        "approach": [
+          "Two pointers from both ends; skip non-alphanumeric characters and compare lowercased letters.",
+          "If any mismatch occurs it is not a palindrome; pointers meeting means success. O(n)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    bool isPalindrome(string s) {\n        int i = 0, j = s.size() - 1;\n        while (i < j) {\n            while (i < j && !isalnum(s[i])) i++;\n            while (i < j && !isalnum(s[j])) j--;\n            if (tolower(s[i]) != tolower(s[j])) return false;\n            i++; j--;\n        }\n        return true;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def isPalindrome(self, s: str) -> bool:\n        i, j = 0, len(s) - 1\n        while i < j:\n            while i < j and not s[i].isalnum():\n                i += 1\n            while i < j and not s[j].isalnum():\n                j -= 1\n            if s[i].lower() != s[j].lower():\n                return False\n            i += 1; j -= 1\n        return True"
+          }
+        ]
+      }
     },
     {
       "id": "tp3",
@@ -125,7 +169,29 @@
       "statement": "Find all unique triplets that sum to zero.",
       "hint": "Fix one element, two-pointer the rest; skip duplicates carefully.",
       "tests": "Two pointers nested inside a loop + dedup.",
-      "link": "https://leetcode.com/problems/3sum/"
+      "link": "https://leetcode.com/problems/3sum/",
+      "solution": {
+        "approach": [
+          "Sort, then fix each a[i] and two-pointer the rest for pairs summing to -a[i].",
+          "Skip duplicates at the fixed index and after finding a triple to avoid repeats. O(n^2)."
+        ],
+        "complexity": {
+          "time": "O(n^2)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    vector<vector<int>> threeSum(vector<int>& a) {\n        sort(a.begin(), a.end());\n        vector<vector<int>> res;\n        int n = a.size();\n        for (int i = 0; i < n - 2; i++) {\n            if (i && a[i] == a[i - 1]) continue;\n            int l = i + 1, r = n - 1;\n            while (l < r) {\n                int s = a[i] + a[l] + a[r];\n                if (s < 0) l++;\n                else if (s > 0) r--;\n                else {\n                    res.push_back({a[i], a[l], a[r]});\n                    while (l < r && a[l] == a[l + 1]) l++;\n                    while (l < r && a[r] == a[r - 1]) r--;\n                    l++; r--;\n                }\n            }\n        }\n        return res;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def threeSum(self, a: list[int]) -> list[list[int]]:\n        a.sort()\n        res, n = [], len(a)\n        for i in range(n - 2):\n            if i and a[i] == a[i - 1]:\n                continue\n            l, r = i + 1, n - 1\n            while l < r:\n                s = a[i] + a[l] + a[r]\n                if s < 0:\n                    l += 1\n                elif s > 0:\n                    r -= 1\n                else:\n                    res.append([a[i], a[l], a[r]])\n                    while l < r and a[l] == a[l + 1]:\n                        l += 1\n                    while l < r and a[r] == a[r - 1]:\n                        r -= 1\n                    l += 1; r -= 1\n        return res"
+          }
+        ]
+      }
     },
     {
       "id": "tp4",
@@ -134,7 +200,29 @@
       "statement": "Pick two lines forming a container holding the most water.",
       "hint": "Move the shorter wall inward — it's the limiting factor.",
       "tests": "Greedy pointer movement.",
-      "link": "https://leetcode.com/problems/container-with-most-water/"
+      "link": "https://leetcode.com/problems/container-with-most-water/",
+      "solution": {
+        "approach": [
+          "Water held by two lines is width × min(height). Start widest; the shorter line limits the area, so moving it inward is the only way to possibly improve.",
+          "Move the pointer at the shorter line each step, tracking the max area. O(n)."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int maxArea(vector<int>& h) {\n        int i = 0, j = h.size() - 1, best = 0;\n        while (i < j) {\n            best = max(best, (j - i) * min(h[i], h[j]));\n            if (h[i] < h[j]) i++; else j--;\n        }\n        return best;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def maxArea(self, h: list[int]) -> int:\n        i, j, best = 0, len(h) - 1, 0\n        while i < j:\n            best = max(best, (j - i) * min(h[i], h[j]))\n            if h[i] < h[j]:\n                i += 1\n            else:\n                j -= 1\n        return best"
+          }
+        ]
+      }
     },
     {
       "id": "tp5",
@@ -143,7 +231,29 @@
       "statement": "Compute trapped rainwater given an elevation map.",
       "hint": "Two pointers with running left-max and right-max; process the smaller side.",
       "tests": "Two pointers with auxiliary maxima.",
-      "link": "https://leetcode.com/problems/trapping-rain-water/"
+      "link": "https://leetcode.com/problems/trapping-rain-water/",
+      "solution": {
+        "approach": [
+          "Water above each bar is min(maxLeft, maxRight) - height. Two pointers track running left/right maxima from both ends.",
+          "Whichever side has the smaller running max is the binding constraint, so process that side and add its trapped water. O(n), O(1) space."
+        ],
+        "complexity": {
+          "time": "O(n)",
+          "space": "O(1)"
+        },
+        "codes": [
+          {
+            "language": "cpp",
+            "title": "solution.cpp",
+            "source": "class Solution {\npublic:\n    int trap(vector<int>& h) {\n        int i = 0, j = h.size() - 1, lmax = 0, rmax = 0, water = 0;\n        while (i < j) {\n            if (h[i] < h[j]) { lmax = max(lmax, h[i]); water += lmax - h[i]; i++; }\n            else { rmax = max(rmax, h[j]); water += rmax - h[j]; j--; }\n        }\n        return water;\n    }\n};"
+          },
+          {
+            "language": "python",
+            "title": "solution.py",
+            "source": "class Solution:\n    def trap(self, h: list[int]) -> int:\n        i, j = 0, len(h) - 1\n        lmax = rmax = water = 0\n        while i < j:\n            if h[i] < h[j]:\n                lmax = max(lmax, h[i]); water += lmax - h[i]; i += 1\n            else:\n                rmax = max(rmax, h[j]); water += rmax - h[j]; j -= 1\n        return water"
+          }
+        ]
+      }
     }
   ]
 }

@@ -10,12 +10,20 @@ import {
   Gauge,
   ListChecks,
   Sparkles,
+  FastForward,
 } from "lucide-react";
 import { CP_TOTAL_PROBLEMS } from "@/data/cpRoadmap.js";
 import { useProgress } from "@/context/ProgressContext.jsx";
 import { useSdProgress } from "@/context/SdProgressContext.jsx";
+import { useKbProgress } from "@/context/KbProgressContext.jsx";
 import { TOTAL_ALGORITHMS } from "@/data/registry.js";
 import { SD_TOTAL_LESSONS } from "@/data/systemDesign.js";
+import {
+  CURRICULUM as KB_CURRICULUM,
+  KB_PHASES,
+  KB_TOTAL_DELIVERABLES,
+  KB_TOTAL_PAPERS,
+} from "@/data/kernelBypass.js";
 import GlassCard from "@/components/liquid/GlassCard.jsx";
 import SwirlProgress from "@/components/liquid/SwirlProgress.jsx";
 
@@ -40,6 +48,7 @@ function StatPill({ icon: Icon, label }) {
 export default function Landing() {
   const { overallPercent, completedCount, problemStats } = useProgress();
   const { overallPercent: sdPercent } = useSdProgress();
+  const { overallPercent: kbPercent } = useKbProgress();
 
   const modules = [
     {
@@ -217,6 +226,110 @@ export default function Landing() {
             );
           })}
         </div>
+      </section>
+
+      {/* Featured: Module 05 — Kernel Bypass */}
+      <section className="mx-auto mt-8 max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-60px" }}
+        >
+          <Link to="/kernel-bypass" className="group block">
+            <GlassCard
+              iris
+              className="relative overflow-hidden rounded-[1.75rem] p-6 sm:p-8"
+              style={{ "--glow": "#22d3eeaa" }}
+            >
+              <div className="absolute inset-0 dot-grid opacity-20" aria-hidden />
+              {/* dual-neon aura */}
+              <div
+                className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full opacity-50 blur-3xl"
+                style={{ background: "radial-gradient(circle, #a855f7, transparent 70%)" }}
+                aria-hidden
+              />
+              <div
+                className="pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full opacity-40 blur-3xl"
+                style={{ background: "radial-gradient(circle, #22d3ee, transparent 70%)" }}
+                aria-hidden
+              />
+
+              <div className="relative flex flex-col gap-7 sm:flex-row sm:items-center sm:justify-between">
+                <div className="max-w-3xl">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="relative grid h-14 w-14 place-items-center rounded-2xl"
+                      style={{
+                        background:
+                          "radial-gradient(120% 120% at 30% 20%, #22d3ee55, #a855f712)",
+                        boxShadow: "inset 0 0 18px #22d3ee40, 0 0 18px #a855f733",
+                        color: "#22d3ee",
+                      }}
+                    >
+                      <Cpu className="h-7 w-7" style={{ filter: "drop-shadow(0 0 6px #22d3ee)" }} />
+                      <FastForward
+                        className="absolute -bottom-1.5 -right-1.5 h-5 w-5"
+                        style={{ color: "#a855f7", filter: "drop-shadow(0 0 5px #a855f7)" }}
+                      />
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold uppercase tracking-[0.22em] text-faint">
+                          {KB_CURRICULUM.moduleCode}
+                        </span>
+                        <span
+                          className="chip text-[10px] font-bold"
+                          style={{ color: "#22d3ee", background: "#22d3ee1a", boxShadow: "inset 0 0 0 1px #22d3ee55" }}
+                        >
+                          NEW
+                        </span>
+                      </div>
+                      <h3 className="mt-0.5 text-2xl font-extrabold tracking-tight lit-text">
+                        Kernel Bypass &amp; Ultra-Low Latency
+                      </h3>
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-muted">{KB_CURRICULUM.description}</p>
+
+                  <div className="mt-5 flex flex-wrap gap-1.5">
+                    {KB_PHASES.map((p) => (
+                      <span
+                        key={p.id}
+                        className="chip border text-[11px] font-medium"
+                        style={{ borderColor: `${p.color}55`, color: p.color }}
+                      >
+                        {p.index}. {p.title}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 flex flex-wrap items-center gap-4">
+                    <span
+                      className="btn inline-flex items-center gap-1.5 px-5 py-2.5 text-base font-semibold text-white"
+                      style={{
+                        background: "linear-gradient(120deg, #22d3ee, #a855f7)",
+                        boxShadow: "0 0 24px #22d3ee55",
+                      }}
+                    >
+                      Enter
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1.5" />
+                    </span>
+                    <span className="text-sm text-muted">
+                      {KB_PHASES.length} phases · {KB_TOTAL_DELIVERABLES} deliverables ·{" "}
+                      {KB_TOTAL_PAPERS} curated papers
+                    </span>
+                  </div>
+                </div>
+
+                <div className="shrink-0 self-center">
+                  <SwirlProgress value={kbPercent} size={140} stroke={11} color="#22d3ee" sublabel="complete" />
+                </div>
+              </div>
+            </GlassCard>
+          </Link>
+        </motion.div>
       </section>
 
       {/* Progress snapshot */}

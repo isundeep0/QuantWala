@@ -1,0 +1,150 @@
+{
+  "slug": "measuring-latency",
+  "sectionId": "systems",
+  "order": 10,
+  "title": "Measuring Latency & Jitter",
+  "tagline": "You can't optimize what you can't measure — and in HFT the tail (p99.9), not the mean, is what loses you the trade.",
+  "level": "Advanced",
+  "track": ["systems", "dev"],
+  "estMinutes": 20,
+  "visualizer": "latency-ladder",
+  "concept": {
+    "analogy": "Reporting only the average commute time is useless if once a week a two-hour traffic jam makes you miss a flight. What you care about is the worst-case and how often it happens — the distribution, not the average. HFT latency is the same: the average tick-to-trade might be 800 ns, but the 99.9th-percentile spike to 50 µs is what causes you to lose the race or break a risk limit. Measurement is about capturing the whole distribution, especially the tail.",
+    "paragraphs": [
+      "Latency is a distribution, not a number. Averages hide the spikes that matter most, and spikes (jitter) come from exactly the things we spent earlier lessons removing: cache misses, page faults, context switches, interrupts, GC/allocation, lock contention, and frequency scaling. So you measure percentiles — p50 (median), p99, p99.9, p99.99 — and the max, and you watch how they move as you change the system.",
+      "Two things make HFT measurement hard. First, the thing you're measuring (hundreds of nanoseconds) is close to the cost of measuring it, so your timing must be cheaper than what it observes. Second, you must record every sample without perturbing the hot path — you can't malloc, lock, or do I/O inline to log a timestamp. The standard answer: read a cheap high-resolution clock (TSC), store deltas into a pre-allocated lock-free buffer or a fixed-bucket histogram, and aggregate off the hot path.",
+      "Clocks: `rdtsc`/`rdtscp` reads the CPU's time-stamp counter in a few nanoseconds (convert cycles→ns using the known invariant-TSC frequency); `clock_gettime(CLOCK_MONOTONIC)` is portable and (via vDSO) cheap-ish but coarser. Beware out-of-order execution reordering your rdtsc — use rdtscp or fences when you need precise fencing. For wire-to-wire truth, use NIC hardware timestamps (PTP/PHC) and external taps, because software clocks miss the NIC and switch.",
+      "To store samples cheaply, use a histogram with fixed buckets (e.g., HdrHistogram, which keeps high precision across a huge dynamic range at constant cost) rather than storing every raw value, or a pre-sized ring you drain later. Then report the full percentile spread. The discipline: benchmark realistically (warm caches, steady state, representative load), change one thing at a time, and judge by p99/p99.9 — because in trading, consistency beats a good average."
+    ],
+    "points": [
+      "Latency is a distribution; report p50/p99/p99.9/p99.99 and max — the tail is what matters.",
+      "Jitter comes from cache misses, page faults, context switches, interrupts, allocation, and throttling.",
+      "Measurement must be cheaper than what it measures and must not perturb the hot path (no malloc/lock/IO inline).",
+      "Use rdtsc/rdtscp (cycles→ns) or clock_gettime; use NIC hardware timestamps for wire-to-wire truth.",
+      "Record into fixed-bucket histograms (HdrHistogram) or a pre-allocated buffer; aggregate off-path."
+    ],
+    "callouts": [
+      { "type": "warn", "title": "The mean is a liar", "body": "Two systems with the same average latency can be wildly different: one steady, one with frequent 50 µs spikes. Always quote and optimize percentiles. A common rule: 'p99.9 is your real latency' because that's how often the spike actually bites." },
+      { "type": "tip", "title": "Coordinated omission", "body": "If you only time requests you happened to send, you miss the latency of requests delayed because the system was stalled — undercounting the tail. Measure against the intended schedule (when the event should have been processed), as HdrHistogram's recorder and tools like wrk2 do." }
+    ],
+    "keyIdea": "Treat latency as a distribution and optimize the tail (p99.9), not the mean. Measure with a clock cheaper than the thing measured (rdtsc), record samples without perturbing the hot path (pre-allocated buffers / fixed-bucket histograms like HdrHistogram), use hardware timestamps for wire-to-wire truth, and beware coordinated omission."
+  },
+  "deepDive": {
+    "intro": "Picking a clock, timing the hot path without disturbing it, building the distribution, and benchmarking honestly.",
+    "steps": [
+      {
+        "title": "Choose a clock and calibrate it",
+        "detail": "On modern x86, the TSC is invariant (constant rate regardless of frequency scaling) and rdtsc/rdtscp cost a few ns. Read start/end, take the cycle delta, and convert to ns with the measured TSC frequency (calibrate once against clock_gettime). Use rdtscp (or lfence+rdtsc) so out-of-order execution doesn't move the read outside the region you mean to time."
+      },
+      {
+        "title": "Don't perturb the hot path",
+        "detail": "Inline logging must be allocation-free, lock-free, and I/O-free. Either bump a fixed-bucket histogram in place, or write the (compact, binary) sample into a pre-allocated SPSC ring that a separate, non-pinned thread drains and aggregates. Never printf, malloc, take a mutex, or touch the disk on the path you're measuring — that would dwarf the signal."
+      },
+      {
+        "title": "Build the distribution (histograms)",
+        "detail": "Storing every raw sample is costly and you still have to sort it. Instead use a histogram: HdrHistogram records values into logarithmically-sized buckets, giving configurable precision (e.g., 3 significant digits) across a huge range (ns to seconds) at constant memory and O(1) record cost, then yields any percentile. Report p50/p99/p99.9/p99.99/max, not just the mean and stdev."
+      },
+      {
+        "title": "Find the cause of spikes",
+        "detail": "When the tail is bad, attribute it: `perf stat`/`perf record` for cache misses and mispredicts; `perf sched`/`/proc` for context switches and migrations; check for page faults (pre-fault and mlock memory), interrupts on your core, frequency transitions, and allocations. Each spike usually traces to one of the determinism enemies from earlier lessons."
+      },
+      {
+        "title": "Benchmark honestly",
+        "detail": "Warm up (let caches/branch predictors and the JIT/allocator settle) before measuring; run at steady state under representative load; pin and isolate as in production; change one variable at a time; and run long enough to populate the tail. Watch for coordinated omission and for the optimizer deleting your benchmark (use `volatile`/`DoNotOptimize`/`benchmark::ClobberMemory`)."
+      }
+    ],
+    "codes": [
+      {
+        "language": "cpp",
+        "title": "rdtsc_timing.cpp — cheap, fenced timing",
+        "source": "#include <x86intrin.h>\n#include <cstdint>\n\n// Calibrate once: cycles per nanosecond (TSC is invariant on modern x86).\nextern double g_cycles_per_ns;   // e.g., 3.0 on a 3 GHz box\n\nstruct ScopedTsc {\n    uint64_t start;\n    ScopedTsc() { unsigned aux; start = __rdtscp(&aux); }  // serializing-ish read\n    uint64_t elapsed_ns() const {\n        unsigned aux; uint64_t end = __rdtscp(&aux);\n        _mm_lfence();                      // keep the read inside the region\n        return (uint64_t)((end - start) / g_cycles_per_ns);\n    }\n};\n\n// Hot path: time a region, record into a histogram, NO alloc/lock/IO inline.\nextern void hist_record(uint64_t ns);   // O(1), pre-allocated buckets\n\nvoid on_event(const Event& e) {\n    ScopedTsc t;\n    handle(e);                            // the work we want to measure\n    hist_record(t.elapsed_ns());          // cheap bucket bump\n}"
+      },
+      {
+        "language": "cpp",
+        "title": "histogram_report.cpp — percentiles, not averages",
+        "source": "// Sketch of a fixed-bucket latency histogram (HdrHistogram-style idea).\n#include <array>\n#include <cstdint>\n#include <cmath>\n\nstruct LatencyHist {\n    static constexpr int N = 1 << 16;     // bucket per ~log step\n    std::array<uint64_t, N> buckets{};\n    uint64_t count = 0, maxv = 0;\n\n    static int bucket_of(uint64_t ns) {   // coarse log bucketing\n        return ns == 0 ? 0 : std::min(N - 1, (int)(std::log2((double)ns) * 1024));\n    }\n    void record(uint64_t ns) {            // O(1), allocation-free\n        ++buckets[bucket_of(ns)]; ++count; if (ns > maxv) maxv = ns;\n    }\n    uint64_t percentile(double p) const { // walk buckets to the p-th sample\n        uint64_t target = (uint64_t)(p / 100.0 * count), seen = 0;\n        for (int i = 0; i < N; ++i) { seen += buckets[i]; if (seen >= target) return 1ull << (i / 1024); }\n        return maxv;\n    }\n    // report: p50=percentile(50), p99=..(99), p999=..(99.9), max=maxv\n};\n// Prefer the real HdrHistogram in production; this shows the principle."
+      }
+    ],
+    "notes": [
+      { "title": "Pre-fault and lock memory", "detail": "Page faults cause µs-scale spikes. mlockall the process and pre-touch your buffers at startup so no faults happen on the hot path; use huge pages for big working sets." },
+      { "title": "Beware the observer effect", "detail": "Heavy instrumentation changes timing. Keep inline cost to a single cheap bucket bump; do all formatting/printing off the hot path; and validate that turning measurement on/off doesn't move the distribution much." },
+      { "title": "Wire-to-wire is the real number", "detail": "Software timestamps miss the NIC and switch. NIC hardware timestamping (PTP/PHC) and external capture taps give the true exchange-to-exchange or wire-to-wire latency that determines whether you won the race." }
+    ],
+    "complexity": {
+      "time": "Record in O(1), a few ns",
+      "timeReason": "A fenced rdtsc plus a histogram bucket increment is single-digit nanoseconds — cheap enough to leave on in production without distorting sub-microsecond measurements.",
+      "space": "O(buckets), fixed",
+      "spaceReason": "A histogram uses constant memory regardless of sample count; far cheaper than storing every raw value."
+    },
+    "pitfalls": [
+      "Reporting only mean/stdev and missing the p99.9 spikes that actually cost trades.",
+      "Allocating, locking, or doing I/O inline to record a sample — the measurement dwarfs the work.",
+      "Letting the optimizer delete the benchmarked code, or measuring cold-start instead of steady state.",
+      "Coordinated omission: timing only completed requests and undercounting delayed ones.",
+      "Trusting software clocks for wire latency, and forgetting page faults / frequency scaling cause spikes."
+    ]
+  },
+  "benchmark": {
+    "intro": "Why the same 'average' can hide very different systems — two tick-to-trade paths with identical means.",
+    "columns": ["System", "Mean", "p99", "p99.9", "Verdict"],
+    "rows": [
+      ["A: tuned, pinned, no faults", "800 ns", "1.2 µs", "2 µs", "Consistent — wins races"],
+      ["B: same mean, occasional stalls", "800 ns", "9 µs", "55 µs", "Spiky — loses on the tail"]
+    ],
+    "note": "Identical averages, very different behavior; B's GC/fault/context-switch spikes are invisible in the mean.",
+    "takeaway": "Optimize and report the distribution. In HFT, a system with a slightly worse mean but a tight tail beats one with a great average and frequent spikes — because the spike is when you lose the trade or trip a risk limit."
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-percentiles",
+        "q": "Why do HFT engineers care about p99.9 latency rather than the average, and how do you measure it without distorting the hot path?",
+        "tag": "Systems",
+        "a": [
+          "Because latency is a distribution and the tail is what costs money: an occasional 50 µs spike (from a cache miss, page fault, context switch, GC/allocation, or interrupt) is exactly when you lose the race to the order book or breach a timing assumption — and the average completely hides it. So you track p50/p99/p99.9/p99.99 and the max and optimize to flatten the tail.",
+          "To measure without distortion: use a clock cheaper than the work (fenced rdtsc/rdtscp, cycles→ns), and record samples allocation-free, lock-free, and I/O-free — bump a fixed-bucket histogram (e.g., HdrHistogram) in place or push a compact sample into a pre-allocated ring that another thread drains and aggregates. Never malloc/lock/printf inline. Also pre-fault and mlock memory, run at steady state, and watch for coordinated omission so you don't undercount the tail."
+        ],
+        "followups": ["What is coordinated omission?", "Why prefer rdtsc over clock_gettime, and what's the catch?"]
+      },
+      {
+        "id": "q-clock",
+        "q": "Compare rdtsc and clock_gettime(CLOCK_MONOTONIC) for timing a sub-microsecond region. What are the gotchas?",
+        "tag": "Systems",
+        "a": [
+          "rdtsc/rdtscp reads the CPU time-stamp counter directly in a few nanoseconds — ideal when you're timing hundreds of ns. On modern CPUs the TSC is 'invariant' (constant rate regardless of frequency scaling), so you calibrate cycles→ns once. Gotchas: out-of-order execution can move a plain rdtsc outside your region (use rdtscp or lfence to fence it), and on older/multi-socket systems TSCs could be unsynchronized across cores (mostly solved on modern hardware, but pin the thread to be safe).",
+          "clock_gettime(CLOCK_MONOTONIC) is portable and, via the vDSO, reasonably cheap, but typically coarser/slower than rdtsc and can itself cost a meaningful fraction of a sub-µs measurement. Use clock_gettime for portability and coarser timing; use rdtsc(p) when you need the cheapest, finest-grained timing on the hot path — and always validate your calibration."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-instrument",
+        "title": "Instrument a hot path for latency without perturbing it",
+        "difficulty": "Advanced",
+        "statement": "Add tick-to-trade latency measurement to a busy-spinning strategy loop that currently does no measurement. Requirements: capture every event's latency, report p50/p99/p99.9/max, add no allocation/locks/I-O on the hot path, keep per-sample overhead to a few ns, and not lose the tail. Describe your design and how you'd validate it doesn't distort results.",
+        "hint": "rdtscp around the region + O(1) histogram bump inline; drain/report from a separate thread; pre-fault & mlock memory.",
+        "tests": "Low-overhead, tail-accurate instrumentation.",
+        "solution": {
+          "approach": [
+            "Inline, per event: read the start with rdtscp, run the handler, read the end with rdtscp + lfence, compute the cycle delta, convert to ns with the pre-calibrated cycles/ns, and record it with a single O(1) histogram bucket increment (HdrHistogram or a fixed-bucket array). No malloc, no lock, no printf — just a few ns added. Pre-touch and mlockall all buffers at startup so no page faults occur on the path.",
+            "Off the hot path: a separate, non-pinned reporter thread periodically snapshots/merges the histogram (or drains a pre-allocated SPSC ring of raw samples) and logs p50/p99/p99.9/p99.99/max. To avoid coordinated omission, time against when each event should have been processed (e.g., from its ingress hardware timestamp) so events delayed by a stall still count toward the tail.",
+            "Validate non-distortion: compare the latency distribution with instrumentation on vs off (a compile-time flag) — the median should barely move; quantify the per-sample cost by timing the record() call itself; ensure the optimizer didn't elide the work (DoNotOptimize/ClobberMemory); and cross-check against NIC hardware timestamps for the wire-to-wire figure. Run long enough at steady state to populate p99.9."
+          ],
+          "complexity": { "time": "~few ns/sample inline; report off-path", "space": "O(buckets) fixed histogram" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "instrument.cpp",
+              "source": "void strategy_loop(LatencyHist& hist) {\n    Event e;\n    while (running) {\n        if (!q.pop(e)) { _mm_pause(); continue; }\n        unsigned a;\n        uint64_t t0 = __rdtscp(&a);\n        handle(e);                                  // measured work\n        uint64_t t1 = __rdtscp(&a); _mm_lfence();\n        hist.record((uint64_t)((t1 - t0) / g_cycles_per_ns)); // O(1), no alloc/lock\n    }\n}\n// A separate thread: every second, snapshot hist and log p50/p99/p99.9/max."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "HdrHistogram", "by": "Gil Tene", "note": "High-dynamic-range histograms + the definitive talk on coordinated omission ('How NOT to Measure Latency')." },
+    { "title": "Google Benchmark & nanobench", "note": "Microbenchmark frameworks that handle warmup and stop the optimizer from deleting your code." },
+    { "title": "perf, ftrace, and Brendan Gregg's latency methodologies", "note": "Attributing tail-latency spikes to their root cause." }
+  ]
+}

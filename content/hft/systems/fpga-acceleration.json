@@ -1,0 +1,118 @@
+{
+  "slug": "fpga-acceleration",
+  "sectionId": "systems",
+  "order": 9,
+  "title": "FPGAs & Hardware Acceleration",
+  "tagline": "When software's nanoseconds aren't enough: doing tick-to-trade in silicon, on the wire, in tens of nanoseconds.",
+  "level": "Elite",
+  "track": ["systems"],
+  "estMinutes": 16,
+  "concept": {
+    "analogy": "A CPU is a brilliant generalist who reads each instruction and does it, one after another — incredibly flexible, but always reading the recipe. An FPGA is like building a dedicated machine on a factory floor whose gears are wired specifically to make one product: the input flows in and the finished output falls out the other end, with no recipe-reading in between. You give up flexibility and pay a lot to build the machine, but for that one product it's untouchably fast and perfectly consistent.",
+    "paragraphs": [
+      "An FPGA (Field-Programmable Gate Array) is a chip whose logic you wire up yourself: instead of running instructions on fixed hardware, you describe a circuit (in Verilog/VHDL or via high-level synthesis) and the FPGA becomes that circuit. Because the data flows through purpose-built parallel pipelines rather than being fetched and executed as instructions, latency can be tens of nanoseconds and almost perfectly deterministic — no OS, no cache misses, no branch mispredicts, no jitter.",
+      "In HFT, FPGAs sit on the network card (a 'smart NIC') in the data path. They can parse the market-data protocol as the packet bits arrive, maintain a small order book, evaluate a simple signal, and emit an order — all in the time it takes the frame to pass through. The very fastest strategies are 'tick-to-trade in hardware', where a qualifying market event triggers a pre-formed order leaving the NIC before a CPU would even have been interrupted. Some designs do 'inline' processing where the response is generated mid-packet.",
+      "The trade-offs are steep. FPGA development is slow and specialized (hardware description languages, timing closure, long compile/synthesis cycles), the logic must be simple enough to fit and meet timing, and updating strategy logic is far harder than redeploying software. So the common architecture is hybrid: the FPGA handles the ultra-fast, simple, latency-critical path (parse, risk gate, fire pre-canned orders), while CPUs handle the complex, evolving logic (research-heavy signals, full book, OMS) and configure the FPGA's parameters.",
+      "You don't need to be an FPGA engineer to interview for most quant-dev/systems roles, but you should understand the model: why hardware beats software on the critical path (no instruction fetch, full parallelism, determinism), where the boundary between FPGA and CPU sits, and the cost (development effort, flexibility, verification). Beyond FPGAs, the same theme covers smart NICs, custom ASICs at the extreme, and microwave/laser links that cut inter-city propagation delay — another front where HFT buys nanoseconds with hardware."
+    ],
+    "points": [
+      "FPGA = user-defined circuit; data flows through parallel pipelines instead of fetched instructions.",
+      "On a smart NIC it parses, books, and fires orders in the data path — tens of ns, near-zero jitter.",
+      "'Tick-to-trade in hardware': a market event triggers a pre-formed order before a CPU is even involved.",
+      "Costs: HDL development, timing closure, limited logic, slow to change vs software.",
+      "Typical design is hybrid — FPGA for the simple fast path, CPU for complex/evolving logic."
+    ],
+    "callouts": [
+      { "type": "info", "title": "It's about determinism too", "body": "FPGAs win not only on raw latency but on consistency: no OS scheduling, no cache misses, no GC, no mispredicts — the same operation takes the same number of cycles every time. In a latency race, low variance is as valuable as a low mean." },
+      { "type": "warn", "title": "Flexibility is the price", "body": "Changing FPGA logic means re-coding HDL, re-synthesizing, and re-verifying timing — far slower than shipping a software patch. Keep evolving research logic in software; push only stable, simple, hot logic into the FPGA." }
+    ],
+    "keyIdea": "FPGAs implement the latency-critical path as a custom circuit on the NIC, processing packets as they arrive with tens-of-nanoseconds latency and near-zero jitter — no instruction fetch, full parallelism, no OS. The price is development effort and inflexibility, so real systems are hybrid: hardware for the simple fast path, CPUs for everything complex and changing."
+  },
+  "deepDive": {
+    "intro": "How FPGAs achieve their latency, what they're used for in trading, and where the CPU/FPGA boundary sits.",
+    "steps": [
+      {
+        "title": "Why hardware is faster",
+        "detail": "A CPU spends time fetching and decoding instructions and shuffling data through registers and caches. An FPGA is a spatial computer: you lay out a pipeline where each stage is dedicated logic, so a packet's bytes stream through parse→book-update→risk→order-format stages in parallel, one stage per clock region. There's no instruction stream, no cache, no scheduler — just wires and flip-flops clocked at a fixed rate, giving fixed, tiny latency."
+      },
+      {
+        "title": "What runs on the FPGA",
+        "detail": "Good fits are simple, fixed, throughput-critical functions: line-rate protocol parsing/feed decode, packet filtering and timestamping, a compact top-of-book, pre-trade risk checks (size/price/notional limits, kill switch), and firing pre-registered orders. Complex, branchy, frequently-changing logic (full research models, large books, OMS state machines) stays in software."
+      },
+      {
+        "title": "The hybrid boundary",
+        "detail": "A common pattern: the FPGA does inline market-data decode and a 'fast trigger' (if condition X, send pre-armed order Y) with hardware risk gating, while the CPU computes the parameters (which orders to arm, thresholds, sizes) and handles the slow path. The CPU updates the FPGA's lookup tables/registers; the FPGA executes the armed actions at wire speed."
+      },
+      {
+        "title": "Development reality",
+        "detail": "You write RTL (Verilog/VHDL) or use HLS (C/C++ → hardware), then place-and-route and close timing — ensuring every path meets the clock. Iteration is slow (synthesis can take minutes to hours) and verification is rigorous (simulation, formal). This is why FPGA changes are infrequent and carefully staged versus software's rapid iteration."
+      },
+      {
+        "title": "Beyond FPGAs",
+        "detail": "At the extreme, fully custom ASICs squeeze out more but cost far more and can't be reprogrammed. Off the chip, firms reduce propagation delay with microwave/laser networks between exchanges (faster than fiber over distance) and pay for colocation/cross-connects to sit physically next to the matching engine. Hardware acceleration is one part of an end-to-end latency strategy."
+      }
+    ],
+    "notes": [
+      { "title": "Software still matters most for most roles", "detail": "The majority of quant-dev/research/systems jobs are software. Understand the FPGA model and boundary conceptually; deep HDL skills are needed only for dedicated FPGA engineering roles." },
+      { "title": "Determinism enables guarantees", "detail": "Because FPGA latency is fixed, you can make hard real-time guarantees (e.g., risk check always completes before the order leaves) that are hard to promise in software with a long tail." }
+    ],
+    "complexity": {
+      "time": "~tens of ns, fixed",
+      "timeReason": "A pipelined circuit processes data in a known number of clock cycles every time — no fetch/decode, no cache misses, no scheduling — so both latency and jitter are minimal.",
+      "space": "Bounded by chip resources",
+      "spaceReason": "Logic must fit the FPGA's LUTs/registers/BRAM and meet timing, which constrains how complex the in-hardware logic can be."
+    },
+    "pitfalls": [
+      "Trying to put complex, branchy, or frequently-changing strategy logic into hardware — it won't fit, won't close timing, and can't iterate.",
+      "Underestimating verification: a hardware bug in the order path is dangerous and slow to fix.",
+      "Ignoring the CPU/FPGA boundary design — the interface (registers/tables, arming protocol) is where most of the system complexity lives.",
+      "Assuming FPGA is always required: for many strategies a well-tuned kernel-bypass software stack is fast enough and far cheaper to build and change."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-why-fpga",
+        "q": "Why can an FPGA achieve lower and more deterministic latency than a highly-tuned C++ program on a fast CPU?",
+        "tag": "Systems",
+        "a": [
+          "A CPU executes a stream of instructions: it fetches, decodes, and runs them, moving data through registers and caches, and is subject to cache misses, branch mispredicts, and (with an OS) scheduling — all of which add latency and, critically, variance. An FPGA instead is configured as a dedicated circuit: the packet's bits flow through purpose-built parallel pipeline stages, so the computation happens spatially with no instruction fetch and no cache/scheduler in the way.",
+          "The result is latency of tens of nanoseconds and near-constant timing — every event takes the same number of clock cycles. In a latency race that low variance (no long tail) is as valuable as the low mean, which is why the very fastest tick-to-trade paths are implemented in FPGA logic on the NIC."
+        ],
+        "followups": ["What would you keep in software in such a system?", "What's the cost of using an FPGA?"]
+      },
+      {
+        "id": "q-boundary",
+        "q": "In a hybrid FPGA/CPU trading system, how do you decide what goes where?",
+        "tag": "Systems",
+        "a": [
+          "Put the simple, stable, latency-critical, high-throughput work in the FPGA: line-rate feed parsing, timestamping, a compact top-of-book, pre-trade risk gates and the kill switch, and firing pre-armed orders on a hardware trigger. These are fixed functions that benefit from determinism and must run at wire speed.",
+          "Keep complex, branchy, and frequently-changing logic in software on the CPU: research-heavy signal computation, full order-book and position state, the OMS, and configuration. The CPU computes parameters and 'arms' the FPGA (loads thresholds/tables/pre-formed orders) while the FPGA executes the armed actions at wire speed. The design principle: hardware for the hot, simple, unchanging path; software for the smart, evolving, complex path."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-tradeoff",
+        "title": "Argue FPGA vs software for a new strategy",
+        "difficulty": "Advanced",
+        "statement": "Your team is choosing how to implement a new strategy. Strategy A is a simple, stable rule: 'if top-of-book imbalance crosses a threshold, send a pre-defined order, subject to size/notional risk limits.' Strategy B is a research-heavy model using dozens of features and frequent retraining. For each, recommend FPGA, kernel-bypass software, or hybrid, and justify in terms of latency, determinism, flexibility, and development cost.",
+        "hint": "Match the implementation to how simple and how stable the logic is, and how often it changes.",
+        "tests": "Reasoning about the hardware/software boundary.",
+        "solution": {
+          "approach": [
+            "Strategy A is the ideal FPGA candidate: the logic is simple, fixed, and latency-critical. Parse the feed, compute imbalance, apply hardware risk gates, and fire a pre-armed order — all inline on the NIC in tens of nanoseconds with near-zero jitter, beating any software stack on the wire. The downsides (HDL development, slow iteration) are acceptable because the rule rarely changes. A pure kernel-bypass software version is a reasonable first build (faster to develop, ~hundreds of ns) and can be migrated to FPGA once the rule is proven and you need the edge.",
+            "Strategy B should be software: dozens of features and frequent retraining demand flexibility and rapid iteration that FPGAs can't provide, and the logic is too complex/branchy to fit and close timing. Run it on CPUs with kernel-bypass I/O, pinned/isolated cores, and a lock-free pipeline; its latency is dominated by the model computation, not I/O, so the FPGA wouldn't help the bottleneck anyway.",
+            "Best overall: a hybrid platform — FPGA handles feed decode, timestamping, and a hardware risk/kill gate for everyone; Strategy A's trigger lives in the FPGA; Strategy B runs in software behind the same fast I/O. The CPU arms/configures the FPGA. This puts each piece of logic where its latency, determinism, flexibility, and cost trade-offs are best served."
+          ],
+          "complexity": { "time": "A: ~tens of ns (HW); B: model-bound (SW)", "space": "FPGA logic bounded; software unconstrained" }
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Xilinx/AMD & Intel FPGA low-latency trading reference designs", "note": "Vendor material on FPGA feed handlers and tick-to-trade." },
+    { "title": "'FPGA accelerated trading' talks & papers", "note": "Overviews of inline parsing, hardware order books, and hybrid architectures." },
+    { "title": "Flash Boys (Michael Lewis) & microwave-network reporting", "note": "Accessible context on the broader latency arms race (colocation, microwave links)." }
+  ]
+}

@@ -5,7 +5,11 @@
   "title": "Execution Algorithms (TWAP, VWAP, IS)",
   "tagline": "How to trade a large order without moving the price against yourself — the science of getting filled cheaply.",
   "level": "Intermediate",
-  "track": ["research", "dev", "trader"],
+  "track": [
+    "research",
+    "dev",
+    "trader"
+  ],
   "estMinutes": 16,
   "concept": {
     "analogy": "Imagine selling 10,000 concert tickets. Dump them all at once and the price crashes — supply overwhelms demand. Instead you trickle them out: maybe evenly through the day (TWAP), or matched to when crowds are biggest so each batch barely moves the price (VWAP). Sell too slowly, though, and the artist might cancel the tour before you're done (timing risk). Execution algorithms manage exactly this tension between impact and timing risk.",
@@ -74,6 +78,19 @@
           "Implementation Shortfall measures total execution cost relative to the 'arrival price' — the market price at the instant you decided to trade. It captures everything: spread paid, market impact, fees, and the price drift while you were working the order (plus the opportunity cost of any unfilled portion).",
           "The central trade-off is impact vs. timing risk. Execute quickly and you minimize exposure to adverse price moves (low timing risk) but pay high market impact. Execute slowly and you reduce impact per slice but bear more risk that the price runs away from you. Minimizing IS means choosing a trading speed/trajectory that optimally balances expected impact cost against the variance from timing risk — your risk aversion sets where on that frontier you sit."
         ]
+      },
+      {
+        "id": "q-twap-vwap",
+        "q": "Compare TWAP, VWAP, POV, and Implementation Shortfall execution algorithms. When would you use each?",
+        "tag": "Execution",
+        "a": [
+          "TWAP (Time-Weighted Average Price) slices the order evenly over a time window — simple, predictable, used when you want steady participation regardless of volume (or to avoid signaling). VWAP (Volume-Weighted Average Price) slices in proportion to expected market volume (more when the market trades more), aiming to match the day's volume-weighted average price — the standard benchmark for 'fair' execution, used when you're judged against VWAP. POV (Percentage of Volume) targets a fixed share of actual real-time volume (e.g., 10%), so you trade more when the market is active and less when it's quiet — adaptive, used to control market impact relative to liquidity.",
+          "Implementation Shortfall (IS) minimizes the difference between the decision price and the final average execution price, explicitly trading off market impact (trade fast → more impact) against timing/price risk (trade slow → more exposure to adverse moves), often via an Almgren–Chriss optimal-trajectory framework. Use IS when minimizing total cost-vs-benchmark (arrival price) is the goal and you want to balance urgency against impact. Rule of thumb: VWAP/TWAP for benchmark-tracking and low signaling; POV to stay proportional to liquidity; IS when you care about total slippage from the decision price and want an impact/risk-optimal schedule."
+        ],
+        "followups": [
+          "What is the impact-vs-timing-risk trade-off?",
+          "What does Almgren–Chriss optimize?"
+        ]
       }
     ],
     "problems": [
@@ -89,7 +106,10 @@
             "Sum the weights. If the sum is 0, fall back to an even split. Otherwise each bucket's target is Q × weight_i / totalWeight.",
             "Round each target to an integer; because rounding can lose/gain a few shares, compute the discrepancy (Q − sum of rounded) and add it to the last nonzero-weight bucket so the schedule sums exactly to Q. This makes each slice proportional to expected volume — the essence of a VWAP schedule."
           ],
-          "complexity": { "time": "O(n)", "space": "O(n)" },
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -103,11 +123,38 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-impact-timing",
+        "title": "Trade off market impact vs timing risk",
+        "difficulty": "Advanced",
+        "statement": "You must buy 1,000,000 shares. Trading it all at once causes large market impact (you push the price up against yourself); trading it slowly over the day exposes you to the risk the price drifts away before you finish. Explain the trade-off quantitatively in spirit (how impact and timing risk scale with trade rate/horizon) and what an optimal (Almgren–Chriss-style) schedule looks like, including how higher volatility or higher urgency changes it.",
+        "hint": "Impact rises with how fast you trade; timing risk (variance of cost) rises with how long you take. Optimal schedule balances them given risk aversion.",
+        "tests": "The core optimal-execution trade-off.",
+        "solution": {
+          "approach": [
+            "Two opposing costs. Market impact: the faster you trade (higher participation rate), the more you move the price against yourself — temporary impact scales with trade rate, and permanent impact with total size. Trading everything now maximizes impact cost. Timing (price) risk: the longer you stretch execution, the more the price can drift away from your decision price before you finish — the *variance* of your execution cost grows with the time you remain exposed (roughly with σ²×horizon). Trading slowly minimizes impact but maximizes exposure to adverse moves.",
+            "Optimal schedule (Almgren–Chriss spirit): minimize expected cost + λ×variance of cost, where λ is your risk aversion. The solution is a front-loaded trajectory that trades faster early and tapers — fast enough to limit exposure, slow enough to limit impact — with the exact shape set by impact parameters, volatility, and λ. A risk-neutral trader (λ→0) trades slowly to minimize impact; a very risk-averse trader (large λ) trades quickly to cut exposure.",
+            "Comparative statics: higher volatility → timing risk dominates, so trade *faster* (the danger of waiting is greater); higher urgency / risk aversion → also faster; higher impact cost (illiquid name) → trade *slower* and smaller to avoid pushing the price. POV/IS algos implement adaptive versions of this. The unifying idea: execution cost = impact (from trading fast) + timing risk (from trading slow), and the optimal rate balances the two given how volatile the asset is and how much risk you're willing to bear."
+          ],
+          "complexity": {
+            "time": "O(schedule slices)",
+            "space": "O(1)"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "'Optimal Execution of Portfolio Transactions'", "by": "Almgren & Chriss (2000)", "note": "The optimal-trajectory / impact-vs-risk framework." },
-    { "title": "The Science of Algorithmic Trading and Portfolio Management", "by": "Robert Kissell", "note": "Practical reference on execution algos and transaction-cost analysis." }
+    {
+      "title": "'Optimal Execution of Portfolio Transactions'",
+      "by": "Almgren & Chriss (2000)",
+      "note": "The optimal-trajectory / impact-vs-risk framework."
+    },
+    {
+      "title": "The Science of Algorithmic Trading and Portfolio Management",
+      "by": "Robert Kissell",
+      "note": "Practical reference on execution algos and transaction-cost analysis."
+    }
   ]
 }

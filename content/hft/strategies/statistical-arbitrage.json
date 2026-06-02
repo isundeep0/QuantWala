@@ -5,7 +5,10 @@
   "title": "Statistical Arbitrage & Mean Reversion",
   "tagline": "Trade relationships, not levels — when two prices that move together drift apart, bet they reconverge.",
   "level": "Intermediate",
-  "track": ["research", "trader"],
+  "track": [
+    "research",
+    "trader"
+  ],
   "estMinutes": 18,
   "concept": {
     "analogy": "Two ferries usually cross a harbor side by side. If one suddenly lags far behind, you don't bet on where the harbor is going — you bet the gap will close, because they're tied to the same tides and routes. Pairs trading is exactly this: you don't predict the market's direction, you predict that a temporarily stretched relationship between two related things will snap back.",
@@ -74,6 +77,19 @@
           "If you're long A and short β units of B, and A and B both move with the broad market, the market component of their moves largely cancels in the combined position. So a market-wide rally or selloff has limited effect on the pair's P&L — your exposure is to the *spread* (the relative move), not the market level. That's market-neutrality.",
           "It leaves you exposed to relationship/idiosyncratic risk: the spread diverging further before reverting (timing/drawdown risk), or the relationship breaking permanently (a merger, a fundamental shift, an index change) so the spread never reverts. Also basis/financing and short-borrow costs, and model risk in the hedge ratio. Neutral to the market ≠ riskless."
         ]
+      },
+      {
+        "id": "q-cointegration",
+        "q": "What does it mean for two assets to be cointegrated, and why is that the right basis for a pairs trade (vs just correlation)?",
+        "tag": "Research",
+        "a": [
+          "Two price series are cointegrated if some linear combination of them (e.g., A − β·B) is stationary — it has a stable mean and reverts to it — even though each series individually wanders (is non-stationary / a random walk). Intuitively, the two prices are tied together by a long-run equilibrium; the *spread* between them is mean-reverting even if the levels drift.",
+          "Correlation alone is the wrong basis: correlation measures co-movement of returns over a window and can be high by chance or transiently, and two correlated series can still drift arbitrarily far apart (no anchor). A pairs trade bets the *spread* reverts to its mean — so you need the spread itself to be stationary/mean-reverting, which is exactly cointegration, not correlation. You test for it (e.g., Engle–Granger / ADF on the residual), estimate the hedge ratio β, and trade the z-score of the spread: short the spread when it's stretched high, long when stretched low, expecting reversion. The risk is that the relationship breaks (structural change), so the spread stops reverting — which is why you cap risk and monitor the relationship's stability."
+        ],
+        "followups": [
+          "How would you test for cointegration?",
+          "What happens if the relationship structurally breaks?"
+        ]
       }
     ],
     "problems": [
@@ -89,7 +105,10 @@
             "Form the spread s_t = A_t − β·B_t for all t. Take the trailing window of the last w spread values. Compute their mean and standard deviation.",
             "The z-score of the latest spread is (s_last − mean)/std. A high positive z means the spread is unusually rich → short it (−1); a low negative z means unusually cheap → long it (+1); within the band → no trade. Guard for too-few points or zero variance."
           ],
-          "complexity": { "time": "O(w)", "space": "O(n)" },
+          "complexity": {
+            "time": "O(w)",
+            "space": "O(n)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -103,11 +122,45 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-zscore",
+        "title": "Build a pairs-trading signal from a spread z-score",
+        "difficulty": "Advanced",
+        "statement": "You have two cointegrated stocks with hedge ratio β=1.5, so spread = A − 1.5·B. Over a lookback the spread has mean $0.20 and standard deviation $0.10. Right now A=$50.00 and B=$33.00. Compute the current spread and its z-score, state the trade you'd put on (and the hedge), and define sensible entry/exit/stop rules. What's the main risk?",
+        "hint": "spread = A − βB; z = (spread − mean)/std. High positive z → spread too wide → short the spread (short A, long B in the β ratio).",
+        "tests": "Constructing and acting on a mean-reversion signal.",
+        "solution": {
+          "approach": [
+            "Spread = A − 1.5·B = 50.00 − 1.5×33.00 = 50.00 − 49.50 = $0.50. z = (0.50 − 0.20)/0.10 = +3.0 — the spread is 3 standard deviations above its mean, i.e., unusually wide. Mean reversion says it should fall back toward $0.20.",
+            "Trade: short the spread. Since spread = A − 1.5B, shorting the spread means short A and long 1.5 units of B per unit of A (the hedge ratio keeps the position market-neutral to the common factor). You profit as the spread narrows toward its mean.",
+            "Rules: enter when |z| crosses an entry threshold (e.g., 2); scale or fully size by z=3; exit when the spread reverts to near its mean (z≈0) or a take-profit (e.g., z<0.5); stop out if z keeps widening past a stop (e.g., z>4) or after a max holding time — because a runaway z may signal the relationship is breaking rather than reverting. Continuously re-estimate mean/std/β (the relationship drifts).",
+            "Main risk: the cointegration relationship structurally breaks (a merger, news, regime change) so the spread does NOT revert and instead trends — turning a 'cheap' mean-reversion bet into a compounding loss. That's why stat-arb runs many pairs (diversification), caps per-pair risk, uses stops/time limits, and monitors the stability of each relationship rather than trusting it blindly."
+          ],
+          "complexity": {
+            "time": "O(1) per update",
+            "space": "O(lookback) for the rolling stats"
+          },
+          "codes": [
+            {
+              "language": "python",
+              "title": "signal.py",
+              "source": "import numpy as np\n\nbeta = 1.5\nmean, std = 0.20, 0.10          # rolling estimates of the spread\nA, B = 50.00, 33.00\nspread = A - beta * B            # 0.50\nz = (spread - mean) / std        # 3.0\n\nENTRY, EXIT, STOP = 2.0, 0.5, 4.0\nif z > ENTRY:\n    # short the spread: short A, long beta*B (market-neutral)\n    signal = 'short_spread'\nelif z < -ENTRY:\n    signal = 'long_spread'\nelse:\n    signal = 'flat'\n# exit when abs(z) < EXIT; stop when abs(z) > STOP (relationship may be breaking)\nprint(spread, z, signal)"
+            }
+          ]
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Pairs Trading: Quantitative Methods and Analysis", "by": "Ganapathy Vidyamurthy", "note": "Practical treatment of cointegration-based pairs trading." },
-    { "title": "Engle & Granger (1987), cointegration", "note": "The original statistical foundation — worth understanding conceptually." }
+    {
+      "title": "Pairs Trading: Quantitative Methods and Analysis",
+      "by": "Ganapathy Vidyamurthy",
+      "note": "Practical treatment of cointegration-based pairs trading."
+    },
+    {
+      "title": "Engle & Granger (1987), cointegration",
+      "note": "The original statistical foundation — worth understanding conceptually."
+    }
   ]
 }

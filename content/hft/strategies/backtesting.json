@@ -5,7 +5,11 @@
   "title": "Backtesting Without Fooling Yourself",
   "tagline": "The discipline of testing a strategy on history honestly — because the easiest person to fool is you.",
   "level": "Advanced",
-  "track": ["research", "dev", "trader"],
+  "track": [
+    "research",
+    "dev",
+    "trader"
+  ],
   "estMinutes": 18,
   "concept": {
     "analogy": "Backtesting is like a flight simulator for trading. A good simulator faithfully models gravity, weather, and engine limits, so the skills transfer to a real plane. A bad one lets you fly through mountains and refuel mid-air — you'll 'land' every time and learn nothing useful. Most failed strategies aren't bad ideas; they're good-looking results from a simulator that quietly cheated.",
@@ -81,6 +85,19 @@
           "Searching 500 combinations is multiple testing: even if none has real edge, some will look great by chance. The reported Sharpe is the maximum over many trials, which is upward-biased — the 'best' is often just the luckiest fit to historical noise (overfitting). A Sharpe of 4 from such a search is a red flag, not a triumph.",
           "Validate by: holding out true out-of-sample data the search never touched and checking performance there; walk-forward analysis (refit rolling, test forward) to see if it persists; checking robustness — does the edge survive small parameter perturbations, or is it a knife-edge? — and adjusting for the number of trials (deflated Sharpe). Also sanity-check costs and fills. If the edge only exists at one fragile parameter set on in-sample data, it isn't real."
         ]
+      },
+      {
+        "id": "q-biases",
+        "q": "Name the main biases that make a backtest lie, and how you guard against each.",
+        "tag": "Research",
+        "a": [
+          "The big ones: (1) Lookahead bias — using data not available at decision time; guard with strict point-in-time data and event-driven processing in true arrival order. (2) Survivorship bias — testing only on instruments that still exist (e.g., today's index members), ignoring delisted/failed ones, which inflates returns; guard by using a point-in-time universe including dead names. (3) Overfitting — tuning parameters to fit historical noise so it won't generalize; guard with out-of-sample/walk-forward validation, few parameters, and skepticism toward too-good results. (4) Unrealistic fills — assuming you get filled at the mid or top of book with no queue or impact; guard with a realistic fill model (queue position, latency, partial fills) and conservative slippage.",
+          "Also: ignoring transaction costs and fees/rebates (a positive gross strategy can be net-negative), data-snooping across many trials (multiple-testing inflates the best result), and regime dependence (a strategy fit to one regime fails in another). The honest principle: a backtest should *if anything* understate live performance — model costs and frictions pessimistically, validate out-of-sample, and treat a spectacular backtest as a red flag to investigate rather than celebrate."
+        ],
+        "followups": [
+          "Why is event-driven backtesting safer than vectorized?",
+          "How do you model fills realistically for an HFT strategy?"
+        ]
       }
     ],
     "problems": [
@@ -96,7 +113,10 @@
             "Compute the mean and sample standard deviation of the per-period returns. The per-period Sharpe is mean/std (risk-free = 0).",
             "Annualize by multiplying by sqrt(P) (this assumes i.i.d. returns; it's the standard convention). Guard against <2 points or zero volatility."
           ],
-          "complexity": { "time": "O(n)", "space": "O(1)" },
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -110,11 +130,59 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-spot-bias",
+        "title": "Spot the backtest bugs",
+        "difficulty": "Advanced",
+        "statement": "A colleague's equity strategy backtests at a 4.0 Sharpe. On inspection: (i) it buys at each day's close using a signal computed from that same close; (ii) it tests on the current S&P 500 members over the last 10 years; (iii) it assumes fills at the mid with zero cost; (iv) the 6 parameters were grid-searched to maximize the backtest Sharpe. Identify the bias in each and predict the direction of its effect on reported performance. What would you do before trusting any result?",
+        "hint": "Map each to lookahead, survivorship, unrealistic fills, and overfitting; each inflates reported performance.",
+        "tests": "Diagnosing the classic backtest pitfalls.",
+        "solution": {
+          "approach": [
+            "(i) Lookahead bias: deciding 'at the close' using that close means you traded on information you didn't have until the bar ended — you can't actually buy at a close you only know after it forms. Effect: inflates performance (the model 'knew' the price). Fix: decide on prior-bar info and execute at the next available price, in true arrival order.",
+            "(ii) Survivorship bias: testing on *today's* index members ignores companies that were dropped/delisted/went bankrupt over the 10 years — you only kept the winners. Effect: inflates returns. Fix: use a point-in-time universe (the actual members on each historical date, including ones that later died).",
+            "(iii) Unrealistic fills/costs: filling at the mid with zero cost ignores spread, fees, queue position, and market impact. Effect: inflates performance, often massively for high-turnover strategies. Fix: realistic fill model (cross the spread or model queue/latency for passive fills) plus fees and slippage; for HFT, model queue position and partial fills.",
+            "(iv) Overfitting / data-snooping: grid-searching 6 parameters to maximize the in-sample Sharpe fits historical noise. Effect: inflates in-sample performance that won't generalize. Fix: out-of-sample/walk-forward testing, far fewer parameters, penalize complexity, and account for the number of trials tested.",
+            "Before trusting anything: re-run with point-in-time data and event-driven, no-lookahead execution; include the full survivorship-free universe; add realistic costs/fills; validate strictly out-of-sample (and ideally on a held-out period never touched during research); and check robustness to small parameter changes. A 4.0 Sharpe that survives all of that is interesting; one that collapses (the likely outcome here) was an artifact. The guiding rule: make the backtest pessimistic, because live trading will be."
+          ],
+          "complexity": {
+            "time": "n/a",
+            "space": "n/a"
+          }
+        }
+      },
+      {
+        "id": "p-eventdriven",
+        "title": "Why event-driven beats vectorized backtesting for HFT",
+        "difficulty": "Intermediate",
+        "statement": "Explain the difference between a vectorized backtest and an event-driven one, why event-driven is the safer (and often only correct) choice for an HFT/intraday strategy, and how an event-driven backtest lets you reuse the exact production strategy code.",
+        "hint": "Vectorized computes over whole arrays (easy to leak the future); event-driven replays events in arrival order through the same callbacks production uses.",
+        "tests": "Backtest architecture and live/backtest parity.",
+        "solution": {
+          "approach": [
+            "A vectorized backtest computes signals and returns over entire arrays/columns at once (e.g., pandas operations across the whole series). It's fast and convenient but dangerous for intraday/HFT: it's very easy to accidentally use future data (a column aligned one row off, a normalization over the whole sample, a fill assumed at a price you couldn't get), and it can't faithfully model order-by-order book dynamics, queue position, or latency.",
+            "An event-driven backtest replays the historical data as a time-ordered stream of events (ticks, book updates, fills) and feeds them, one at a time in true arrival order, through the same callbacks the strategy uses live (onBookUpdate, onFill, onTimer). Because the strategy only ever sees information up to the current event, lookahead is structurally prevented, and a realistic matching/fill simulator can model queue position, latency between signal and order, and partial fills.",
+            "Crucially, if the strategy depends only on abstract interfaces (an event source and an order sink), the event-driven backtest runs the *exact production strategy code* — only the event source (historical file/sim vs live feed) and order sink (sim matcher vs live gateway) are swapped. That gives backtest=paper=live parity: the behavior you measured historically is the behavior you deploy, eliminating the 'worked in backtest, broke live' class of failures that plagues vectorized research. For anything latency- or microstructure-sensitive, event-driven is effectively mandatory."
+          ],
+          "complexity": {
+            "time": "O(events)",
+            "space": "O(book+state)"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Advances in Financial Machine Learning", "by": "Marcos López de Prado", "note": "Excellent on backtest overfitting, the deflated Sharpe, and proper validation." },
-    { "title": "Quantitative Trading", "by": "Ernest Chan", "note": "Accessible intro to backtesting pitfalls and methodology." }
+    {
+      "title": "Advances in Financial Machine Learning",
+      "by": "Marcos López de Prado",
+      "note": "Excellent on backtest overfitting, the deflated Sharpe, and proper validation."
+    },
+    {
+      "title": "Quantitative Trading",
+      "by": "Ernest Chan",
+      "note": "Accessible intro to backtesting pitfalls and methodology."
+    }
   ]
 }

@@ -5,7 +5,11 @@
   "title": "Market Making & Inventory Risk",
   "tagline": "Quote both sides, earn the spread, and survive adverse selection and inventory — the canonical HFT strategy.",
   "level": "Intermediate",
-  "track": ["trader", "research", "dev"],
+  "track": [
+    "trader",
+    "research",
+    "dev"
+  ],
   "estMinutes": 20,
   "visualizer": "market-making",
   "concept": {
@@ -72,7 +76,10 @@
           "A 2-cent (tight) spread sits near the touch: you fill frequently and capture lots of flow, but earn little per fill and suffer more adverse selection (you're filled right before moves) — and in calm, liquid markets the volume can make it worthwhile, especially with a rebate. A 10-cent (wide) spread earns more per fill and filters out some toxic flow, but trades rarely and may cede the touch (and queue priority) to competitors.",
           "Push toward tight: low volatility, deep liquid name, meaningful rebate, benign (uninformed) flow, and confidence in fast cancels so you can pull stale quotes. Push toward wide: high/rising volatility, thin or news-driven name, toxic flow, large inventory you don't want to grow, or limited ability to cancel quickly. The right answer is regime-dependent, and good makers adjust the spread continuously."
         ],
-        "followups": ["How would inventory change your choice?", "How does rebate capture shift the optimal spread?"]
+        "followups": [
+          "How would inventory change your choice?",
+          "How does rebate capture shift the optimal spread?"
+        ]
       },
       {
         "id": "q-skew",
@@ -91,6 +98,19 @@
           "Adverse selection is the tendency for the counterparties who trade against your quotes to be informed, so that on average the price moves against you right after you fill — your realized edge is below the quoted spread even though each fill 'looked' profitable at the touch.",
           "Measure it with markouts: for each fill, record the mid-price at the fill and again at horizons (e.g., +100ms, +1s, +10s). Compute the signed price change relative to your trade direction (for a buy, did the mid rise or fall afterward?). Average markouts that are negative (price moves against you) quantify toxicity; you can bucket by venue, time of day, or signal state to find where you're being picked off and then widen/skew/pull accordingly."
         ]
+      },
+      {
+        "id": "q-inventory-skew",
+        "q": "You're long inventory and want to get back to flat. How do you skew your quotes, and what's the trade-off?",
+        "tag": "Strategy",
+        "a": [
+          "Skew your quotes *down* relative to fair value: lower both your bid and your ask (or widen the bid / tighten the ask) so you're more likely to sell and less likely to buy more. Concretely, if fair value is F and you're long, you might quote bid = F − edge − skew and ask = F + edge − skew, shifting the whole quote down so the ask is more attractive to buyers (you sell, reducing inventory) and your bid is less attractive (you buy less). The skew grows with the size of your inventory.",
+          "Trade-off: skewing to reduce inventory means you cross or give up edge — you're effectively willing to earn less (or pay) to offload risk. If you skew too aggressively you bleed the spread you worked to capture; if you skew too little you carry inventory risk (exposure to a price move against your position). The Avellaneda–Stoikov framework formalizes this: the optimal quotes balance spread capture against inventory risk given volatility and time horizon, producing a reservation price shifted by inventory and a spread that widens with risk."
+        ],
+        "followups": [
+          "How does volatility change how aggressively you skew?",
+          "What is the 'reservation price' in Avellaneda–Stoikov?"
+        ]
       }
     ],
     "problems": [
@@ -106,7 +126,10 @@
             "Compute the reservation (center) price r = mid − k*q. With q > 0 (long), r < mid, so both quotes move down — you lean toward selling. With q < 0 (short), r > mid, leaning toward buying.",
             "Place symmetric quotes around r: bid = r − halfSpread, ask = r + halfSpread. (A fuller model would also widen halfSpread with volatility; here we isolate the skew mechanic.)"
           ],
-          "complexity": { "time": "O(1)", "space": "O(1)" },
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -120,11 +143,56 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-mm-pnl",
+        "title": "Decompose a market maker's P&L",
+        "difficulty": "Advanced",
+        "statement": "Over a session a market maker captured an average of +0.6 ticks of spread on 2,000,000 shares of round-trip volume, paid no net fees (rebates offset fees), but ended the day holding +50,000 shares of unwanted long inventory when the price had fallen 3 ticks since those shares were acquired. With a tick worth $0.01, estimate spread P&L, inventory P&L, and total. What does this teach about the two sides of market-making P&L?",
+        "hint": "Spread P&L = ticks captured × shares × tick value. Inventory P&L = position × price change × tick value (signed).",
+        "tests": "Separating spread capture from inventory risk in P&L.",
+        "solution": {
+          "approach": [
+            "Spread P&L = 0.6 ticks × 2,000,000 shares × $0.01/tick = $12,000 — the reward for providing liquidity (capturing part of the spread on each round trip).",
+            "Inventory P&L = +50,000 shares × (−3 ticks) × $0.01 = −$1,500 (long into a falling price loses). Net = $12,000 − $1,500 = $10,500 for the day.",
+            "Lesson: a market maker's P&L has two distinct components — spread capture (the intended, steady edge) and inventory/position P&L (the risk you take on by accumulating one-sided inventory). The business is to maximize spread capture while keeping inventory near flat so the second term stays small and mean-zero. Here the inventory loss ate ~12% of the spread profit; if inventory had been larger or the move bigger, it could have wiped out the whole edge. That's precisely why makers skew quotes and manage inventory — the spread is the income, inventory is the risk, and uncontrolled inventory is how market makers blow up despite a positive spread edge."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          }
+        }
+      },
+      {
+        "id": "p-as-quotes",
+        "title": "Set inventory-aware quotes (Avellaneda–Stoikov intuition)",
+        "difficulty": "Advanced",
+        "statement": "Fair value (mid) is $100.00, tick = $0.01. Your baseline half-spread is 2 ticks. You are long 40 units and your inventory-skew rule shifts the reservation price by −0.05 ticks per unit of inventory (so −2 ticks at +40). Compute your reservation price and your bid/ask quotes. Then explain how higher volatility and a shorter time-to-close would change your half-spread and skew.",
+        "hint": "Reservation price = mid − (skew per unit × inventory). Quote symmetric half-spread around the reservation price, not the mid.",
+        "tests": "Applying reservation-price + skew quoting.",
+        "solution": {
+          "approach": [
+            "Inventory skew = 0.05 ticks/unit × 40 units = 2 ticks downward. Reservation price r = mid − 2 ticks = $100.00 − $0.02 = $99.98 (shifted below mid because you're long and want to sell). Quote symmetric half-spread (2 ticks) around r: bid = r − 2 ticks = $99.96; ask = r + 2 ticks = $100.00. Notice the ask now sits *at* the true mid — more attractive to buyers — so you're more likely to sell and reduce the long, while your bid is below mid so you buy less. The whole quote leaned down by the skew.",
+            "Avellaneda–Stoikov intuition: the reservation price is the mid adjusted for inventory and risk aversion, and the optimal spread widens with volatility and with time remaining. Higher volatility → wider half-spread (inventory is riskier, so demand more compensation) and stronger skew per unit (you want to shed inventory faster when moves are dangerous). Shorter time-to-close (e.g., near the end of the session when you must be flat) → also stronger skew/urgency to flatten, even at the cost of crossing, because carrying inventory past the horizon is unacceptable. So both the spread and the skew are functions of volatility, inventory, and time — not constants."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "'High-frequency trading in a limit order book'", "by": "Avellaneda & Stoikov (2008)", "note": "The foundational optimal market-making paper." },
-    { "title": "Algorithmic and High-Frequency Trading", "by": "Cartea, Jaimungal & Penalva", "note": "Rigorous treatment of market making and inventory control." }
+    {
+      "title": "'High-frequency trading in a limit order book'",
+      "by": "Avellaneda & Stoikov (2008)",
+      "note": "The foundational optimal market-making paper."
+    },
+    {
+      "title": "Algorithmic and High-Frequency Trading",
+      "by": "Cartea, Jaimungal & Penalva",
+      "note": "Rigorous treatment of market making and inventory control."
+    }
   ]
 }

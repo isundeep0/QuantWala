@@ -5,7 +5,11 @@
   "title": "Alpha Signals from Order Flow",
   "tagline": "How researchers turn the raw torrent of book updates into a tiny, exploitable edge on the next price move.",
   "level": "Advanced",
-  "track": ["research", "trader", "dev"],
+  "track": [
+    "research",
+    "trader",
+    "dev"
+  ],
   "estMinutes": 18,
   "concept": {
     "analogy": "A signal is like reading body language at a poker table. No single tell guarantees the next move, but a player's hesitation, chip-handling, and breathing each shift the odds a little. A quant researcher reads the market's 'body language' — the imbalance of resting orders, the recent trade flow, the speed of cancels — to nudge their estimate of the next tick. Each tell is weak and noisy; combined and acted on fast enough, they're an edge.",
@@ -71,7 +75,10 @@
           "A 0.02 IC (correlation with forward returns) sounds tiny, and for a long-horizon equity factor it would be modest — but for a high-frequency signal applied to millions of events with low costs, even a small, stable IC can be very profitable. So 0.02 isn't inherently good or bad; it depends on horizon, breadth, and cost.",
           "Before trading it you need: is the IC out-of-sample and time-ordered (not in-sample/shuffled)? Is it stable across time/regimes or driven by a few periods? What's the horizon and decay (how fast does the edge fade)? What's the capacity (does impact kill it at size)? And the decisive question — after spread, fees, and realistic latency/adverse selection, is the markout P&L still positive? A 0.02 IC that doesn't clear costs is not tradeable."
         ],
-        "followups": ["How would you test stability across regimes?", "Why is markout P&L a better metric than IC here?"]
+        "followups": [
+          "How would you test stability across regimes?",
+          "Why is markout P&L a better metric than IC here?"
+        ]
       },
       {
         "id": "q-lookahead",
@@ -80,6 +87,32 @@
         "a": [
           "Lookahead bias is using information in your features or evaluation that wouldn't have been available at the moment of the decision, which makes a strategy look predictive when it isn't.",
           "Concrete example: computing a signal's normalization (mean/std for a z-score) over the *entire* dataset, including future data, and then 'predicting' past points — the future leaks into the past statistics. Another: aligning a feature at time t with the target using a timestamp that includes the very move you're trying to predict (e.g., using the trade that caused the price change as a feature for predicting that change). Both inflate results; the fix is strict point-in-time data and rolling, backward-only statistics with time-ordered train/test splits."
+        ]
+      },
+      {
+        "id": "q-ic",
+        "q": "What is the information coefficient (IC) of a signal, and why can a tiny IC still be very profitable in HFT?",
+        "tag": "Research",
+        "a": [
+          "The information coefficient is the correlation between your signal's predictions and the actual subsequent returns (often a rank correlation across many predictions). It measures how much real predictive information the signal carries: IC=0 is noise, higher IC is a stronger predictor. Most genuine alpha signals have small ICs (e.g., 0.01–0.05) because markets are competitive and nearly efficient.",
+          "A tiny IC is still profitable because of breadth and the 'fundamental law of active management': performance scales roughly with IC × √(breadth), where breadth is the number of (roughly independent) bets. HFT makes an enormous number of bets per day across many instruments and moments, so even a minuscule per-prediction edge, applied millions of times with disciplined risk control and low costs, compounds into a smooth, significant P&L — just like a casino's small house edge over many hands. The catch: the edge must survive realistic transaction costs and be tradeable at the latency you operate, and breadth only helps if the bets are reasonably independent."
+        ],
+        "followups": [
+          "What is breadth and why must bets be independent?",
+          "How do transaction costs erode a small-IC signal?"
+        ]
+      },
+      {
+        "id": "q-lookahead",
+        "q": "What is lookahead bias and how does it sneak into signal research?",
+        "tag": "Research",
+        "a": [
+          "Lookahead bias is using information in your backtest/signal that would not have been available at the moment of the decision — effectively letting the model 'peek into the future'. It makes a signal look far more predictive in research than it can ever be live, and is the single most common reason a great backtest fails in production.",
+          "Common ways it sneaks in: using a bar's close to make a decision 'at' that bar (you don't know the close until the bar ends); aligning a feature to the wrong timestamp (using data timestamped at T but actually published/known only at T+δ); using restated/revised data (e.g., revised fundamentals or final prints) instead of what was known in real time; computing normalization statistics (mean/std) over the full sample including the future; survivorship in the universe; or labeling with future returns and then leaking the label. The defenses: strict point-in-time data, decisions made only from information available strictly before the action timestamp, event-driven backtesting that processes data in true arrival order, and modeling realistic latency between signal and execution."
+        ],
+        "followups": [
+          "How does event-driven backtesting prevent lookahead?",
+          "Why is point-in-time data essential?"
         ]
       }
     ],
@@ -96,7 +129,10 @@
             "Take the last w events. Sum buy sizes and sell sizes separately. OFI = (buys − sells)/(buys + sells) ∈ [−1, 1]: strongly positive means aggressive buying dominates (predict up), strongly negative the reverse.",
             "Guard the empty/zero-volume case, then threshold OFI into {−1, 0, +1}. In practice you'd weight recent events more and validate the threshold out-of-sample."
           ],
-          "complexity": { "time": "O(w)", "space": "O(1)" },
+          "complexity": {
+            "time": "O(w)",
+            "space": "O(1)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -110,11 +146,56 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-tradeable",
+        "title": "Is the signal tradeable after costs?",
+        "difficulty": "Advanced",
+        "statement": "A signal predicts an average gross edge of 0.8 basis points (0.008%) per trade on a $50 stock, and you'd trade it 500,000 times/day. Estimated costs per round trip: half-spread paid sometimes (effective 0.4 bps average) + fees (0.2 bps) + market impact/slippage (0.3 bps). Is it tradeable? Compute net edge and daily P&L, and explain what would flip the decision.",
+        "hint": "Net edge = gross edge − total costs (in the same units). Multiply by notional per trade and trade count.",
+        "tests": "Evaluating a signal net of realistic costs.",
+        "solution": {
+          "approach": [
+            "Total cost ≈ 0.4 + 0.2 + 0.3 = 0.9 bps per round trip. Gross edge = 0.8 bps. Net edge = 0.8 − 0.9 = −0.1 bps. The signal is NOT tradeable as specified — costs exceed the edge, so trading it loses money despite a real positive gross signal. This is the crucial lesson: a positive predictive signal is necessary but not sufficient; it must beat *all-in* transaction costs.",
+            "Daily P&L if it were tradeable depends on net edge × notional × count. At net −0.1 bps on $50 notional per trade and 500k trades: −0.00001 × $50 × 500,000 = −$250,000/day (illustrating how a small per-trade deficit scales badly). If net were +0.3 bps instead: +0.00003 × $50 × 500,000 = +$750,000/day.",
+            "What flips the decision: (1) reduce costs — quote passively to earn rebates and avoid paying the spread (turning the 0.4 bps spread cost into a rebate), trade only when the queue/fill is favorable, and reduce impact by sizing smaller or being more patient; (2) be faster/smarter so you capture more of the gross edge before it decays; (3) trade only the subset of opportunities where gross edge clearly exceeds costs (selectivity). Many real HFT signals are only profitable *because* the firm captures rebates and minimizes impact — execution quality, not just the signal, determines tradeability."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          }
+        }
+      },
+      {
+        "id": "p-ic-breadth",
+        "title": "Reason about IC, breadth, and risk",
+        "difficulty": "Intermediate",
+        "statement": "Signal X has IC≈0.04 and you can make ~10,000 roughly-independent bets per day. Signal Y has IC≈0.15 but you can only make ~50 bets per day. Using the IC×√breadth intuition, compare their expected risk-adjusted performance, and explain the assumptions that could break the comparison.",
+        "hint": "Score ∝ IC × √breadth. Compute each and compare. Then question the 'independent' assumption and costs.",
+        "tests": "Applying the fundamental law of active management.",
+        "solution": {
+          "approach": [
+            "Using score ∝ IC × √breadth: X → 0.04 × √10000 = 0.04 × 100 = 4.0. Y → 0.15 × √50 ≈ 0.15 × 7.07 ≈ 1.06. By this measure X (the tiny-IC, high-breadth HFT-style signal) has roughly 4× the risk-adjusted potential of Y (the strong-IC, low-breadth signal). This is the core reason HFT chases breadth: many weak-but-independent bets beat a few strong ones for a smooth, high-Sharpe P&L.",
+            "Assumptions that could break it: (1) Independence — the formula assumes bets are roughly independent. If X's 10,000 bets are highly correlated (all reacting to the same factor), the *effective* breadth is far smaller and the advantage shrinks dramatically. (2) Costs — X trades vastly more, so transaction costs and capacity constraints can erode its edge (a high-IC, low-turnover signal Y may net more after costs). (3) Stationarity — both ICs must persist out-of-sample; a measured IC can be inflated by overfitting/lookahead. (4) Latency/capacity — X's edge may require speed and have limited capacity. So while the IC×√breadth math favors high-breadth signals, the real comparison must account for bet independence, costs, capacity, and whether the IC is genuine and stable."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "'The Price Impact of Order Book Events'", "by": "Cont, Kukanov & Stoikov", "note": "Foundational empirical work linking order-flow imbalance to price moves." },
-    { "title": "Advances in Financial Machine Learning", "by": "Marcos López de Prado", "note": "On avoiding overfitting and doing time-series validation properly." }
+    {
+      "title": "'The Price Impact of Order Book Events'",
+      "by": "Cont, Kukanov & Stoikov",
+      "note": "Foundational empirical work linking order-flow imbalance to price moves."
+    },
+    {
+      "title": "Advances in Financial Machine Learning",
+      "by": "Marcos López de Prado",
+      "note": "On avoiding overfitting and doing time-series validation properly."
+    }
   ]
 }

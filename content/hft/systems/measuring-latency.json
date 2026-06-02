@@ -5,7 +5,10 @@
   "title": "Measuring Latency & Jitter",
   "tagline": "You can't optimize what you can't measure — and in HFT the tail (p99.9), not the mean, is what loses you the trade.",
   "level": "Advanced",
-  "track": ["systems", "dev"],
+  "track": [
+    "systems",
+    "dev"
+  ],
   "estMinutes": 20,
   "visualizer": "latency-ladder",
   "concept": {
@@ -24,8 +27,16 @@
       "Record into fixed-bucket histograms (HdrHistogram) or a pre-allocated buffer; aggregate off-path."
     ],
     "callouts": [
-      { "type": "warn", "title": "The mean is a liar", "body": "Two systems with the same average latency can be wildly different: one steady, one with frequent 50 µs spikes. Always quote and optimize percentiles. A common rule: 'p99.9 is your real latency' because that's how often the spike actually bites." },
-      { "type": "tip", "title": "Coordinated omission", "body": "If you only time requests you happened to send, you miss the latency of requests delayed because the system was stalled — undercounting the tail. Measure against the intended schedule (when the event should have been processed), as HdrHistogram's recorder and tools like wrk2 do." }
+      {
+        "type": "warn",
+        "title": "The mean is a liar",
+        "body": "Two systems with the same average latency can be wildly different: one steady, one with frequent 50 µs spikes. Always quote and optimize percentiles. A common rule: 'p99.9 is your real latency' because that's how often the spike actually bites."
+      },
+      {
+        "type": "tip",
+        "title": "Coordinated omission",
+        "body": "If you only time requests you happened to send, you miss the latency of requests delayed because the system was stalled — undercounting the tail. Measure against the intended schedule (when the event should have been processed), as HdrHistogram's recorder and tools like wrk2 do."
+      }
     ],
     "keyIdea": "Treat latency as a distribution and optimize the tail (p99.9), not the mean. Measure with a clock cheaper than the thing measured (rdtsc), record samples without perturbing the hot path (pre-allocated buffers / fixed-bucket histograms like HdrHistogram), use hardware timestamps for wire-to-wire truth, and beware coordinated omission."
   },
@@ -66,9 +77,18 @@
       }
     ],
     "notes": [
-      { "title": "Pre-fault and lock memory", "detail": "Page faults cause µs-scale spikes. mlockall the process and pre-touch your buffers at startup so no faults happen on the hot path; use huge pages for big working sets." },
-      { "title": "Beware the observer effect", "detail": "Heavy instrumentation changes timing. Keep inline cost to a single cheap bucket bump; do all formatting/printing off the hot path; and validate that turning measurement on/off doesn't move the distribution much." },
-      { "title": "Wire-to-wire is the real number", "detail": "Software timestamps miss the NIC and switch. NIC hardware timestamping (PTP/PHC) and external capture taps give the true exchange-to-exchange or wire-to-wire latency that determines whether you won the race." }
+      {
+        "title": "Pre-fault and lock memory",
+        "detail": "Page faults cause µs-scale spikes. mlockall the process and pre-touch your buffers at startup so no faults happen on the hot path; use huge pages for big working sets."
+      },
+      {
+        "title": "Beware the observer effect",
+        "detail": "Heavy instrumentation changes timing. Keep inline cost to a single cheap bucket bump; do all formatting/printing off the hot path; and validate that turning measurement on/off doesn't move the distribution much."
+      },
+      {
+        "title": "Wire-to-wire is the real number",
+        "detail": "Software timestamps miss the NIC and switch. NIC hardware timestamping (PTP/PHC) and external capture taps give the true exchange-to-exchange or wire-to-wire latency that determines whether you won the race."
+      }
     ],
     "complexity": {
       "time": "Record in O(1), a few ns",
@@ -86,10 +106,28 @@
   },
   "benchmark": {
     "intro": "Why the same 'average' can hide very different systems — two tick-to-trade paths with identical means.",
-    "columns": ["System", "Mean", "p99", "p99.9", "Verdict"],
+    "columns": [
+      "System",
+      "Mean",
+      "p99",
+      "p99.9",
+      "Verdict"
+    ],
     "rows": [
-      ["A: tuned, pinned, no faults", "800 ns", "1.2 µs", "2 µs", "Consistent — wins races"],
-      ["B: same mean, occasional stalls", "800 ns", "9 µs", "55 µs", "Spiky — loses on the tail"]
+      [
+        "A: tuned, pinned, no faults",
+        "800 ns",
+        "1.2 µs",
+        "2 µs",
+        "Consistent — wins races"
+      ],
+      [
+        "B: same mean, occasional stalls",
+        "800 ns",
+        "9 µs",
+        "55 µs",
+        "Spiky — loses on the tail"
+      ]
     ],
     "note": "Identical averages, very different behavior; B's GC/fault/context-switch spikes are invisible in the mean.",
     "takeaway": "Optimize and report the distribution. In HFT, a system with a slightly worse mean but a tight tail beats one with a great average and frequent spikes — because the spike is when you lose the trade or trip a risk limit."
@@ -104,7 +142,10 @@
           "Because latency is a distribution and the tail is what costs money: an occasional 50 µs spike (from a cache miss, page fault, context switch, GC/allocation, or interrupt) is exactly when you lose the race to the order book or breach a timing assumption — and the average completely hides it. So you track p50/p99/p99.9/p99.99 and the max and optimize to flatten the tail.",
           "To measure without distortion: use a clock cheaper than the work (fenced rdtsc/rdtscp, cycles→ns), and record samples allocation-free, lock-free, and I/O-free — bump a fixed-bucket histogram (e.g., HdrHistogram) in place or push a compact sample into a pre-allocated ring that another thread drains and aggregates. Never malloc/lock/printf inline. Also pre-fault and mlock memory, run at steady state, and watch for coordinated omission so you don't undercount the tail."
         ],
-        "followups": ["What is coordinated omission?", "Why prefer rdtsc over clock_gettime, and what's the catch?"]
+        "followups": [
+          "What is coordinated omission?",
+          "Why prefer rdtsc over clock_gettime, and what's the catch?"
+        ]
       },
       {
         "id": "q-clock",
@@ -113,6 +154,19 @@
         "a": [
           "rdtsc/rdtscp reads the CPU time-stamp counter directly in a few nanoseconds — ideal when you're timing hundreds of ns. On modern CPUs the TSC is 'invariant' (constant rate regardless of frequency scaling), so you calibrate cycles→ns once. Gotchas: out-of-order execution can move a plain rdtsc outside your region (use rdtscp or lfence to fence it), and on older/multi-socket systems TSCs could be unsynchronized across cores (mostly solved on modern hardware, but pin the thread to be safe).",
           "clock_gettime(CLOCK_MONOTONIC) is portable and, via the vDSO, reasonably cheap, but typically coarser/slower than rdtsc and can itself cost a meaningful fraction of a sub-µs measurement. Use clock_gettime for portability and coarser timing; use rdtsc(p) when you need the cheapest, finest-grained timing on the hot path — and always validate your calibration."
+        ]
+      },
+      {
+        "id": "q-coordinated-omission",
+        "q": "Explain coordinated omission and how it makes latency stats lie.",
+        "tag": "Systems",
+        "a": [
+          "Coordinated omission is a measurement bug where you only record the latency of requests/events you actually managed to process, silently omitting the ones that were delayed *because the system was stalled*. Classic example: a load generator sends a request, waits for the response, then sends the next. If the system stalls for 100ms, the in-flight request is recorded as slow — but all the requests that *should* have been sent during that stall are never sent, so their (huge) latencies never appear. The result wildly *understates* the tail: your p99.9 looks great because the worst samples are missing.",
+          "It makes stats lie precisely where it matters most — the tail — by hiding the impact of stalls/pauses. The fix is to measure against the *intended schedule*: record latency as (time processed − time the event *should* have been processed/arrived), so an event delayed by a stall counts its full delay, and account for all the events that 'should' have happened during a pause. HdrHistogram's recordValueWithExpectedInterval and tools like wrk2 do this correction. In trading, measure tick-to-trade from the hardware ingress timestamp of the triggering packet (when it actually arrived), not from when your code happened to get to it — otherwise a backlog/stall hides exactly the tail latency you care about."
+        ],
+        "followups": [
+          "How does measuring from the ingress hardware timestamp avoid it?",
+          "Why is the tail the thing that matters in HFT?"
         ]
       }
     ],
@@ -130,7 +184,10 @@
             "Off the hot path: a separate, non-pinned reporter thread periodically snapshots/merges the histogram (or drains a pre-allocated SPSC ring of raw samples) and logs p50/p99/p99.9/p99.99/max. To avoid coordinated omission, time against when each event should have been processed (e.g., from its ingress hardware timestamp) so events delayed by a stall still count toward the tail.",
             "Validate non-distortion: compare the latency distribution with instrumentation on vs off (a compile-time flag) — the median should barely move; quantify the per-sample cost by timing the record() call itself; ensure the optimizer didn't elide the work (DoNotOptimize/ClobberMemory); and cross-check against NIC hardware timestamps for the wire-to-wire figure. Run long enough at steady state to populate p99.9."
           ],
-          "complexity": { "time": "~few ns/sample inline; report off-path", "space": "O(buckets) fixed histogram" },
+          "complexity": {
+            "time": "~few ns/sample inline; report off-path",
+            "space": "O(buckets) fixed histogram"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -139,12 +196,43 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-design-histo",
+        "title": "Design always-on production latency monitoring",
+        "difficulty": "Advanced",
+        "statement": "Design always-on, per-stage latency monitoring for a live tick-to-trade pipeline that adds negligible overhead, captures the true distribution including the tail, survives bursts, and is safe to leave running in production. Specify the clock, the recording mechanism, how you avoid coordinated omission, and how you report. Contrast with what NOT to do.",
+        "hint": "rdtsc per stage + fixed-bucket histograms (HdrHistogram) recorded inline O(1); measure from hardware ingress timestamp; aggregate/report off-path; never malloc/lock/print inline.",
+        "tests": "Production-grade latency instrumentation design.",
+        "solution": {
+          "approach": [
+            "Clock: use fenced rdtsc/rdtscp (cycles→ns via a one-time calibration; TSC is invariant on modern x86) for cheap (~few ns) timestamps at each stage boundary, and use the NIC hardware ingress timestamp (PTP/PHC) as the 'true arrival' reference for wire-to-wire and to avoid coordinated omission. Pin the threads so TSC is consistent.",
+            "Recording: at each stage, compute the delta and record it with a single O(1) operation into a per-stage fixed-bucket histogram (HdrHistogram-style: constant memory, configurable precision across ns→s, no allocation). Critically, do NOTHING on the hot path that allocates, locks, does I/O, or formats strings — just bump a bucket (or push a compact binary sample into a pre-allocated SPSC ring for a background thread to fold into the histogram). Pre-touch + mlock memory so recording never page-faults.",
+            "Avoid coordinated omission: measure each event's latency from the hardware ingress timestamp of the triggering packet (when it actually arrived), not from when your code got to it — so an event delayed by a backlog/stall records its full delay rather than being hidden. If using interval-based sampling, use HdrHistogram's expected-interval correction.",
+            "Reporting: a separate, non-pinned thread periodically snapshots/merges the histograms and emits p50/p99/p99.9/p99.99/max per stage and end-to-end (plus gap/error counters) to monitoring — all off the hot path. Validate non-distortion by comparing the distribution with instrumentation on vs off (median shouldn't move) and by timing the record() call.",
+            "What NOT to do: don't log per-event with printf/iostreams inline (dominates the signal), don't malloc/lock to store samples, don't report only mean/stddev (they hide the tail), don't store every raw sample (costly and unsorted), and don't measure only completed events from the moment you handle them (coordinated omission). The whole point is a few-ns inline cost, true tail capture from real arrival times, burst-proof fixed-memory histograms, and all heavy work off the critical path."
+          ],
+          "complexity": {
+            "time": "~few ns/sample inline; report off-path",
+            "space": "O(buckets) fixed per stage"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "HdrHistogram", "by": "Gil Tene", "note": "High-dynamic-range histograms + the definitive talk on coordinated omission ('How NOT to Measure Latency')." },
-    { "title": "Google Benchmark & nanobench", "note": "Microbenchmark frameworks that handle warmup and stop the optimizer from deleting your code." },
-    { "title": "perf, ftrace, and Brendan Gregg's latency methodologies", "note": "Attributing tail-latency spikes to their root cause." }
+    {
+      "title": "HdrHistogram",
+      "by": "Gil Tene",
+      "note": "High-dynamic-range histograms + the definitive talk on coordinated omission ('How NOT to Measure Latency')."
+    },
+    {
+      "title": "Google Benchmark & nanobench",
+      "note": "Microbenchmark frameworks that handle warmup and stop the optimizer from deleting your code."
+    },
+    {
+      "title": "perf, ftrace, and Brendan Gregg's latency methodologies",
+      "note": "Attributing tail-latency spikes to their root cause."
+    }
   ]
 }

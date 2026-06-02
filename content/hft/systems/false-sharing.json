@@ -5,7 +5,10 @@
   "title": "False Sharing & Cache-Line Contention",
   "tagline": "Two threads, two different variables, one shared cache line — and a silent 5–10x slowdown.",
   "level": "Advanced",
-  "track": ["dev", "systems"],
+  "track": [
+    "dev",
+    "systems"
+  ],
   "estMinutes": 16,
   "concept": {
     "analogy": "Imagine two clerks who each own a different document, but both documents are stapled to the same clipboard. Every time one clerk writes on her page, office rules force the whole clipboard to be handed over, so the other clerk must stop, wait, and re-grab it before touching his page. They never touch the same document, yet they constantly fight over the clipboard. The clipboard is the cache line; the documents are their separate variables.",
@@ -23,8 +26,16 @@
       "Common in per-thread counter arrays, adjacent atomics, and ring-buffer head/tail indices."
     ],
     "callouts": [
-      { "type": "warn", "title": "Atomics don't save you", "body": "Two atomics on the same line still false-share. Atomicity is about correctness; it does nothing for the coherence ping-pong. Separate them onto different lines." },
-      { "type": "tip", "title": "Producer/consumer indices", "body": "In an SPSC ring buffer, put the head index and the tail index on different cache lines. Otherwise every producer write invalidates the consumer's line and vice versa — the single biggest false-sharing bug in lock-free queues." }
+      {
+        "type": "warn",
+        "title": "Atomics don't save you",
+        "body": "Two atomics on the same line still false-share. Atomicity is about correctness; it does nothing for the coherence ping-pong. Separate them onto different lines."
+      },
+      {
+        "type": "tip",
+        "title": "Producer/consumer indices",
+        "body": "In an SPSC ring buffer, put the head index and the tail index on different cache lines. Otherwise every producer write invalidates the consumer's line and vice versa — the single biggest false-sharing bug in lock-free queues."
+      }
     ],
     "keyIdea": "Because coherence invalidates entire 64-byte lines, independent variables that share a line force cores to ping-pong it on every write. Pad/align hot, separately-written data onto its own line and the phantom contention disappears."
   },
@@ -65,8 +76,14 @@
       }
     ],
     "notes": [
-      { "title": "alignas on heap allocations", "detail": "`new T` respects over-aligned types since C++17, and you can use aligned allocators / `std::pmr`. For arrays, ensure the element stride is a line multiple so no element straddles or shares lines." },
-      { "title": "It can hide in the standard library", "detail": "Adjacent fields in a struct, small objects packed by a container, or two `std::atomic_flag`s side by side can all false-share. Lay out hot concurrent fields deliberately." }
+      {
+        "title": "alignas on heap allocations",
+        "detail": "`new T` respects over-aligned types since C++17, and you can use aligned allocators / `std::pmr`. For arrays, ensure the element stride is a line multiple so no element straddles or shares lines."
+      },
+      {
+        "title": "It can hide in the standard library",
+        "detail": "Adjacent fields in a struct, small objects packed by a container, or two `std::atomic_flag`s side by side can all false-share. Lay out hot concurrent fields deliberately."
+      }
     ],
     "pitfalls": [
       "Per-thread counters/state in a tight array without padding — the textbook false-sharing bug.",
@@ -78,10 +95,28 @@
   },
   "benchmark": {
     "intro": "Four threads each incrementing their own counter 50M times — shared line vs padded.",
-    "columns": ["Layout", "Relative time", "Scaling", "Why"],
+    "columns": [
+      "Layout",
+      "Relative time",
+      "Scaling",
+      "Why"
+    ],
     "rows": [
-      ["counters[4] (shared line)", "~5–8x", "Negative / flat", "Every ++ invalidates the line in 3 other cores"],
-      { "cells": ["Padded alignas(64) per counter", "~1x", "Near-linear", "Each counter owns its line; no cross-core invalidation"], "best": true }
+      [
+        "counters[4] (shared line)",
+        "~5–8x",
+        "Negative / flat",
+        "Every ++ invalidates the line in 3 other cores"
+      ],
+      {
+        "cells": [
+          "Padded alignas(64) per counter",
+          "~1x",
+          "Near-linear",
+          "Each counter owns its line; no cross-core invalidation"
+        ],
+        "best": true
+      }
     ],
     "note": "Exact ratio depends on core count and topology; the qualitative gap is large and reproducible.",
     "takeaway": "Same logic, same atomics — only the memory layout changed. Padding independently-written data to separate cache lines restored linear scaling and a multi-x speedup."
@@ -96,7 +131,10 @@
           "False sharing is a performance problem (not a correctness one) where two threads write to different variables that happen to occupy the same 64-byte cache line. Because cache coherence invalidates the whole line on a write, each thread's write evicts the line from the other core's cache, forcing re-fetches — they ping-pong the line despite never touching the same variable.",
           "A data race is a correctness bug (concurrent unsynchronized access to the same variable). True contention is multiple threads actually fighting over the same variable/lock. False sharing has neither: the program is correct and the variables are logically independent — only their physical adjacency causes the slowdown. That's why it's so easy to miss in code review."
         ],
-        "followups": ["How would you detect it on Linux?", "Why don't atomics fix it?"]
+        "followups": [
+          "How would you detect it on Linux?",
+          "Why don't atomics fix it?"
+        ]
       },
       {
         "id": "q-fix",
@@ -105,6 +143,19 @@
         "a": [
           "`hits` and `misses` almost certainly share a cache line, so the hits-thread and misses-thread invalidate each other on every update. Separate them onto distinct lines: `struct Stats { alignas(std::hardware_destructive_interference_size) std::atomic<long> hits; alignas(...) std::atomic<long> misses; };` (or `alignas(64)`).",
           "Now each atomic owns its own line and the cross-core invalidations stop. If updates are very frequent and you only need the total occasionally, an even better design is per-thread local counters (each padded) summed lazily on read — eliminating both contention and false sharing."
+        ]
+      },
+      {
+        "id": "q-find-line-size",
+        "q": "How would you determine the cache line size at runtime/build time, and why does code sometimes hardcode 64?",
+        "tag": "Systems",
+        "a": [
+          "At build/run time you can query it: on Linux read /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size or use sysconf(_SC_LEVEL1_DCACHE_LINESIZE); in C++17 there's std::hardware_destructive_interference_size (the recommended portable padding hint) and std::hardware_constructive_interference_size. The CPUID instruction also reports it on x86.",
+          "Code often hardcodes 64 because virtually all modern x86-64 and most ARM server cores use a 64-byte line, so `alignas(64)` is a safe, simple default for padding. The caveat: some platforms differ (e.g., Apple M-series and some POWER use 128-byte lines, and some CPUs prefetch pairs of lines effectively making 128 the practical unit), so for portability prefer std::hardware_destructive_interference_size or a configured constant. The practical guidance: hardcode 64 for x86-only low-latency code, but use the portable constant when targeting multiple architectures so padding actually separates contended data."
+        ],
+        "followups": [
+          "What is hardware_constructive_interference_size for?",
+          "Could padding to 64 ever be insufficient?"
         ]
       }
     ],
@@ -122,7 +173,10 @@
             "Fix: make each slot own a line — `struct alignas(64) Acc { long sum; long count; };` (or pad to 64 bytes). Better yet, give each thread a private local Acc on its own stack/line and merge at the end, avoiding shared writes entirely during the hot loop.",
             "Prove it with `perf c2c record`/`report` before and after (HITM on that line should vanish), and by showing throughput now scales roughly linearly with thread count up to the core limit."
           ],
-          "complexity": { "time": "Restores ~linear scaling", "space": "+padding per slot (line-sized)" },
+          "complexity": {
+            "time": "Restores ~linear scaling",
+            "space": "+padding per slot (line-sized)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -131,11 +185,37 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-scale-debug",
+        "title": "Debug a multithreaded throughput collapse",
+        "difficulty": "Advanced",
+        "statement": "A lock-free SPSC queue between two pinned threads gives great throughput, but when you add per-thread statistics counters in a shared `struct Stats { std::atomic<long> produced; std::atomic<long> consumed; };` (producer bumps `produced`, consumer bumps `consumed`), throughput drops ~40%. Diagnose the cause, fix it, and describe how you'd confirm the diagnosis.",
+        "hint": "`produced` and `consumed` almost certainly share a cache line; the two cores ping-pong it on every bump.",
+        "tests": "Recognizing false sharing introduced by 'harmless' instrumentation.",
+        "solution": {
+          "approach": [
+            "Diagnosis: `produced` and `consumed` are adjacent in the struct, so they almost certainly occupy the same 64-byte cache line. The producer core writes `produced` every push and the consumer core writes `consumed` every pop; each write invalidates the other core's copy of the shared line (cache-coherence ping-pong), so both threads stall re-fetching the line — classic false sharing introduced by 'innocent' instrumentation. The queue itself was fine; the counters coupled the two cores through one line.",
+            "Fix: put each counter on its own cache line — `struct Stats { alignas(std::hardware_destructive_interference_size) std::atomic<long> produced; alignas(...) std::atomic<long> consumed; };` (or alignas(64)). Even better, keep per-thread *local* (non-atomic) counters bumped without any sharing and only merge them occasionally for reporting, eliminating both contention and false sharing on the hot path.",
+            "Confirm: run `perf c2c record`/`report` before and after — you should see HITM (hit-modified) coherence traffic on the Stats line before the fix and none after; and throughput should return to the no-counter baseline once the counters are line-separated or made thread-local. This is a textbook case of measurement code silently destroying scaling via false sharing."
+          ],
+          "complexity": {
+            "time": "restores baseline throughput",
+            "space": "+padding per counter"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "perf c2c: shared data / false sharing analysis", "by": "Joe Mario (Red Hat)", "note": "The standard Linux tool and write-up for hunting false sharing." },
-    { "title": "std::hardware_destructive_interference_size", "note": "C++17 portable cache-line padding hint (cppreference)." }
+    {
+      "title": "perf c2c: shared data / false sharing analysis",
+      "by": "Joe Mario (Red Hat)",
+      "note": "The standard Linux tool and write-up for hunting false sharing."
+    },
+    {
+      "title": "std::hardware_destructive_interference_size",
+      "note": "C++17 portable cache-line padding hint (cppreference)."
+    }
   ]
 }

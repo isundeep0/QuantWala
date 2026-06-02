@@ -5,7 +5,10 @@
   "title": "NUMA, Core Pinning & Isolation",
   "tagline": "Determinism is a feature: pin threads, isolate cores, keep memory local, and stop the OS from stealing your nanoseconds.",
   "level": "Advanced",
-  "track": ["systems", "dev"],
+  "track": [
+    "systems",
+    "dev"
+  ],
   "estMinutes": 20,
   "concept": {
     "analogy": "Imagine a workshop with two benches (sockets), each with its own toolbox (local memory). A worker at bench A reaches for tools in bench B's box constantly — every trip across the room (the interconnect) wastes time. Now add a manager (the OS scheduler) who keeps reassigning workers to whichever bench is free, and a janitor (interrupts, other processes) who keeps interrupting them. To go fast and predictably, you assign each worker a fixed bench, keep their tools at that bench, and post a 'do not disturb' sign on their station.",
@@ -23,8 +26,16 @@
       "Disable frequency scaling / C-states; often disable hyperthreading on hot cores for determinism."
     ],
     "callouts": [
-      { "type": "tip", "title": "First-touch allocation", "body": "Linux assigns a page to the NUMA node of the thread that first writes it, not the one that malloc'd it. So initialize/zero your buffers from the same pinned thread that will use them, or use numactl/numa_alloc_onnode to force locality." },
-      { "type": "warn", "title": "Busy-spin needs isolation", "body": "A busy-spinning thread on a non-isolated core fights the scheduler and other tasks, causing jitter for everyone. Always pair busy-polling with a pinned, isolated, dedicated core." }
+      {
+        "type": "tip",
+        "title": "First-touch allocation",
+        "body": "Linux assigns a page to the NUMA node of the thread that first writes it, not the one that malloc'd it. So initialize/zero your buffers from the same pinned thread that will use them, or use numactl/numa_alloc_onnode to force locality."
+      },
+      {
+        "type": "warn",
+        "title": "Busy-spin needs isolation",
+        "body": "A busy-spinning thread on a non-isolated core fights the scheduler and other tasks, causing jitter for everyone. Always pair busy-polling with a pinned, isolated, dedicated core."
+      }
     ],
     "keyIdea": "Latency determinism comes from a quiet, dedicated core: pin each hot thread to a specific isolated core, keep its memory on the local NUMA node (first-touch / membind), use huge pages, and disable scheduler/IRQ interference, frequency scaling, and C-states. You trade some CPU efficiency for repeatable, low-tail latency."
   },
@@ -65,9 +76,18 @@
       }
     ],
     "notes": [
-      { "title": "Pin before you allocate", "detail": "Because of first-touch, the order matters: pin the thread, then allocate/initialize its hot buffers from that thread so the pages are placed on the local node." },
-      { "title": "Determinism vs utilization", "detail": "Dedicating spinning cores wastes raw CPU capacity. HFT accepts that: a core that does nothing but instantly handle the next packet beats a 'shared' core that's busy when the packet arrives." },
-      { "title": "Don't forget the kernel still exists", "detail": "Even isolated cores can be hit by TLB shootdowns, NMIs, or maintenance threads. nohz_full + rcu_nocbs + IRQ affinity reduce but don't fully eliminate this; measure your tail to confirm." }
+      {
+        "title": "Pin before you allocate",
+        "detail": "Because of first-touch, the order matters: pin the thread, then allocate/initialize its hot buffers from that thread so the pages are placed on the local node."
+      },
+      {
+        "title": "Determinism vs utilization",
+        "detail": "Dedicating spinning cores wastes raw CPU capacity. HFT accepts that: a core that does nothing but instantly handle the next packet beats a 'shared' core that's busy when the packet arrives."
+      },
+      {
+        "title": "Don't forget the kernel still exists",
+        "detail": "Even isolated cores can be hit by TLB shootdowns, NMIs, or maintenance threads. nohz_full + rcu_nocbs + IRQ affinity reduce but don't fully eliminate this; measure your tail to confirm."
+      }
     ],
     "complexity": {
       "time": "Lower & far more stable latency",
@@ -93,7 +113,10 @@
           "NUMA (Non-Uniform Memory Access) means each CPU socket has its own local DRAM that it accesses quickly, while accessing another socket's DRAM goes over an interconnect and is significantly slower (often ~1.5–2x latency). So memory access cost depends on which node the data lives on relative to the running core.",
           "For a trading app it matters because a thread pinned to socket 0 that touches buffers allocated on socket 1 pays the remote penalty on every access, adding latency and jitter. The fix is locality: pin each hot thread to a core and ensure its hot data is allocated on that core's node (via numactl --membind, numa_alloc_onnode, or first-touch from the pinned thread), and verify with numastat. Cross-node sharing (and cross-node false sharing) is especially costly."
         ],
-        "followups": ["What is first-touch allocation?", "How would you confirm memory is local?"]
+        "followups": [
+          "What is first-touch allocation?",
+          "How would you confirm memory is local?"
+        ]
       },
       {
         "id": "q-isolation",
@@ -102,6 +125,19 @@
         "a": [
           "Because HFT cares about the tail, not just the average. The default scheduler migrates threads (cold caches/TLB), preempts them for other work, and runs timer ticks and interrupts on your core — each a source of unpredictable latency spikes. Pinning keeps a thread on one warm core; isolation keeps the kernel and other tasks off it.",
           "Concretely: pin with CPU affinity; isolate cores with isolcpus, stop the tick with nohz_full, offload RCU with rcu_nocbs, move device IRQs off the core and disable irqbalance; set the performance governor and disable deep C-states so the core stays at full clock and doesn't sleep; optionally disable hyperthreading on hot cores. Then validate by measuring the latency histogram — the spikes should shrink."
+        ]
+      },
+      {
+        "id": "q-hyperthread",
+        "q": "Should you run two latency-critical threads on hyperthread siblings? Why or why not?",
+        "tag": "Systems",
+        "a": [
+          "Generally no. Hyperthread (SMT) siblings are two logical CPUs that share one physical core's execution resources — the ALUs, L1/L2 cache, and execution ports. If you pin two latency-critical threads to sibling logical CPUs, they contend for those shared resources, so each runs slower and, worse, less predictably (one thread's activity creates jitter in the other) — the opposite of what HFT wants.",
+          "Best practice for hot threads: pin each to its own *physical* core (use lstopo/lscpu to identify sibling pairs and avoid placing two hot threads on a pair), and on dedicated trading boxes many shops disable hyperthreading entirely on the cores running the hot path so a sibling can never steal cycles or pollute the cache. SMT can still be useful for non-latency-critical background work, but for the deterministic hot path you want a whole physical core to yourself. The general theme: latency determinism comes from *not sharing* — not sharing cache lines (false sharing), not sharing a core (SMT), not sharing with the scheduler/interrupts (isolation)."
+        ],
+        "followups": [
+          "How do you identify sibling logical CPUs?",
+          "When is SMT actually helpful?"
         ]
       }
     ],
@@ -119,7 +155,10 @@
             "Prove no migration: log sched_getcpu() periodically (should always be 6); check `taskset -cp <tid>` shows only core 6; and confirm /proc/<pid>/status nonvoluntary_ctxt_switches stays flat. Prove locality: `numastat -p <pid>` should show numa_hit high and numa_miss/other_node near zero; `perf mem`/`perf c2c` should show local accesses; or read /proc/<pid>/numa_maps.",
             "Finally, measure the latency histogram before/after isolation+pinning to show the tail (p99.9) shrank — the real point of the exercise."
           ],
-          "complexity": { "time": "Stable, local-memory latency", "space": "Buffers on node 0" },
+          "complexity": {
+            "time": "Stable, local-memory latency",
+            "space": "Buffers on node 0"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -128,12 +167,40 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-tail-hunt",
+        "title": "Hunt down a periodic latency spike",
+        "difficulty": "Advanced",
+        "statement": "Your pinned strategy thread has a great median latency but shows a periodic p99.9 spike of ~30µs every few seconds. Walk through the likely causes (NUMA, scheduling, interrupts, power, faults, GC-like effects) and the systematic steps you'd take to identify and eliminate the spike.",
+        "hint": "Periodic µs-scale spikes on a pinned thread usually point to scheduler ticks/interrupts, page faults, frequency transitions, or remote-NUMA access — isolate and measure each.",
+        "tests": "Systematic tail-latency debugging on a pinned thread.",
+        "solution": {
+          "approach": [
+            "Enumerate suspects for periodic µs spikes on a pinned hot thread: (1) scheduler interference — the periodic timer tick or another task being scheduled onto the core (even briefly); (2) interrupts/IRQs landing on the core; (3) page faults — touching memory whose pages aren't resident (or THP compaction), causing a µs-scale fault; (4) frequency/C-state transitions — the core throttling or waking from a sleep state; (5) NUMA — occasional remote-memory access if some hot data lives on the other socket; (6) TLB shootdowns or RCU/kernel maintenance; (7) allocation/locks sneaking onto the path; (8) the measurement itself.",
+            "Systematic steps: confirm the thread never migrates (sched_getcpu logging, nonvoluntary context-switch count) — if it does, fix affinity. Isolate the core: isolcpus + nohz_full + rcu_nocbs and move IRQs off it (and stop irqbalance) — a periodic spike timed with the scheduler tick is the classic nohz_full fix. Eliminate faults: mlockall + pre-touch all buffers at startup, use huge pages, and disable THP if compaction is the culprit. Lock the clock: performance governor, disable deep C-states (idle=poll), so no throttling/wake latency. Verify NUMA locality with numastat (numa_miss near zero) and ensure first-touch placed memory locally. Profile the spike directly: perf sched / ftrace / perf record with timestamps to catch what runs on the core at the spike, and check the latency histogram before/after each change.",
+            "Method: change ONE thing at a time and re-measure the p99.9 — the spike should shrink as you remove the responsible source. Periodic µs spikes most often trace to the scheduler tick/interrupts (fixed by isolation) or page faults (fixed by mlock/pre-touch); the discipline is to attribute, not guess, using the histogram and kernel tracing."
+          ],
+          "complexity": {
+            "time": "eliminates p99.9 spike",
+            "space": "n/a"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Red Hat Low Latency Performance Tuning Guide", "note": "isolcpus, nohz_full, IRQ affinity, tuned profiles — the practical knobs." },
-    { "title": "numactl, libnuma, hwloc/lstopo man pages", "note": "Topology discovery and NUMA binding tooling." },
-    { "title": "Brendan Gregg — Systems Performance", "note": "Methodologies for finding and removing latency outliers." }
+    {
+      "title": "Red Hat Low Latency Performance Tuning Guide",
+      "note": "isolcpus, nohz_full, IRQ affinity, tuned profiles — the practical knobs."
+    },
+    {
+      "title": "numactl, libnuma, hwloc/lstopo man pages",
+      "note": "Topology discovery and NUMA binding tooling."
+    },
+    {
+      "title": "Brendan Gregg — Systems Performance",
+      "note": "Methodologies for finding and removing latency outliers."
+    }
   ]
 }

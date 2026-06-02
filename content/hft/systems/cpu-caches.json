@@ -5,7 +5,10 @@
   "title": "CPU Caches & The Memory Hierarchy",
   "tagline": "Why a cache miss costs ~100x an L1 hit — and how data layout, not clever code, wins the latency game.",
   "level": "Intermediate",
-  "track": ["dev", "systems"],
+  "track": [
+    "dev",
+    "systems"
+  ],
   "estMinutes": 22,
   "visualizer": "cache",
   "concept": {
@@ -24,8 +27,16 @@
       "Code also lives in cache — bloated/branchy hot paths suffer I-cache misses."
     ],
     "callouts": [
-      { "type": "tip", "title": "Structure of Arrays (SoA)", "body": "If a loop only reads the `price` field of a million orders, store all prices contiguously (SoA) rather than as a field inside a fat struct (AoS). You then load only useful bytes per cache line instead of dragging along fields you don't touch." },
-      { "type": "warn", "title": "Pointer chasing kills throughput", "body": "Linked lists, node-based maps, and `shared_ptr` graphs scatter data across the heap. Each `next` is a likely cache miss the prefetcher can't predict. Prefer flat arrays / open-addressing hash maps on the hot path." }
+      {
+        "type": "tip",
+        "title": "Structure of Arrays (SoA)",
+        "body": "If a loop only reads the `price` field of a million orders, store all prices contiguously (SoA) rather than as a field inside a fat struct (AoS). You then load only useful bytes per cache line instead of dragging along fields you don't touch."
+      },
+      {
+        "type": "warn",
+        "title": "Pointer chasing kills throughput",
+        "body": "Linked lists, node-based maps, and `shared_ptr` graphs scatter data across the heap. Each `next` is a likely cache miss the prefetcher can't predict. Prefer flat arrays / open-addressing hash maps on the hot path."
+      }
     ],
     "keyIdea": "Memory is a hierarchy and the unit of transfer is the 64-byte cache line. Make hot data compact, contiguous, and accessed sequentially so it stays in L1/L2 — because a cache miss to DRAM can cost 50–100x an L1 hit, dwarfing most algorithmic savings."
   },
@@ -66,8 +77,14 @@
       }
     ],
     "notes": [
-      { "title": "Alignment helps but is not magic", "detail": "Aligning hot structures to cache-line boundaries avoids straddling two lines, but the bigger win is touching fewer lines overall. Compactness first, alignment second." },
-      { "title": "Latency vs bandwidth", "detail": "Sequential access is fast partly because DRAM delivers high bandwidth in bursts; the cost you fight on random access is latency, which prefetching and pipelining cannot hide." }
+      {
+        "title": "Alignment helps but is not magic",
+        "detail": "Aligning hot structures to cache-line boundaries avoids straddling two lines, but the bigger win is touching fewer lines overall. Compactness first, alignment second."
+      },
+      {
+        "title": "Latency vs bandwidth",
+        "detail": "Sequential access is fast partly because DRAM delivers high bandwidth in bursts; the cost you fight on random access is latency, which prefetching and pipelining cannot hide."
+      }
     ],
     "complexity": {
       "time": "Same Big-O, ~1–100 ns/access in practice",
@@ -84,14 +101,52 @@
   },
   "benchmark": {
     "intro": "Approximate latency of each level of the hierarchy on a modern server CPU (order-of-magnitude, not exact).",
-    "columns": ["Level", "Typical latency", "Approx size", "Notes"],
+    "columns": [
+      "Level",
+      "Typical latency",
+      "Approx size",
+      "Notes"
+    ],
     "rows": [
-      { "cells": ["Register", "~0 ns", "~1 KB", "No load needed"], "best": true },
-      ["L1 cache", "~1 ns (~4 cycles)", "32–48 KB", "Per-core, split I/D"],
-      ["L2 cache", "~4 ns", "256 KB–2 MB", "Per-core"],
-      ["L3 cache", "~12–20 ns", "8–64 MB", "Shared across cores"],
-      ["DRAM", "~70–100 ns", "GBs", "The cliff — hidden only by prefetch"],
-      ["NUMA-remote DRAM", "~120–160 ns", "GBs", "Another socket's memory"]
+      {
+        "cells": [
+          "Register",
+          "~0 ns",
+          "~1 KB",
+          "No load needed"
+        ],
+        "best": true
+      },
+      [
+        "L1 cache",
+        "~1 ns (~4 cycles)",
+        "32–48 KB",
+        "Per-core, split I/D"
+      ],
+      [
+        "L2 cache",
+        "~4 ns",
+        "256 KB–2 MB",
+        "Per-core"
+      ],
+      [
+        "L3 cache",
+        "~12–20 ns",
+        "8–64 MB",
+        "Shared across cores"
+      ],
+      [
+        "DRAM",
+        "~70–100 ns",
+        "GBs",
+        "The cliff — hidden only by prefetch"
+      ],
+      [
+        "NUMA-remote DRAM",
+        "~120–160 ns",
+        "GBs",
+        "Another socket's memory"
+      ]
     ],
     "note": "Numbers vary by CPU; treat ratios (≈1 : 4 : 15 : 80) as the durable lesson.",
     "takeaway": "An L1 hit vs a DRAM miss is roughly 1 ns vs 80 ns — an 80x gap created entirely by where the data lives. Winning latency is mostly about keeping hot data in cache, not shaving instructions."
@@ -106,7 +161,10 @@
           "A cache line is the fixed-size block the CPU transfers between memory and cache — almost always 64 bytes on x86/ARM server cores. The cache never moves single bytes; touching one byte loads its entire 64-byte line.",
           "It matters because it sets the granularity of locality: sequential access reuses already-loaded lines and triggers the prefetcher (cheap), while scattered access pays a full miss per line (expensive). It also explains false sharing (two threads hammering different variables that happen to share a line), and why packing hot fields together and unrelated-but-contended fields apart both help."
         ],
-        "followups": ["How would you find the cache line size at runtime?", "How does this lead to false sharing?"]
+        "followups": [
+          "How would you find the cache line size at runtime?",
+          "How does this lead to false sharing?"
+        ]
       },
       {
         "id": "q-rowcol",
@@ -141,7 +199,10 @@
             "Under SoA, `std::vector<double> px` is dense: one 64-byte line holds 8 prices, all useful — 100% useful bandwidth, and the prefetcher streams it perfectly. So you fetch ~4x fewer lines for the same scan.",
             "Expect roughly a 3–4x speedup on the price-only scan (bounded by the bandwidth ratio), more if the AoS struct were larger. The exact number depends on whether the data was already cache-resident, so always measure with perf."
           ],
-          "complexity": { "time": "O(n), ~4x fewer cache lines touched", "space": "O(n), same total bytes split per field" },
+          "complexity": {
+            "time": "O(n), ~4x fewer cache lines touched",
+            "space": "O(n), same total bytes split per field"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -164,14 +225,47 @@
             "Fixes that keep the algorithm: pad each row (e.g., allocate width 1024+8) so the stride is no longer a power of two; or block/tile the traversal so you reuse lines within a small sub-block before moving on; or transpose once if you'll scan columns repeatedly. Each restores set diversity or restores stride-1 locality.",
             "Confirm with `perf stat` — you should see the high cache-miss / low-IPC profile collapse after padding or tiling."
           ],
-          "complexity": { "time": "O(n) restored to L1/L2-bound", "space": "O(n) plus small padding" }
+          "complexity": {
+            "time": "O(n) restored to L1/L2-bound",
+            "space": "O(n) plus small padding"
+          }
+        }
+      },
+      {
+        "id": "p-hashmap-choice",
+        "title": "Why open-addressing beats node-based maps on the hot path",
+        "difficulty": "Advanced",
+        "statement": "A hot lookup uses std::unordered_map<uint64_t, Order*> and profiling shows it's memory-bound with high cache-miss rate. Explain why a node-based hash map causes misses, why an open-addressing (flat) hash map is faster here, and what trade-offs the flat map introduces.",
+        "hint": "std::unordered_map chains nodes via pointers (each node a separate heap allocation); open-addressing stores entries in one contiguous array.",
+        "tests": "Connecting data-structure choice to cache behavior.",
+        "solution": {
+          "approach": [
+            "std::unordered_map is typically separate chaining: each key lives in its own heap-allocated node, and buckets point to linked lists of nodes. A lookup hashes to a bucket, then follows pointers to scattered nodes — each pointer hop is a likely cache miss because nodes are allocated all over the heap and aren't contiguous. So even an O(1) average lookup pays one or more DRAM-latency misses, which dominates on the hot path.",
+            "An open-addressing (flat) hash map stores entries directly in one contiguous array; on lookup you hash to a slot and probe linearly/quadratically within the array. Probed slots are adjacent in memory, so they're prefetcher-friendly and usually all in the same one or two cache lines — far fewer misses, no per-entry allocation, and better cache locality. For a hot id→pointer lookup this can be several times faster despite the same Big-O.",
+            "Trade-offs of the flat map: it needs a good load factor and resizing strategy (rehashing the whole array on growth, which is a big one-time cost — so pre-size it); deletions need tombstones or backward-shift handling; large values stored inline can hurt if entries are big (store pointers/indices instead); and worst-case clustering can degrade probe length. For HFT you pre-size to the max working set, store small entries (id→index/pointer), and accept the resize/erase complexity in exchange for the cache-locality win. The general lesson: on the hot path, choose structures by their memory access pattern, not just asymptotic complexity."
+          ],
+          "complexity": {
+            "time": "O(1) avg, far fewer cache misses",
+            "space": "O(capacity) contiguous, pre-sized"
+          }
         }
       }
     ]
   },
   "resources": [
-    { "title": "What Every Programmer Should Know About Memory", "by": "Ulrich Drepper", "note": "The definitive deep dive on caches, TLBs, and access patterns." },
-    { "title": "Latency Numbers Every Programmer Should Know", "by": "Jeff Dean / Peter Norvig", "note": "The classic order-of-magnitude latency table." },
-    { "title": "perf, VTune, and Agner Fog's optimization manuals", "note": "Tools and references for measuring and tuning memory behavior." }
+    {
+      "title": "What Every Programmer Should Know About Memory",
+      "by": "Ulrich Drepper",
+      "note": "The definitive deep dive on caches, TLBs, and access patterns."
+    },
+    {
+      "title": "Latency Numbers Every Programmer Should Know",
+      "by": "Jeff Dean / Peter Norvig",
+      "note": "The classic order-of-magnitude latency table."
+    },
+    {
+      "title": "perf, VTune, and Agner Fog's optimization manuals",
+      "note": "Tools and references for measuring and tuning memory behavior."
+    }
   ]
 }

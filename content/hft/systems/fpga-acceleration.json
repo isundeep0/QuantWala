@@ -5,7 +5,9 @@
   "title": "FPGAs & Hardware Acceleration",
   "tagline": "When software's nanoseconds aren't enough: doing tick-to-trade in silicon, on the wire, in tens of nanoseconds.",
   "level": "Elite",
-  "track": ["systems"],
+  "track": [
+    "systems"
+  ],
   "estMinutes": 16,
   "concept": {
     "analogy": "A CPU is a brilliant generalist who reads each instruction and does it, one after another — incredibly flexible, but always reading the recipe. An FPGA is like building a dedicated machine on a factory floor whose gears are wired specifically to make one product: the input flows in and the finished output falls out the other end, with no recipe-reading in between. You give up flexibility and pay a lot to build the machine, but for that one product it's untouchably fast and perfectly consistent.",
@@ -23,8 +25,16 @@
       "Typical design is hybrid — FPGA for the simple fast path, CPU for complex/evolving logic."
     ],
     "callouts": [
-      { "type": "info", "title": "It's about determinism too", "body": "FPGAs win not only on raw latency but on consistency: no OS scheduling, no cache misses, no GC, no mispredicts — the same operation takes the same number of cycles every time. In a latency race, low variance is as valuable as a low mean." },
-      { "type": "warn", "title": "Flexibility is the price", "body": "Changing FPGA logic means re-coding HDL, re-synthesizing, and re-verifying timing — far slower than shipping a software patch. Keep evolving research logic in software; push only stable, simple, hot logic into the FPGA." }
+      {
+        "type": "info",
+        "title": "It's about determinism too",
+        "body": "FPGAs win not only on raw latency but on consistency: no OS scheduling, no cache misses, no GC, no mispredicts — the same operation takes the same number of cycles every time. In a latency race, low variance is as valuable as a low mean."
+      },
+      {
+        "type": "warn",
+        "title": "Flexibility is the price",
+        "body": "Changing FPGA logic means re-coding HDL, re-synthesizing, and re-verifying timing — far slower than shipping a software patch. Keep evolving research logic in software; push only stable, simple, hot logic into the FPGA."
+      }
     ],
     "keyIdea": "FPGAs implement the latency-critical path as a custom circuit on the NIC, processing packets as they arrive with tens-of-nanoseconds latency and near-zero jitter — no instruction fetch, full parallelism, no OS. The price is development effort and inflexibility, so real systems are hybrid: hardware for the simple fast path, CPUs for everything complex and changing."
   },
@@ -53,8 +63,14 @@
       }
     ],
     "notes": [
-      { "title": "Software still matters most for most roles", "detail": "The majority of quant-dev/research/systems jobs are software. Understand the FPGA model and boundary conceptually; deep HDL skills are needed only for dedicated FPGA engineering roles." },
-      { "title": "Determinism enables guarantees", "detail": "Because FPGA latency is fixed, you can make hard real-time guarantees (e.g., risk check always completes before the order leaves) that are hard to promise in software with a long tail." }
+      {
+        "title": "Software still matters most for most roles",
+        "detail": "The majority of quant-dev/research/systems jobs are software. Understand the FPGA model and boundary conceptually; deep HDL skills are needed only for dedicated FPGA engineering roles."
+      },
+      {
+        "title": "Determinism enables guarantees",
+        "detail": "Because FPGA latency is fixed, you can make hard real-time guarantees (e.g., risk check always completes before the order leaves) that are hard to promise in software with a long tail."
+      }
     ],
     "complexity": {
       "time": "~tens of ns, fixed",
@@ -79,7 +95,10 @@
           "A CPU executes a stream of instructions: it fetches, decodes, and runs them, moving data through registers and caches, and is subject to cache misses, branch mispredicts, and (with an OS) scheduling — all of which add latency and, critically, variance. An FPGA instead is configured as a dedicated circuit: the packet's bits flow through purpose-built parallel pipeline stages, so the computation happens spatially with no instruction fetch and no cache/scheduler in the way.",
           "The result is latency of tens of nanoseconds and near-constant timing — every event takes the same number of clock cycles. In a latency race that low variance (no long tail) is as valuable as the low mean, which is why the very fastest tick-to-trade paths are implemented in FPGA logic on the NIC."
         ],
-        "followups": ["What would you keep in software in such a system?", "What's the cost of using an FPGA?"]
+        "followups": [
+          "What would you keep in software in such a system?",
+          "What's the cost of using an FPGA?"
+        ]
       },
       {
         "id": "q-boundary",
@@ -88,6 +107,19 @@
         "a": [
           "Put the simple, stable, latency-critical, high-throughput work in the FPGA: line-rate feed parsing, timestamping, a compact top-of-book, pre-trade risk gates and the kill switch, and firing pre-armed orders on a hardware trigger. These are fixed functions that benefit from determinism and must run at wire speed.",
           "Keep complex, branchy, and frequently-changing logic in software on the CPU: research-heavy signal computation, full order-book and position state, the OMS, and configuration. The CPU computes parameters and 'arms' the FPGA (loads thresholds/tables/pre-formed orders) while the FPGA executes the armed actions at wire speed. The design principle: hardware for the hot, simple, unchanging path; software for the smart, evolving, complex path."
+        ]
+      },
+      {
+        "id": "q-fpga-determinism",
+        "q": "Beyond raw speed, why is an FPGA's determinism valuable, and how does it enable guarantees software can't make?",
+        "tag": "Systems",
+        "a": [
+          "An FPGA pipeline processes data in a fixed number of clock cycles every time — there's no instruction fetch, no cache hierarchy, no branch predictor, no OS scheduler, and no garbage collection — so its latency has essentially zero variance. Software, even highly tuned, has a latency *distribution* with a tail (cache misses, page faults, context switches, frequency changes), so you can only speak probabilistically about p99.9. The FPGA's latency is effectively a constant.",
+          "That determinism enables hard guarantees software can't make: for example, you can guarantee that a pre-trade risk check *always completes before the order leaves* (because it's a fixed-cycle stage in the pipeline), or that tick-to-trade is bounded by a known number of nanoseconds with no tail. In a latency race, low variance is as valuable as a low mean — being consistently fast beats being usually-fast-sometimes-slow, because the 'sometimes slow' is exactly when you lose the trade or breach a timing assumption. So FPGAs are used not only because they're fast but because they make latency a guarantee rather than a probability — which is why the simplest, most critical hot-path functions (parse, risk gate, fire pre-armed order) are the ones pushed into hardware."
+        ],
+        "followups": [
+          "What's the cost of that determinism (flexibility/development)?",
+          "Why keep complex logic in software then?"
         ]
       }
     ],
@@ -105,14 +137,46 @@
             "Strategy B should be software: dozens of features and frequent retraining demand flexibility and rapid iteration that FPGAs can't provide, and the logic is too complex/branchy to fit and close timing. Run it on CPUs with kernel-bypass I/O, pinned/isolated cores, and a lock-free pipeline; its latency is dominated by the model computation, not I/O, so the FPGA wouldn't help the bottleneck anyway.",
             "Best overall: a hybrid platform — FPGA handles feed decode, timestamping, and a hardware risk/kill gate for everyone; Strategy A's trigger lives in the FPGA; Strategy B runs in software behind the same fast I/O. The CPU arms/configures the FPGA. This puts each piece of logic where its latency, determinism, flexibility, and cost trade-offs are best served."
           ],
-          "complexity": { "time": "A: ~tens of ns (HW); B: model-bound (SW)", "space": "FPGA logic bounded; software unconstrained" }
+          "complexity": {
+            "time": "A: ~tens of ns (HW); B: model-bound (SW)",
+            "space": "FPGA logic bounded; software unconstrained"
+          }
+        }
+      },
+      {
+        "id": "p-partition-hw-sw",
+        "title": "Partition a strategy across FPGA and CPU",
+        "difficulty": "Elite",
+        "statement": "You're building a latency-critical 'sniping' strategy: when a specific price condition appears in the feed, instantly send a pre-decided order, subject to risk limits — but the *parameters* (which price, which order, limits) are computed by a complex model that updates a few times per second. Design the FPGA/CPU partition: what runs where, how the CPU arms the FPGA, the data path, and why this split is optimal. Note the verification concerns.",
+        "hint": "FPGA: inline parse + condition match + risk gate + fire pre-armed order (fixed ns). CPU: compute/update parameters and arm the FPGA via registers/tables. Hardware for the fast simple trigger, software for the slow complex thinking.",
+        "tests": "Designing the hardware/software boundary for tick-to-trade.",
+        "solution": {
+          "approach": [
+            "FPGA (the fast, simple, fixed path): inline-parse the market-data feed as bits arrive, evaluate the price condition (a comparison against an armed threshold), apply hardware pre-trade risk gates (size/price/notional/position limits and a kill flag), and if all pass, emit a *pre-formed* order — all in a fixed handful of nanoseconds with zero jitter, before a CPU could even be interrupted. The order template and thresholds live in FPGA registers/tables.",
+            "CPU (the slow, complex, changing path): run the model that decides *what* to arm — which price condition, which order (side/size/price), and the current risk limits — updating a few times per second. The CPU 'arms' the FPGA by writing the new parameters into the FPGA's registers/lookup tables over PCIe; it also handles the full order book, P&L, position reconciliation, and the slow path of order management. So the CPU does the thinking; the FPGA does the instantaneous reacting on armed parameters.",
+            "Why optimal: the latency-critical action (detect condition → risk-check → fire) is simple, stable, and must be deterministic — a perfect FPGA fit (tens of ns, guaranteed). The intelligence (which conditions are worth arming) is complex and frequently changing — a perfect software fit (flexible, fast to iterate). Putting the model in the FPGA would be infeasible (won't fit/close timing, can't iterate); putting the trigger in software would be too slow/jittery to win the snipe. The split matches each piece to where its latency/flexibility trade-off is best.",
+            "Verification concerns: the order path is in hardware, so a bug is dangerous and slow to fix — rigorously simulate and formally verify the FPGA logic (especially the risk gate and order formatting), test the arming protocol and CPU/FPGA synchronization (stale or torn parameter updates must be impossible — use versioned/atomic arming), and validate the hardware risk limits independently. Also ensure the kill switch reaches the FPGA. The CPU/FPGA *interface* (arming, register layout, consistency) is where most of the system risk lives, so test it hardest."
+          ],
+          "complexity": {
+            "time": "~tens of ns trigger (HW); model updates in SW",
+            "space": "FPGA registers/tables + CPU model state"
+          }
         }
       }
     ]
   },
   "resources": [
-    { "title": "Xilinx/AMD & Intel FPGA low-latency trading reference designs", "note": "Vendor material on FPGA feed handlers and tick-to-trade." },
-    { "title": "'FPGA accelerated trading' talks & papers", "note": "Overviews of inline parsing, hardware order books, and hybrid architectures." },
-    { "title": "Flash Boys (Michael Lewis) & microwave-network reporting", "note": "Accessible context on the broader latency arms race (colocation, microwave links)." }
+    {
+      "title": "Xilinx/AMD & Intel FPGA low-latency trading reference designs",
+      "note": "Vendor material on FPGA feed handlers and tick-to-trade."
+    },
+    {
+      "title": "'FPGA accelerated trading' talks & papers",
+      "note": "Overviews of inline parsing, hardware order books, and hybrid architectures."
+    },
+    {
+      "title": "Flash Boys (Michael Lewis) & microwave-network reporting",
+      "note": "Accessible context on the broader latency arms race (colocation, microwave links)."
+    }
   ]
 }

@@ -5,7 +5,10 @@
   "title": "Branch Prediction & The Pipeline",
   "tagline": "Why an unpredictable `if` can cost ~15 cycles, and how sorting, hints, and branchless code reclaim them.",
   "level": "Advanced",
-  "track": ["dev", "systems"],
+  "track": [
+    "dev",
+    "systems"
+  ],
   "estMinutes": 18,
   "visualizer": "branch-prediction",
   "concept": {
@@ -24,8 +27,16 @@
       "Branchless code (cmov, masks, arithmetic, lookup tables) removes the branch entirely."
     ],
     "callouts": [
-      { "type": "tip", "title": "The famous sorted-array result", "body": "Summing only elements above a threshold runs several times faster on a sorted array than an identical unsorted one — because after sorting, the branch becomes a long run of 'no' then a long run of 'yes', which the predictor nails." },
-      { "type": "warn", "title": "Branchless isn't always faster", "body": "A `cmov` always executes both sides and has a data dependency; for a highly-predictable branch, a normal `if` is faster. Go branchless only for genuinely unpredictable branches, and measure." }
+      {
+        "type": "tip",
+        "title": "The famous sorted-array result",
+        "body": "Summing only elements above a threshold runs several times faster on a sorted array than an identical unsorted one — because after sorting, the branch becomes a long run of 'no' then a long run of 'yes', which the predictor nails."
+      },
+      {
+        "type": "warn",
+        "title": "Branchless isn't always faster",
+        "body": "A `cmov` always executes both sides and has a data dependency; for a highly-predictable branch, a normal `if` is faster. Go branchless only for genuinely unpredictable branches, and measure."
+      }
     ],
     "keyIdea": "Speculative pipelines make correctly-predicted branches nearly free but punish mispredictions with a ~15-cycle flush. On unpredictable, data-dependent hot-path branches, reshape the data to be predictable or remove the branch (branchless / cmov / lookup) — and always measure, since branchless helps only when the branch is actually hard to predict."
   },
@@ -66,8 +77,14 @@
       }
     ],
     "notes": [
-      { "title": "Measure mispredicts directly", "detail": "`perf stat -e branches,branch-misses ./app` reports the mispredict rate; `perf record -e branch-misses` attributes them to source lines. A hot branch with a double-digit mispredict rate is your target." },
-      { "title": "cmov has a cost too", "detail": "A conditional move executes both inputs and serializes on the data dependency, so it isn't free. It wins only when it replaces a hard-to-predict branch; for predictable branches the ordinary `if` is faster." }
+      {
+        "title": "Measure mispredicts directly",
+        "detail": "`perf stat -e branches,branch-misses ./app` reports the mispredict rate; `perf record -e branch-misses` attributes them to source lines. A hot branch with a double-digit mispredict rate is your target."
+      },
+      {
+        "title": "cmov has a cost too",
+        "detail": "A conditional move executes both inputs and serializes on the data dependency, so it isn't free. It wins only when it replaces a hard-to-predict branch; for predictable branches the ordinary `if` is faster."
+      }
     ],
     "complexity": {
       "time": "Misprediction ~10–20 cycles each",
@@ -85,11 +102,34 @@
   },
   "benchmark": {
     "intro": "Summing elements ≥ threshold over a 1M array, 100 reps. Same code, three variants.",
-    "columns": ["Variant", "Relative time", "Branch-miss rate", "Why"],
+    "columns": [
+      "Variant",
+      "Relative time",
+      "Branch-miss rate",
+      "Why"
+    ],
     "rows": [
-      ["Unsorted + branch", "~6x", "High (~25–50%)", "Random data → predictor guesses ~coin-flip"],
-      ["Sorted + branch", "~1.5x", "Very low", "One no-run then one yes-run → easily predicted"],
-      { "cells": ["Branchless (mask)", "~1x", "n/a (no branch)", "No branch to mispredict; pure data dependency"], "best": true }
+      [
+        "Unsorted + branch",
+        "~6x",
+        "High (~25–50%)",
+        "Random data → predictor guesses ~coin-flip"
+      ],
+      [
+        "Sorted + branch",
+        "~1.5x",
+        "Very low",
+        "One no-run then one yes-run → easily predicted"
+      ],
+      {
+        "cells": [
+          "Branchless (mask)",
+          "~1x",
+          "n/a (no branch)",
+          "No branch to mispredict; pure data dependency"
+        ],
+        "best": true
+      }
     ],
     "note": "Sorting itself isn't free; the point is that branch behavior, not arithmetic, drives the gap.",
     "takeaway": "The arithmetic is identical across all three; predictability of the branch explains a multi-x difference. Reshape data to be predictable, or eliminate the branch when it's genuinely random."
@@ -104,7 +144,10 @@
           "The CPU speculatively fetched and executed instructions down the predicted path. On a mispredict, all that speculative work after the branch is squashed and the front-end re-steers to the correct target, refilling a deep (15+ stage) pipeline. It also discards speculative prefetches issued on the wrong path.",
           "The penalty is roughly 10–20 cycles (≈3–7 ns) per mispredict on modern cores. That's cheap once, but on a hot branch executed millions of times per second with a high mispredict rate it can dominate a function's latency — which is why HFT cares about branch predictability."
         ],
-        "followups": ["How do you measure the mispredict rate?", "When is branchless code the wrong choice?"]
+        "followups": [
+          "How do you measure the mispredict rate?",
+          "When is branchless code the wrong choice?"
+        ]
       },
       {
         "id": "q-sorted",
@@ -113,6 +156,19 @@
         "a": [
           "The cost difference is branch prediction, not arithmetic. On unsorted data the `if (x >= thr)` outcome looks random to the predictor, so it mispredicts frequently and eats pipeline flushes. After sorting, the branch is 'false' for a long run and then 'true' for a long run — a trivially predictable pattern, so the predictor is right almost every time and the flushes disappear.",
           "Net: the sorted loop runs several times faster purely because its branch became predictable. (Note that you'd only sort if you reuse the data or it's already grouped — sorting solely to speed one pass usually isn't worth it.)"
+        ]
+      },
+      {
+        "id": "q-when-not-branchless",
+        "q": "Your colleague made every branch in a hot path branchless and it got slower. Why?",
+        "tag": "Systems",
+        "a": [
+          "Because branchless code isn't free and isn't always faster — it only wins when the branch is genuinely hard to predict. A conditional move (cmov) or mask-based select executes *both* sides of the condition and introduces a data dependency that serializes execution (the result depends on the comparison, breaking the CPU's ability to speculate ahead). For a *predictable* branch, the ordinary `if` is essentially free: the predictor is right ~99%+ of the time, the not-taken path costs nothing, and the CPU speculates past it. Replacing such a branch with cmov adds work (computing both sides) and a dependency, making it slower.",
+          "So if your colleague blanket-converted every branch — including the many highly-predictable ones (loop bounds, rarely-taken error checks) — they paid the branchless overhead everywhere while only the few unpredictable branches would have benefited. The right approach: measure branch-miss rates (perf), and go branchless *only* on the specific branches with high mispredict rates and cheap-to-compute both-sides; leave predictable branches alone (and use [[likely]]/[[unlikely]] or PGO for biased ones). Branchless is a targeted tool, not a global policy."
+        ],
+        "followups": [
+          "How do you identify which branches to target?",
+          "Why does a data dependency hurt throughput?"
         ]
       }
     ],
@@ -130,7 +186,10 @@
             "`select` uses a mask: `long m = -(long)cond; return (a & m) | (b & ~m);` — `cond` becomes 0 or all-ones, choosing a or b with pure arithmetic. There's no branch to mispredict, just a dependency on `cond`.",
             "These beat the branchy versions when `cond`/comparisons are genuinely unpredictable (random data), because they trade a possible 15-cycle flush for a couple of cheap ALU ops. They lose when the branch is highly predictable: then the branchy `if` is essentially free and avoids always computing both sides plus the serializing dependency. Always confirm with `perf stat -e branch-misses` and a microbenchmark."
           ],
-          "complexity": { "time": "O(1) per element, no mispredict", "space": "O(1)" },
+          "complexity": {
+            "time": "O(1) per element, no mispredict",
+            "space": "O(1)"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -139,12 +198,41 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-partition",
+        "title": "Make a hot filter loop predictable or branchless",
+        "difficulty": "Advanced",
+        "statement": "A hot loop processes a stream of orders and does expensive work only for those above a size threshold, but the threshold check is unpredictable (random sizes) and profiling shows a high branch-miss rate. Give two distinct approaches to fix it (one that makes the branch predictable, one that removes it), and explain the trade-offs.",
+        "hint": "Approach 1: partition/group so similar outcomes cluster (predictable). Approach 2: branchless processing or precompute a compact index of qualifying elements.",
+        "tests": "Two strategies for taming a hot data-dependent branch.",
+        "solution": {
+          "approach": [
+            "Approach 1 — make the branch predictable by reorganizing data: partition the stream so qualifying and non-qualifying elements are grouped (e.g., a stable partition, or bucket by above/below threshold), then process each group in its own loop. Within each loop the branch outcome is constant (all 'yes' or all 'no'), so the predictor is right ~100% of the time and the flushes vanish. Trade-off: partitioning itself costs work and may touch memory; worth it only if you reuse the partition or the branch was truly dominating.",
+            "Approach 2 — remove the branch: either go branchless (compute the result for all elements and use a mask/conditional-move to select, if the 'expensive work' can be made unconditional and cheap), or, more commonly when the work is genuinely expensive, build a compact index/list of the qualifying elements first (a tight predictable pass that just appends indices), then iterate that dense index doing the expensive work with no per-element branch. This converts an unpredictable per-element branch into a predictable gather + branch-free work loop. Trade-off: the index pass adds a cheap linear scan and some memory; the expensive work no longer pays mispredicts.",
+            "Choosing: if the expensive work is small, branchless/cmov may win; if it's large and sparse, building a compact index of qualifiers (or partitioning) is better because you also improve locality of the expensive pass. Always confirm with `perf stat -e branch-misses` and an end-to-end microbenchmark — branchless is only a win when the branch is genuinely unpredictable, and reorganization only pays if the branch was actually the bottleneck."
+          ],
+          "complexity": {
+            "time": "removes ~15-cycle mispredicts on the hot branch",
+            "space": "O(n) for an index, or O(1) branchless"
+          }
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Why is processing a sorted array faster than an unsorted array?", "by": "Stack Overflow (the canonical Q)", "note": "The most-upvoted explanation of branch prediction in practice." },
-    { "title": "Agner Fog — The microarchitecture of Intel/AMD CPUs", "note": "Authoritative detail on predictors, pipelines, and penalties." },
-    { "title": "C++20 [[likely]]/[[unlikely]] and __builtin_expect", "note": "Branch hints; pair with Profile-Guided Optimization for best results." }
+    {
+      "title": "Why is processing a sorted array faster than an unsorted array?",
+      "by": "Stack Overflow (the canonical Q)",
+      "note": "The most-upvoted explanation of branch prediction in practice."
+    },
+    {
+      "title": "Agner Fog — The microarchitecture of Intel/AMD CPUs",
+      "note": "Authoritative detail on predictors, pipelines, and penalties."
+    },
+    {
+      "title": "C++20 [[likely]]/[[unlikely]] and __builtin_expect",
+      "note": "Branch hints; pair with Profile-Guided Optimization for best results."
+    }
   ]
 }

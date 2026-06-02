@@ -5,7 +5,10 @@
   "title": "SIMD & Data-Oriented Design",
   "tagline": "Do 8–16 lanes of work per instruction — but only if your data is laid out so the CPU can.",
   "level": "Advanced",
-  "track": ["dev", "systems"],
+  "track": [
+    "dev",
+    "systems"
+  ],
   "estMinutes": 20,
   "concept": {
     "analogy": "A scalar instruction is one cashier scanning one item at a time. SIMD (Single Instruction, Multiple Data) is a cashier with a wide scanner that reads a whole row of items in one swipe. But the wide scanner only works if the items are lined up neatly in a row (contiguous, aligned). Hand it a jumbled pile (pointers scattered across the heap) and it falls back to one-at-a-time. Data-oriented design is the discipline of always presenting the data as a neat row.",
@@ -23,8 +26,16 @@
       "Data-oriented design (organize by access pattern, SoA, hot/cold split) is the foundation."
     ],
     "callouts": [
-      { "type": "tip", "title": "Let the compiler try first", "body": "Write clean, contiguous SoA loops with `-O3 -march=native` and check the vectorization report (`-fopt-info-vec` / `-Rpass=loop-vectorize`). Hand-written intrinsics are a last resort — they're unportable and easy to get wrong." },
-      { "type": "warn", "title": "Gather/scatter is a trap", "body": "AVX gather loads from non-contiguous addresses, but it's often barely faster than scalar. If you find yourself needing gather, the real fix is usually to change the data layout so loads are contiguous." }
+      {
+        "type": "tip",
+        "title": "Let the compiler try first",
+        "body": "Write clean, contiguous SoA loops with `-O3 -march=native` and check the vectorization report (`-fopt-info-vec` / `-Rpass=loop-vectorize`). Hand-written intrinsics are a last resort — they're unportable and easy to get wrong."
+      },
+      {
+        "type": "warn",
+        "title": "Gather/scatter is a trap",
+        "body": "AVX gather loads from non-contiguous addresses, but it's often barely faster than scalar. If you find yourself needing gather, the real fix is usually to change the data layout so loads are contiguous."
+      }
     ],
     "keyIdea": "SIMD multiplies throughput by operating on many lanes per instruction, but it only delivers when data is contiguous, aligned, and Structure-of-Arrays with branches turned into masks. Fix the data layout (data-oriented design) first; vectorization — often automatic — follows."
   },
@@ -65,9 +76,18 @@
       }
     ],
     "notes": [
-      { "title": "Throughput, not latency", "detail": "SIMD speeds up bulk computation; it doesn't shorten the critical path of a single event. Use it for batch signal/PNL/parse work, not to shave one order's tick-to-trade." },
-      { "title": "Watch the clock", "detail": "Heavy AVX-512 can trigger frequency throttling on some CPUs, so a 'wider' kernel can be net slower for mixed workloads. Always benchmark the whole program, not the kernel in isolation." },
-      { "title": "Reductions need care", "detail": "Summations vectorize with multiple partial accumulators (to break the dependency chain) then a horizontal add. Be aware floating-point reductions become non-associative — results can differ slightly from the scalar order." }
+      {
+        "title": "Throughput, not latency",
+        "detail": "SIMD speeds up bulk computation; it doesn't shorten the critical path of a single event. Use it for batch signal/PNL/parse work, not to shave one order's tick-to-trade."
+      },
+      {
+        "title": "Watch the clock",
+        "detail": "Heavy AVX-512 can trigger frequency throttling on some CPUs, so a 'wider' kernel can be net slower for mixed workloads. Always benchmark the whole program, not the kernel in isolation."
+      },
+      {
+        "title": "Reductions need care",
+        "detail": "Summations vectorize with multiple partial accumulators (to break the dependency chain) then a horizontal add. Be aware floating-point reductions become non-associative — results can differ slightly from the scalar order."
+      }
     ],
     "complexity": {
       "time": "Up to W× fewer instructions (W = lane count)",
@@ -85,11 +105,30 @@
   },
   "benchmark": {
     "intro": "Elementwise `out = a*k + b` over 64M floats, contiguous data (relative, -O3 -march=native).",
-    "columns": ["Variant", "Relative throughput", "Notes"],
+    "columns": [
+      "Variant",
+      "Relative throughput",
+      "Notes"
+    ],
     "rows": [
-      ["Scalar, AoS (gather-like access)", "~0.2x", "Strided access defeats prefetch & vectorization"],
-      ["Scalar, SoA contiguous", "~1x", "Baseline; prefetcher-friendly"],
-      { "cells": ["Auto-vectorized SoA (AVX2 FMA)", "~4–6x", "8 lanes + FMA; bandwidth-bound at the top end"], "best": true }
+      [
+        "Scalar, AoS (gather-like access)",
+        "~0.2x",
+        "Strided access defeats prefetch & vectorization"
+      ],
+      [
+        "Scalar, SoA contiguous",
+        "~1x",
+        "Baseline; prefetcher-friendly"
+      ],
+      {
+        "cells": [
+          "Auto-vectorized SoA (AVX2 FMA)",
+          "~4–6x",
+          "8 lanes + FMA; bandwidth-bound at the top end"
+        ],
+        "best": true
+      }
     ],
     "note": "Speedup is capped by memory bandwidth once the kernel is compute-light; layout is the prerequisite.",
     "takeaway": "Vectorization delivered several-fold throughput only because the data was contiguous SoA. The same SIMD on AoS data would have collapsed to scalar — proving layout comes before vectorization."
@@ -104,7 +143,10 @@
           "A SIMD register fills from contiguous memory: to add eight prices in one instruction you need eight prices laid out back-to-back. SoA gives exactly that — each field is its own contiguous array — so a single aligned vector load grabs eight useful values. AoS interleaves fields, so the eight prices are 'struct-stride' apart and you'd need a slow gather or scalar fallback.",
           "So SoA is the enabling data layout for SIMD: it turns a loop over a field into unit-stride, prefetcher-friendly, vectorizable code. That's the heart of data-oriented design — choose the layout that matches how you process the data in bulk."
         ],
-        "followups": ["How do you handle a conditional inside a SIMD loop?", "When does gather make sense?"]
+        "followups": [
+          "How do you handle a conditional inside a SIMD loop?",
+          "When does gather make sense?"
+        ]
       },
       {
         "id": "q-when",
@@ -113,6 +155,19 @@
         "a": [
           "SIMD optimizes throughput of data-parallel bulk work, not the latency of a single event. It's the wrong tool when the hot path is one event with control-flow-heavy, pointer-chasing logic — there's nothing to vectorize, and forcing it (gathers, per-lane branches) can be slower than clean scalar code.",
           "It's also the wrong first move: if data is AoS or scattered, fix the layout before reaching for intrinsics. And on some CPUs wide AVX-512 downclocks the core, so it can hurt mixed workloads. Use SIMD for batch signal/PNL/feature/parse computations where data is contiguous and you process many elements the same way — and benchmark end-to-end."
+        ]
+      },
+      {
+        "id": "q-reduction",
+        "q": "How do you vectorize a sum (reduction), and what subtle correctness issue appears?",
+        "tag": "Systems",
+        "a": [
+          "A naive `for(i) sum += a[i]` has a loop-carried dependency on `sum`, which limits the CPU (each add waits for the previous) and a single accumulator can't fill a vector register usefully. To vectorize, use multiple partial accumulators — e.g., maintain a vector of 8 partial sums, add 8 lanes per iteration (independent adds, breaking the dependency chain and using the full SIMD width), and at the end do a horizontal add to combine the lanes into the final scalar. Compilers do this automatically with `-O3 -ffast-math` (or `#pragma omp simd reduction`), or you write it with intrinsics.",
+          "The subtle correctness issue is that floating-point addition is *not associative*: summing in a different order (lane-wise then horizontal, vs strictly left-to-right) can give a slightly different result due to rounding. So the vectorized sum is not bit-identical to the scalar one — which is why compilers require `-ffast-math`/`-fassociative-math` (or an explicit reduction clause) to reorder FP reductions, since it technically changes results. For most analytics this is fine (and often *more* accurate), but if you need reproducibility or are doing money math, be deliberate: use integer/fixed-point where exactness matters, or a defined summation order, and document that the vectorized result may differ in the last bits."
+        ],
+        "followups": [
+          "Why does FP non-associativity matter for reproducible backtests?",
+          "How does -ffast-math enable this and what else does it change?"
         ]
       }
     ],
@@ -130,7 +185,10 @@
             "Refactor to SoA: keep `std::vector<float> bid, ask, mid;`. Now `for(i) mid[i]=0.5f*(bid[i]+ask[i]);` is unit-stride. Mark pointers `__restrict` (or pass distinct vectors) so the compiler knows they don't alias, build with `-O3 -march=native`, and confirm with `-Rpass=loop-vectorize` / `-fopt-info-vec` that it emitted AVX.",
             "Intrinsic version: load 8 bids and 8 asks (`_mm256_loadu_ps`), add, multiply by a broadcast 0.5 (`_mm256_mul_ps`), store; scalar tail for the remainder. Verify: compare outputs against the scalar version within a tiny float tolerance for correctness, and microbenchmark all three (AoS scalar, SoA auto-vec, SoA intrinsic) over the same data, plus `perf stat` to confirm higher IPC and that you're now bandwidth-bound."
           ],
-          "complexity": { "time": "~4–8x fewer instructions, bandwidth-bound", "space": "SoA arrays, same total bytes" },
+          "complexity": {
+            "time": "~4–8x fewer instructions, bandwidth-bound",
+            "space": "SoA arrays, same total bytes"
+          },
           "codes": [
             {
               "language": "cpp",
@@ -139,12 +197,48 @@
             }
           ]
         }
+      },
+      {
+        "id": "p-aos-soa-redesign",
+        "title": "Redesign a struct for SIMD and measure",
+        "difficulty": "Advanced",
+        "statement": "A risk engine stores positions as `struct Pos { double qty; double price; char sym[8]; uint32_t acct; };` in a vector, and a hot routine computes total notional = Σ qty*price over millions of positions, but it won't vectorize well. Redesign the layout, write a vectorizable (or intrinsic) notional sum, and describe how you'd verify both the speedup and that the result is acceptable.",
+        "hint": "AoS interleaves qty/price with sym/acct, so vector loads can't fill cleanly; move to SoA (separate qty[] and price[]) and use a multi-accumulator/FMA reduction.",
+        "tests": "Layout-driven vectorization of a reduction.",
+        "solution": {
+          "approach": [
+            "Why it won't vectorize: in AoS, each Pos is ~28–32 bytes, so qty and price for consecutive positions are strided ~32 bytes apart and interleaved with sym/acct. A SIMD load can't grab 8 contiguous qtys; you'd need slow gathers, and the loop also has a reduction dependency on the running sum.",
+            "Redesign to SoA: store `std::vector<double> qty, price;` (and sym/acct separately). Now qty[i] and price[i] are each dense and contiguous, so the loop `Σ qty[i]*price[i]` is unit-stride and vectorizable: load 8 qtys and 8 prices, multiply, and accumulate with FMA into several partial-sum vectors (multiple accumulators to break the dependency chain), then horizontal-add at the end. The compiler will auto-vectorize the clean SoA loop with `-O3 -march=native -ffast-math`, or write it with AVX2 intrinsics.",
+            "Verify: (1) speedup — microbenchmark AoS-scalar vs SoA-auto-vec vs SoA-intrinsic over the same data; check `perf stat` shows higher IPC and that you've become memory-bandwidth-bound (the sign you've maxed the kernel). Confirm the vectorizer fired with `-Rpass=loop-vectorize`. (2) Correctness/acceptability — because the FP reduction order changed (lane-wise + horizontal vs left-to-right), the result may differ in the last bits; verify it's within an acceptable tolerance of the scalar result, and if exact reproducibility is required (e.g., official risk numbers), use a fixed summation order or higher-precision/Kahan summation. Expect a several-fold throughput gain, gated by the layout change, not the SIMD itself."
+          ],
+          "complexity": {
+            "time": "~4-8x fewer instructions, bandwidth-bound",
+            "space": "SoA arrays, same total bytes"
+          },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "notional.cpp",
+              "source": "#include <immintrin.h>\n#include <vector>\n\n// SoA layout enables a clean FMA reduction with multiple accumulators.\ndouble notional(const std::vector<double>& qty, const std::vector<double>& price) {\n    size_t n = qty.size(), i = 0;\n    __m256d acc0 = _mm256_setzero_pd(), acc1 = _mm256_setzero_pd();\n    for (; i + 8 <= n; i += 8) {\n        acc0 = _mm256_fmadd_pd(_mm256_loadu_pd(&qty[i]),   _mm256_loadu_pd(&price[i]),   acc0);\n        acc1 = _mm256_fmadd_pd(_mm256_loadu_pd(&qty[i+4]), _mm256_loadu_pd(&price[i+4]), acc1);\n    }\n    __m256d acc = _mm256_add_pd(acc0, acc1);\n    double tmp[4]; _mm256_storeu_pd(tmp, acc);\n    double s = tmp[0]+tmp[1]+tmp[2]+tmp[3];\n    for (; i < n; ++i) s += qty[i]*price[i];   // scalar tail\n    return s;\n}"
+            }
+          ]
+        }
       }
     ]
   },
   "resources": [
-    { "title": "Data-Oriented Design", "by": "Richard Fabian / Mike Acton (CppCon 'Data-Oriented Design and C++')", "note": "The canonical case for organizing code around data access." },
-    { "title": "Intel Intrinsics Guide & Agner Fog instruction tables", "note": "Reference for every SIMD intrinsic and its latency/throughput." },
-    { "title": "Google Highway, xsimd, std::experimental::simd", "note": "Portable SIMD libraries to avoid hand-writing per-ISA intrinsics." }
+    {
+      "title": "Data-Oriented Design",
+      "by": "Richard Fabian / Mike Acton (CppCon 'Data-Oriented Design and C++')",
+      "note": "The canonical case for organizing code around data access."
+    },
+    {
+      "title": "Intel Intrinsics Guide & Agner Fog instruction tables",
+      "note": "Reference for every SIMD intrinsic and its latency/throughput."
+    },
+    {
+      "title": "Google Highway, xsimd, std::experimental::simd",
+      "note": "Portable SIMD libraries to avoid hand-writing per-ISA intrinsics."
+    }
   ]
 }

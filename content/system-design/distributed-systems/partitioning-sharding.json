@@ -1,0 +1,132 @@
+{
+  "slug": "partitioning-sharding",
+  "sectionId": "distributed-systems",
+  "order": 2,
+  "title": "Partitioning & Sharding",
+  "tagline": "Split data across many machines to scale writes and storage — and avoid the hot-shard trap.",
+  "summary": "Range vs hash sharding, the shard key, hot spots, rebalancing.",
+  "difficulty": "Advanced",
+  "estMinutes": 18,
+  "tags": ["data", "distributed", "must-know"],
+  "prereqs": ["replication"],
+  "sections": [
+    {
+      "id": "why",
+      "title": "Why shard at all",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Replication scales *reads* (more copies), but every copy still holds *all* the data and every write still goes to one leader. When the dataset is too big for one machine, or write throughput exceeds one leader's capacity, you must **partition** (a.k.a. **shard**): split the data into pieces and put different pieces on different nodes. Now writes, storage, and total throughput scale horizontally.",
+            "Each shard is an independent database (and is itself usually replicated). The cost is a big jump in complexity — and it all hinges on one decision: the **shard key**."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "Each shard owns a slice of the keyspace; a router sends each request to the owning shard.",
+          "groups": [
+            { "label": "Request", "nodes": [{ "label": "key = user_42", "icon": "Send", "accent": "#0ea5e9" }] },
+            { "label": "Router", "nodes": [{ "label": "Shard Router", "sub": "key → shard", "icon": "Split", "accent": "#ef4444" }] },
+            { "label": "Shards", "nodes": [{ "label": "Shard A (users 0–33%)", "icon": "Database", "accent": "#10b981" }, { "label": "Shard B (34–66%)", "icon": "Database", "accent": "#10b981" }, { "label": "Shard C (67–100%)", "icon": "Database", "accent": "#10b981" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "strategies",
+      "title": "Partitioning strategies",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Range-based", "detail": "Partition by key ranges (A–H, I–P, Q–Z; or by date). Pros: efficient range scans (e.g., 'all events in January'). Cons: easily creates hot spots — sequential keys (timestamps, auto-increment IDs) all land on the newest shard." },
+            { "term": "Hash-based", "detail": "Apply a hash to the key and assign by hash range/modulo. Pros: spreads load evenly, no hot spots from sequential keys. Cons: kills range queries (adjacent keys scatter everywhere)." },
+            { "term": "Directory / lookup", "detail": "A lookup service maps each key (or key range) to a shard. Most flexible (move keys freely), but the directory is an extra component and potential bottleneck/SPOF." }
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["Strategy", "Even load?", "Range queries?", "Watch out"],
+          "rows": [
+            ["Range", "No — hot spots likely", "Yes", "Sequential keys overload newest shard"],
+            ["Hash", "Yes", "No", "No range scans; rebalancing reshuffles a lot (use consistent hashing)"],
+            ["Directory", "Tunable", "Depends", "Directory is extra infra / SPOF"]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shard-key",
+      "title": "Choosing the shard key (the whole ballgame)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A good shard key has **high cardinality** (many distinct values), **even access distribution** (no single value gets a huge share of traffic), and **aligns with your queries** (so most reads hit a single shard, not all of them). Choosing it well makes sharding invisible; choosing it badly creates hot shards and cross-shard queries that erase the benefit."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "The hot-shard / celebrity problem",
+          "text": "If you shard by user and one celebrity has 100M followers, that user's shard gets hammered while others idle. Mitigations: pick a higher-cardinality composite key, split hot keys into sub-keys, cache the hot entity aggressively, or special-case celebrities. Always raise hot spots — interviewers probe for it."
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Cross-shard queries & transactions hurt",
+          "text": "Queries that span shards (joins, 'top posts globally', multi-key transactions) require scatter-gather across nodes and lose ACID convenience. Design the shard key so the common queries stay single-shard; push the rare cross-shard analytics to a separate system."
+        }
+      ]
+    },
+    {
+      "id": "rebalancing",
+      "title": "Adding shards & rebalancing",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "When you add capacity, data must move to the new shard. Naive **hash mod N** is a disaster here: changing N from 4 to 5 remaps almost every key, forcing a massive reshuffle. The standard fix is **consistent hashing** (its own lesson), which moves only ~1/N of keys when a node is added/removed. Another approach is **fixed virtual partitions**: pre-create many more partitions than nodes and just reassign whole partitions to new nodes — cheap and simple to reason about.",
+            "Rebalancing should be incremental and online (throttled background copying) so it doesn't take the system down or saturate the network."
+          ]
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Sharding splits data across nodes to scale writes + storage (replication only scales reads).",
+    "Range sharding → fast range scans but hot spots from sequential keys; hash sharding → even load but no range scans.",
+    "The shard key decides everything: want high cardinality, even access, and queries that hit a single shard.",
+    "Hot-shard/celebrity problem and cross-shard queries/transactions are the main pain points — always call them out.",
+    "Avoid hash-mod-N (reshuffles everything on resize); use consistent hashing or fixed virtual partitions to rebalance cheaply.",
+    "Each shard is itself replicated; rebalancing should be incremental and online."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Scenario",
+      "difficulty": "Hard",
+      "prompt": "You shard a posts table by user_id. Most users are fine, but a few celebrities make some shards melt while others idle. What went wrong and what are your options?",
+      "hint": "Sharding by user concentrates all of a celebrity's load on one shard.",
+      "answer": [
+        "Sharding by user_id puts *all* of a single user's data and traffic on one shard. For a celebrity with enormous read/write volume, that one shard becomes a hot spot — uneven load that sharding was supposed to prevent. The shard key has skewed access distribution.",
+        "Options, often combined: (1) **Cache** the hot entity's data aggressively so most reads never touch the shard. (2) **Sub-partition** hot keys — split a celebrity's posts across multiple sub-shards (e.g., key = user_id + bucket) and gather on read. (3) **Special-case** celebrities with a dedicated path (different storage/fan-out strategy). (4) Choose a higher-cardinality composite key if queries allow. The meta-point: detect skew, then break the hot key apart or serve it from cache."
+      ],
+      "keyPoints": ["Sharding by user concentrates a celebrity's load on one shard (skew)", "Cache the hot entity to absorb reads", "Sub-partition/split the hot key across shards, gather on read", "Special-case celebrities; consider composite key"],
+      "followUps": ["How does this connect to the fan-out problem in a Twitter feed design?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "Why is sharding with `hash(key) % N` problematic when you add a new node, and what's the standard fix?",
+      "hint": "What happens to the mapping when N changes?",
+      "answer": [
+        "With `hash(key) % N`, the shard for a key depends on N (the node count). Changing N from, say, 4 to 5 changes `% N` for almost every key, so nearly all data has to move to a different node at once — a massive, disruptive reshuffle that saturates the network and may require downtime.",
+        "The standard fix is **consistent hashing**: keys and nodes are placed on a hash ring, and each key belongs to the next node clockwise. Adding/removing a node only reassigns the keys between it and its neighbor — about 1/N of the data — instead of remapping everything. Virtual nodes smooth the distribution. (An alternative is pre-creating many fixed virtual partitions and moving whole partitions to new nodes.)"
+      ],
+      "keyPoints": ["mod N ties mapping to node count → changing N remaps ~all keys", "Massive reshuffle / downtime on scaling", "Consistent hashing moves only ~1/N keys on change", "Virtual nodes for even distribution; or fixed virtual partitions"],
+      "followUps": ["How do virtual nodes improve consistent hashing's balance?"]
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "slug": "realtime-communication",
+  "sectionId": "building-blocks",
+  "order": 9,
+  "title": "Real-Time Communication",
+  "tagline": "Polling, long polling, SSE, and WebSockets — how servers push updates to clients for chat, feeds, and live data.",
+  "summary": "Polling vs long-polling vs SSE vs WebSockets, and when to use each.",
+  "difficulty": "Intermediate",
+  "estMinutes": 15,
+  "tags": ["networking", "realtime"],
+  "prereqs": ["networking-basics"],
+  "sections": [
+    {
+      "id": "problem",
+      "title": "The problem: HTTP is client-initiated",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Normal HTTP is request/response — the *client* asks, the *server* answers. But chat, notifications, live scores, collaborative editors, and dashboards need the *server* to push data to the client the moment something happens. There are four common techniques to bridge that gap, from crude to purpose-built."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "techniques",
+      "title": "The four techniques",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Short polling", "detail": "Client repeatedly asks 'anything new?' on a timer (e.g., every 5 s). Dead simple, works everywhere, but wasteful (mostly empty responses) and laggy (updates wait for the next poll)." },
+            { "term": "Long polling", "detail": "Client sends a request and the server *holds it open* until there's data (or a timeout), then responds; the client immediately re-requests. Near-real-time using plain HTTP, but ties up a connection per client and has reconnect overhead." },
+            { "term": "Server-Sent Events (SSE)", "detail": "A single long-lived HTTP connection over which the *server streams* events to the client (one-directional, server→client). Built-in auto-reconnect, simple, great for feeds/notifications/live updates. Client→server still uses normal requests." },
+            { "term": "WebSockets", "detail": "A persistent, *full-duplex* TCP connection — both sides can send anytime over one upgraded connection. The right tool for truly bidirectional, low-latency apps: chat, multiplayer, collaborative editing." }
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["Technique", "Direction", "Latency", "Use when"],
+          "rows": [
+            ["Short polling", "Client pulls", "Poor (poll interval)", "Simplicity; infrequent updates; legacy"],
+            ["Long polling", "Simulated push", "Good", "Need near-real-time without WebSockets support"],
+            ["SSE", "Server → client", "Good", "One-way streams: notifications, feeds, live metrics"],
+            ["WebSocket", "Both ways", "Best", "Two-way real-time: chat, games, collab editing"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Decision rule: one-way server→client updates → SSE (simpler, auto-reconnects, plays well with HTTP/CDNs). Two-way, low-latency, frequent → WebSockets. Don't reach for WebSockets if SSE or even long polling suffices — they add stateful-connection complexity."
+        }
+      ]
+    },
+    {
+      "id": "scaling",
+      "title": "Scaling persistent connections",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "WebSockets/SSE introduce a new challenge: connections are **stateful and long-lived**, so a user is pinned to a specific server for the duration. That breaks the simple stateless model. Key concerns:"
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Connection servers", "detail": "Dedicate a tier of 'gateway'/connection servers that just hold WebSocket connections. Each can hold tens/hundreds of thousands of connections (limited by memory and file descriptors)." },
+            { "term": "Routing messages to the right server", "detail": "User A on server 1 messages user B on server 7. You need a way to find B's server — a presence/registry (e.g., in Redis: user → connected server) and a pub/sub or message bus to forward the message to B's connection server." },
+            { "term": "Load balancing", "detail": "LBs must support sticky, long-lived connections; you balance by connection count, not request rate." },
+            { "term": "Reconnection & missed messages", "detail": "Networks drop. Clients must reconnect and fetch anything missed while offline (store undelivered messages and replay on reconnect)." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "text": "This 'connection server + presence registry + pub/sub fan-out' pattern is exactly what powers chat systems — you'll see it again in the WhatsApp/Messenger case study."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "HTTP is client-initiated; real-time needs server push — 4 options from crude to purpose-built.",
+    "Short polling (simple/wasteful) → long polling (held request) → SSE (server→client stream) → WebSockets (full-duplex).",
+    "One-way updates → SSE; two-way low-latency → WebSockets. Don't over-reach for WebSockets.",
+    "WebSocket/SSE connections are stateful & long-lived → users pinned to a connection server.",
+    "Scale with a connection-server tier + a presence registry (user→server in Redis) + pub/sub to route messages; handle reconnection/missed messages."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "For a live sports score ticker that only pushes updates to viewers, would you use WebSockets or SSE? Why?",
+      "hint": "Is communication one-way or two-way?",
+      "answer": [
+        "SSE is the better fit. The data flows only one way — server to client — and SSE is purpose-built for that: a single long-lived HTTP stream of events, with automatic reconnection built into the browser API, and it works nicely with standard HTTP infrastructure. You don't need the full-duplex capability of WebSockets, which would add unnecessary connection-management complexity.",
+        "Use WebSockets when the client also needs to send frequent low-latency messages back (chat, multiplayer, collaborative editing). Choosing the simpler tool that meets the requirement is itself a good signal."
+      ],
+      "keyPoints": ["Score ticker is one-way (server→client)", "SSE fits one-way streaming + auto-reconnect + HTTP-friendly", "WebSockets are overkill without bidirectional needs", "Pick the simplest sufficient tool"],
+      "followUps": ["What happens to an SSE client that loses connectivity for 30 seconds?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Hard",
+      "prompt": "In a chat app, user A (connected to server 1) sends a message to user B (connected to server 7). How does the message reach B in real time?",
+      "hint": "Server 1 has no direct connection to B. How does it find and reach B's server?",
+      "answer": [
+        "Server 1 doesn't hold B's connection, so it must locate B's connection server and forward the message there. Maintain a **presence registry** (e.g., Redis: `user_id → connection_server_id`) updated when users connect/disconnect. Server 1 looks up B → server 7, then forwards the message to server 7 via an internal message bus / **pub/sub** (publish to a channel server 7 subscribes to, or a direct RPC). Server 7 pushes it down B's WebSocket.",
+        "Also persist the message durably first (so it's not lost) and, if B is offline, store it as undelivered and deliver on reconnect (with read/delivery receipts). This connection-server + presence + pub/sub fan-out is the canonical chat architecture."
+      ],
+      "keyPoints": ["Presence registry maps user→connection server (Redis)", "Look up B's server, forward via pub/sub / message bus", "B's server pushes over its WebSocket", "Persist message; queue + replay if B offline"],
+      "followUps": ["How do you handle B being connected on two devices at once?"]
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "slug": "blob-storage",
+  "sectionId": "building-blocks",
+  "order": 8,
+  "title": "Object / Blob Storage",
+  "tagline": "Where images, video, backups, and big files actually live — and why you never store them in your database.",
+  "summary": "Object storage (S3), the metadata-DB pattern, presigned uploads.",
+  "difficulty": "Beginner",
+  "estMinutes": 12,
+  "tags": ["data", "storage"],
+  "prereqs": ["databases", "cdn"],
+  "sections": [
+    {
+      "id": "what",
+      "title": "What object storage is",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "**Object storage** (Amazon S3, Google Cloud Storage, Azure Blob) stores arbitrary files ('objects') — images, videos, PDFs, backups — as opaque blobs with a key and metadata, in flat 'buckets'. It's designed for virtually unlimited capacity, extreme durability (e.g., '11 nines' — 99.999999999%), and cheap-per-GB storage, accessed over HTTP.",
+            "It is *not* a file system (no real directories, no in-place edits — you replace whole objects) and *not* a database (no querying object contents). You get an object by its key. That simplicity is exactly what lets it scale to exabytes."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pattern",
+      "title": "The golden rule: blobs in object storage, pointers in the DB",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Never store large binaries inside your primary database — it bloats the DB, blows up backups, kills cache efficiency, and slows every query. Instead, store the file in object storage and keep only a **reference (URL/key) plus metadata** (owner, size, content-type, timestamps) in the database. The DB stays small and fast; the blobs live where storage is cheap and limitless."
+          ]
+        },
+        {
+          "type": "diagram",
+          "caption": "DB holds metadata + the object key; the bytes live in object storage and are served via CDN.",
+          "groups": [
+            { "label": "Client", "nodes": [{ "label": "Upload / view", "icon": "Image", "accent": "#0ea5e9" }] },
+            { "label": "App + DB", "nodes": [{ "label": "Metadata DB", "sub": "owner, key, size", "icon": "Database", "accent": "#10b981" }] },
+            { "label": "Storage", "nodes": [{ "label": "Object Store (S3)", "sub": "the actual bytes", "icon": "Folder", "accent": "#d97706" }] },
+            { "label": "Edge", "nodes": [{ "label": "CDN", "sub": "serves to users", "icon": "Cloud", "accent": "#8b5cf6" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "uploads",
+      "title": "Presigned URLs — don't proxy big files through your app",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "For uploads/downloads of large files, don't stream the bytes through your application servers — it wastes their bandwidth and capacity. Instead, the app generates a short-lived **presigned URL** that grants the client temporary, scoped permission to upload (PUT) or download (GET) directly to/from object storage. The heavy data path bypasses your servers entirely; they only handle the lightweight metadata.",
+            "Reads are typically served through a **CDN** in front of the bucket, so popular files are cached at the edge. This combination — presigned direct uploads + CDN-fronted reads + metadata in the DB — is the standard media-handling pattern in designs like Instagram, YouTube, and Dropbox."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Whenever a design involves photos/videos/files, say: 'Store blobs in object storage (S3), keep metadata + the key in the DB, upload via presigned URLs directly to the bucket, and serve reads through a CDN.' That one pattern answers the storage half of many media questions."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Object storage (S3/GCS) = cheap, near-infinite, highly durable HTTP blob store; not a filesystem or queryable DB.",
+    "Golden rule: store blobs in object storage, keep only the key/URL + metadata in your database.",
+    "Use presigned URLs so clients upload/download directly to storage — don't proxy big files through app servers.",
+    "Serve reads through a CDN in front of the bucket for low latency + offload.",
+    "This (presigned upload + metadata DB + CDN reads) is the standard media pattern (Instagram/YouTube/Dropbox)."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "Why shouldn't you store user-uploaded images directly as BLOBs in your relational database?",
+      "hint": "Think about DB size, backups, caching, and query performance.",
+      "answer": [
+        "Large binaries bloat the database, which makes backups/restores slow and expensive, wastes the buffer pool/cache on bytes that won't help queries, and increases I/O on every operation that touches those tables — degrading performance for *all* data, not just images. Relational DBs are optimized for structured, queryable rows, not multi-MB blobs.",
+        "The right design keeps the DB lean: store images in object storage and keep just the object key/URL and metadata (owner, size, type) in the DB. Object storage is cheaper per GB, effectively unlimited, and far more durable for this purpose — and reads can be offloaded to a CDN."
+      ],
+      "keyPoints": ["Blobs bloat DB → slow backups, poor cache use, more I/O", "Hurts performance of all queries, not just images", "DB is for structured/queryable data", "Store blob in object storage, keep key+metadata in DB"],
+      "followUps": ["How would you handle deleting an image so the DB row and the object stay in sync?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "Users upload 1 GB videos. Routing them through your app servers maxes out their bandwidth. How do you fix the upload path?",
+      "hint": "Let the client talk to storage directly, with temporary permission.",
+      "answer": [
+        "Use **presigned (pre-authorized) upload URLs**. The client asks your app for permission to upload; the app returns a short-lived, scoped URL (and any required fields) that lets the client PUT the video bytes *directly* into object storage. Your servers never touch the gigabytes — they only issue the URL and later record metadata, so their bandwidth and capacity are freed.",
+        "For very large files, use multipart upload (split into parts, upload in parallel, resume on failure). After upload completes (often signaled by a storage event/webhook), kick off async processing (transcoding, thumbnailing) via a queue, and serve playback through a CDN. This is exactly how large-media platforms handle uploads."
+      ],
+      "keyPoints": ["Presigned URLs for direct client→storage upload", "App only issues URL + records metadata (no byte proxying)", "Multipart/resumable for huge files", "Async transcode via queue after upload; serve via CDN"],
+      "followUps": ["How do you know the upload finished, and how do you trigger transcoding?"]
+    }
+  ]
+}

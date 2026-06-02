@@ -1,0 +1,114 @@
+{
+  "slug": "api-design",
+  "sectionId": "building-blocks",
+  "order": 6,
+  "title": "API Design: REST, gRPC & GraphQL",
+  "tagline": "How services talk to each other and to clients — and how to design endpoints an interviewer respects.",
+  "summary": "REST vs gRPC vs GraphQL, idempotency, pagination, versioning.",
+  "difficulty": "Intermediate",
+  "estMinutes": 18,
+  "tags": ["api"],
+  "prereqs": ["networking-basics"],
+  "sections": [
+    {
+      "id": "styles",
+      "title": "The three API styles",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "REST", "detail": "Resources (nouns) addressed by URLs, manipulated with HTTP verbs (GET/POST/PUT/DELETE) over JSON. Simple, cacheable (GETs), universally supported, human-readable. The default for public/client-facing APIs." },
+            { "term": "gRPC", "detail": "Binary RPC over HTTP/2 using Protocol Buffers. Compact, fast, strongly-typed contracts, supports streaming. The default for *internal* service-to-service communication where performance matters." },
+            { "term": "GraphQL", "detail": "A query language where the *client* specifies exactly the fields it wants in one request. Eliminates over-/under-fetching and request waterfalls; great for varied clients (mobile vs web). Cost: harder caching, complex server, risk of expensive queries." }
+          ]
+        },
+        {
+          "type": "compare",
+          "columns": ["", "REST", "gRPC", "GraphQL"],
+          "rows": [
+            ["Transport / format", "HTTP/1.1+, JSON", "HTTP/2, Protobuf (binary)", "HTTP, JSON (single endpoint)"],
+            ["Best for", "Public APIs, simple CRUD", "Internal microservices, low latency", "Aggregating data for rich/varied clients"],
+            ["Strengths", "Simple, cacheable, ubiquitous", "Fast, typed, streaming", "No over/under-fetch, one round trip"],
+            ["Weaknesses", "Over/under-fetching, many round trips", "Not browser-native, less human-readable", "Caching + query-cost control are hard"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Common real-world split: REST or GraphQL at the edge for clients, gRPC between internal services. State this and you've shown you know where each shines rather than treating them as competitors."
+        }
+      ]
+    },
+    {
+      "id": "rest-design",
+      "title": "Designing clean REST endpoints",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Resource nouns, not verbs", "detail": "`POST /users`, `GET /users/123`, `GET /users/123/orders` — not `/createUser`. Let HTTP verbs convey the action." },
+            { "term": "Use the right verbs & status codes", "detail": "GET (read), POST (create → 201), PUT/PATCH (update), DELETE. Return 200/201/204, 400/401/403/404/409/429, 500/503 meaningfully." },
+            { "term": "Idempotency", "detail": "GET/PUT/DELETE should be idempotent (safe to retry). For POST (e.g., 'create payment'), accept an **Idempotency-Key** header so a client retry doesn't create duplicates." },
+            { "term": "Pagination", "detail": "Never return unbounded lists. Use **cursor-based** pagination (a token pointing past the last item) for large/changing datasets — it's stable and scalable; offset/limit drifts and gets slow deep in the list." },
+            { "term": "Versioning", "detail": "Version the API (`/v1/...` or a header) so you can evolve without breaking existing clients." },
+            { "term": "Filtering & sparse fields", "detail": "Support query params for filtering/sorting and returning only needed fields, to reduce payloads." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "Cursor vs offset pagination",
+          "text": "Offset/limit (`?page=500`) forces the DB to scan and skip rows (slow at depth) and items shift if data is inserted/deleted mid-scroll. Cursor pagination (`?after=<id/timestamp>`) seeks directly and is stable under writes — the right answer for feeds, timelines, and large lists."
+        }
+      ]
+    },
+    {
+      "id": "contracts",
+      "title": "APIs as contracts",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "In a system design interview, sketching the API is a key step — it forces clarity on what the system does. For each core feature, write the endpoint, its inputs, and outputs. Example for a URL shortener: `POST /urls {longUrl} → {shortUrl}` and `GET /{shortCode} → 302 redirect`. This 'API contract' anchors the rest of the design (data model, services) and shows structured thinking.",
+            "Treat the API as a stable contract: backward-compatible changes (adding optional fields) are safe; breaking changes (removing/renaming fields) need a new version. Good APIs are predictable, consistent in naming, and document their errors."
+          ]
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "REST (JSON/HTTP) for public/CRUD APIs; gRPC (Protobuf/HTTP2) for fast internal service calls; GraphQL to avoid over/under-fetch for varied clients.",
+    "REST design: resource nouns, correct verbs/status codes, version the API.",
+    "Make GET/PUT/DELETE idempotent; for POST use an Idempotency-Key so retries don't duplicate.",
+    "Use cursor-based pagination for large/changing lists (stable + fast); avoid deep offset/limit.",
+    "Sketch the API contract early in interviews — it anchors data model and services and signals structure."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "A 'Pay' button sometimes double-charges users on flaky networks because the client retries the POST. How do you fix this at the API level?",
+      "hint": "POST isn't idempotent by default. Give the client a way to mark 'this is the same request'.",
+      "answer": [
+        "The retried POST creates a second charge because POST is not idempotent. Fix it with an **idempotency key**: the client generates a unique key per payment attempt and sends it as a header (`Idempotency-Key`). The server records the key with the result of the first successful processing; if a request arrives with a key it has already seen, it returns the original result instead of charging again.",
+        "Store the key→result mapping durably (with a TTL) and write the charge + key atomically so a crash mid-processing can't create a duplicate. This turns an unsafe retry into a safe no-op and is the standard pattern payment APIs (Stripe, etc.) use."
+      ],
+      "keyPoints": ["POST isn't idempotent → retries duplicate", "Client-supplied Idempotency-Key per attempt", "Server dedupes: return stored result for seen keys", "Atomic charge + key write; key store with TTL"],
+      "followUps": ["How does this relate to at-least-once message delivery and idempotent consumers?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Trade-off",
+      "difficulty": "Easy",
+      "prompt": "Your mobile app makes 6 sequential REST calls to render one screen, causing slow loads. Would GraphQL or gRPC help, and what's the catch?",
+      "hint": "The problem is multiple round trips / over-fetching.",
+      "answer": [
+        "**GraphQL** directly targets this: the client asks for exactly the data the screen needs across multiple resources in a *single* request, eliminating the 6-round-trip waterfall and over-fetching. That's its core strength for rich, data-aggregating clients.",
+        "The catch: GraphQL makes HTTP caching harder (one endpoint, POST queries), and you must guard against expensive/abusive queries (query depth/cost limits, persisted queries). A simpler alternative is a REST **Backend-for-Frontend (BFF)** that aggregates the 6 calls server-side into one response — keeps REST's caching simplicity while cutting client round trips. gRPC helps internal call latency but wouldn't by itself collapse the 6 client requests."
+      ],
+      "keyPoints": ["GraphQL collapses many resource fetches into one request, no over-fetch", "Catch: harder caching + must limit query cost", "Alternative: REST BFF aggregates server-side", "gRPC speeds internal calls, not the client round-trip count"],
+      "followUps": ["When would a BFF be preferable to exposing GraphQL directly?"]
+    }
+  ]
+}

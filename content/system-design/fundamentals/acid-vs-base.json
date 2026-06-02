@@ -1,0 +1,123 @@
+{
+  "slug": "acid-vs-base",
+  "sectionId": "fundamentals",
+  "order": 6,
+  "title": "ACID vs BASE",
+  "tagline": "The two database philosophies: strict transactional guarantees vs soft, available, eventually-consistent ones.",
+  "summary": "Transactional guarantees (ACID) vs available/eventual (BASE).",
+  "difficulty": "Intermediate",
+  "estMinutes": 13,
+  "tags": ["core", "databases", "consistency"],
+  "prereqs": ["cap-theorem"],
+  "sections": [
+    {
+      "id": "acid",
+      "title": "ACID — the transactional contract",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "ACID is the set of guarantees classic relational databases give around a **transaction** — a group of operations treated as one indivisible unit. It's what lets you move money between two accounts without ever losing or duplicating it."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Atomicity", "detail": "All operations in a transaction succeed, or none do. A transfer that debits A but crashes before crediting B is rolled back entirely — no half-states." },
+            { "term": "Consistency (ACID sense)", "detail": "A transaction moves the database from one valid state to another, respecting all rules/constraints (foreign keys, checks). Note: this is a *different* 'consistency' than CAP's." },
+            { "term": "Isolation", "detail": "Concurrent transactions don't step on each other; the result is as if they ran one at a time. Isolation levels (read committed, repeatable read, serializable) tune how strict this is vs how much concurrency you allow." },
+            { "term": "Durability", "detail": "Once committed, data survives crashes and power loss — it's persisted (e.g., via a write-ahead log)." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "text": "The 'C' in ACID (valid states per constraints) is NOT the 'C' in CAP (every read sees the latest write). Interviewers love this distinction — don't conflate them."
+        }
+      ]
+    },
+    {
+      "id": "base",
+      "title": "BASE — the availability philosophy",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Many NoSQL systems deliberately relax ACID to scale horizontally and stay highly available. Their philosophy is summarised as **BASE**, a tongue-in-cheek opposite of ACID (acid vs base, chemistry pun)."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Basically Available", "detail": "The system guarantees availability — it responds to every request, even if some responses are stale or degraded." },
+            { "term": "Soft state", "detail": "State may change over time even without new input, as replicas sync in the background; there's no single instant of 'the' truth." },
+            { "term": "Eventual consistency", "detail": "Given no new writes, all replicas converge to the same value eventually. Readers may briefly see old data." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "BASE is essentially the AP corner of CAP applied as a design philosophy: prefer availability and partition tolerance, accept eventual consistency. It trades strict guarantees for massive scale and uptime."
+        }
+      ]
+    },
+    {
+      "id": "choosing",
+      "title": "Choosing between them",
+      "blocks": [
+        {
+          "type": "compare",
+          "columns": ["", "ACID (typically SQL)", "BASE (typically NoSQL)"],
+          "rows": [
+            ["Guarantees", "Strong: atomic, isolated, durable transactions", "Weak: available, eventually consistent"],
+            ["Scaling", "Scale up; sharding is hard", "Scale out horizontally by design"],
+            ["Best for", "Money, orders, inventory, anything needing correctness", "High-volume, write-heavy, tolerant of staleness"],
+            ["Examples", "PostgreSQL, MySQL, Oracle, Spanner", "Cassandra, DynamoDB, Riak, Couchbase"],
+            ["Cost of guarantee", "Coordination → latency, harder to scale writes", "Complexity pushed to the app (conflict handling)"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "title": "The mature answer: use both",
+          "text": "Real systems are polyglot. Use an ACID/SQL store for the parts that demand correctness (payments, orders), and a BASE/NoSQL store for the parts that demand scale and can tolerate staleness (activity feeds, view counts, sessions). Stating this 'right tool per data type' reasoning is the senior move — far better than 'NoSQL is more scalable so use it everywhere'."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "ACID = Atomicity, Consistency, Isolation, Durability — strong transactional guarantees (classic SQL).",
+    "BASE = Basically Available, Soft state, Eventual consistency — relaxed guarantees for scale/availability (many NoSQL).",
+    "ACID's 'C' (valid states/constraints) ≠ CAP's 'C' (latest read). Don't conflate them.",
+    "ACID for correctness (money/orders/inventory); BASE for scale + staleness-tolerant data (feeds/counts).",
+    "Mature systems are polyglot — pick the store per data type, not one for everything."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Easy",
+      "prompt": "Explain atomicity and isolation using a bank transfer, and what breaks without each.",
+      "hint": "One is about partial failure; the other about concurrent transfers.",
+      "answer": [
+        "Atomicity: transferring $100 from A to B is debit-A + credit-B as one unit. Without atomicity, a crash after the debit but before the credit destroys $100 — money vanishes. Atomicity guarantees both happen or neither does (rollback on failure).",
+        "Isolation: if two transfers touch account A at the same time, isolation makes them behave as if run sequentially, so they don't read/overwrite each other's intermediate state. Without it you get race conditions like lost updates — e.g., two withdrawals both reading the same starting balance and overdrawing the account."
+      ],
+      "keyPoints": ["Atomicity: all-or-nothing, prevents money vanishing on partial failure", "Isolation: concurrent txns don't interfere, prevents lost-update races", "Both protect correctness of the transfer"],
+      "followUps": ["What isolation level would you need to prevent the lost-update, and what's its cost?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Trade-off",
+      "difficulty": "Medium",
+      "prompt": "An e-commerce site needs to store orders, payments, product catalog, and a 'recently viewed' list. Which want ACID and which are fine with BASE?",
+      "hint": "Which data, if briefly stale or partially written, causes real harm?",
+      "answer": [
+        "Orders and payments need **ACID**: a payment must be atomic and durable, and you can't have an order half-created or charged twice. Inventory decrement also wants strong guarantees to avoid overselling. Put these in a transactional SQL store.",
+        "Product catalog and 'recently viewed' are fine with **BASE**: a catalog can be eventually consistent (a price/description propagating over seconds is acceptable, and it's read-heavy — great for caching/replication), and 'recently viewed' is per-user, non-critical, and tolerant of staleness or even occasional loss. Splitting storage this way gives correctness where it matters and scale where it doesn't."
+      ],
+      "keyPoints": ["Orders/payments/inventory → ACID (correctness, no double-charge/oversell)", "Catalog → BASE/eventually consistent + cacheable (read-heavy)", "Recently-viewed → BASE, non-critical", "Polyglot persistence per data type"],
+      "followUps": ["How would you keep inventory strongly consistent while the catalog stays eventually consistent?"]
+    }
+  ]
+}

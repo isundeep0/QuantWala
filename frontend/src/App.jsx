@@ -8,6 +8,8 @@ import SystemDesign from "./pages/system-design/SystemDesign.jsx";
 import SystemDesignLesson from "./pages/system-design/SystemDesignLesson.jsx";
 import HFT from "./pages/hft/HFT.jsx";
 import HFTTopic from "./pages/hft/HFTTopic.jsx";
+import KernelBypass from "./pages/kernel-bypass/KernelBypass.jsx";
+import KernelBypassPhase from "./pages/kernel-bypass/KernelBypassPhase.jsx";
 import CPHub from "./pages/cp/CPHub.jsx";
 import CPThemeDetail from "./pages/cp/CPThemeDetail.jsx";
 import Finance from "./pages/finance/Finance.jsx";
@@ -27,6 +29,8 @@ export default function App() {
           <Route path="/system-design/:topicId" element={<SystemDesignLesson />} />
           <Route path="/hft" element={<HFT />} />
           <Route path="/hft/:topicId" element={<HFTTopic />} />
+          <Route path="/kernel-bypass" element={<KernelBypass />} />
+          <Route path="/kernel-bypass/:phaseId" element={<KernelBypassPhase />} />
           <Route path="/cp" element={<CPHub />} />
           <Route path="/cp/:phaseId/:themeId" element={<CPThemeDetail />} />
           <Route path="/finance" element={<Finance />} />

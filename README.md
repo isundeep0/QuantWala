@@ -31,6 +31,16 @@ Four modules:
   panels (concept, architecture diagram, key points, common questions).
 - **Module 3 — HFT / Low Latency** *(UI shell only)*: full navigation and placeholder
   panels (concept, code snippet, benchmark table, interview questions).
+- **Module 5 — Kernel Bypass & Ultra-Low Latency** *(complete, content)*: an interactive,
+  hierarchical syllabus (5 **phases** → 16 **topics** → 31 checkable **deliverables**)
+  that takes a complete beginner from standard OS internals through DPDK, SPDK, eBPF/XDP,
+  and into the dataplane-OS research frontier. Anchored to primary sources — OSTEP,
+  Kurose & Ross, official DPDK/SPDK/eBPF docs — plus a **Reading Room** of 11 curated
+  research papers (XDP, Arrakis, IX, Shenango, Caladan, Snap, Junction, …), each with a
+  TL;DR, a "why read it", and a guided three-pass reading plan (Keshav). The syllabus is
+  data-driven from `content/kernel-bypass/curriculum.json` and typed by
+  `frontend/src/types/kernelBypass.ts`; deliverable/paper progress uses the same
+  `localStorage` pattern. Routes: `/kernel-bypass` and `/kernel-bypass/:phaseId`.
 - **Module 5 — Personal Finance & Investing** *(complete, content)*: a from‑scratch
   personal‑finance masterclass for the Indian market. **17 lessons across 8 sections**
   (mindset → budgeting & emergency fund → compounding → credit/CIBIL → asset classes →

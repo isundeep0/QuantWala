@@ -463,6 +463,71 @@
   }
 }
 
+/* ----------------------------------------------------------------------------
+   Kindle-style Reader — paginated reading surface + text highlights
+---------------------------------------------------------------------------- */
+@layer components {
+  .reader-content {
+    --reader-scale: 1;
+    font-size: calc(16px * var(--reader-scale));
+    line-height: 1.75;
+    color: rgb(var(--text));
+    -webkit-text-size-adjust: 100%;
+  }
+  /* Normalise the lesson's utility-sized typography to scale with the reader
+     text-size control. Element selectors out-specify Tailwind's px utilities. */
+  .reader-content :where(p, li, td, th, span, figcaption, a) {
+    font-size: 1em;
+    line-height: 1.75;
+  }
+  .reader-content :where(h1) {
+    font-size: 1.85em;
+    line-height: 1.2;
+  }
+  .reader-content :where(h2) {
+    font-size: 1.5em;
+    line-height: 1.25;
+  }
+  .reader-content :where(h3) {
+    font-size: 1.28em;
+    line-height: 1.3;
+  }
+  .reader-content :where(h4) {
+    font-size: 1.12em;
+    line-height: 1.35;
+  }
+  .reader-content :where(.font-mono, code, pre, .reader-keep-size) {
+    font-size: 0.9em;
+  }
+  /* Keep rich blocks whole so they don't tear across a column break. */
+  .reader-content :where(pre, table, figure, ul, ol, .reader-keep) {
+    break-inside: avoid;
+  }
+  .reader-content :where(img, svg, video, canvas) {
+    max-width: 100%;
+    height: auto;
+  }
+  /* Comfortable rhythm between the reading sections. */
+  .reader-section + .reader-section {
+    margin-top: 2em;
+  }
+
+  /* Saved text highlights */
+  mark.reader-hl {
+    background: var(--hl, rgba(250, 204, 21, 0.4));
+    color: inherit;
+    border-radius: 3px;
+    padding: 0.05em 1px;
+    cursor: pointer;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    transition: filter 0.15s ease;
+  }
+  mark.reader-hl:hover {
+    filter: brightness(1.08) saturate(1.15);
+  }
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -532,6 +597,9 @@
   .animate-pulse-ring,
   .animate-caustic {
     animation: none !important;
+  }
+  .reader-content {
+    transition: none !important;
   }
   html { scroll-behavior: auto; }
 }

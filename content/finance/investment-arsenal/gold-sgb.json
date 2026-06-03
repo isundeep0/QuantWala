@@ -1,0 +1,114 @@
+{
+  "slug": "gold-sgb",
+  "sectionId": "investment-arsenal",
+  "order": 4,
+  "title": "Gold: Digital Gold & Sovereign Gold Bonds",
+  "tagline": "Gold's real role is a hedge and a diversifier, not a wealth engine. The modern ways to own it without lockers or making-charges — and the honest status of SGBs in 2026.",
+  "summary": "Digital gold vs Gold ETFs vs Sovereign Gold Bonds, gold's role as a hedge, and the SGB situation today.",
+  "difficulty": "Intermediate",
+  "estMinutes": 12,
+  "tags": ["gold", "sgb", "hedge", "module-4"],
+  "prereqs": ["mutual-funds"],
+  "sections": [
+    {
+      "id": "role",
+      "title": "What gold is actually for",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Indians love gold, but its job in a portfolio is widely misunderstood. Gold is a **hedge and diversifier**, not a primary growth asset. Over very long periods its returns roughly keep pace with inflation and tend to *trail* equity — but it often rises when stocks fall (crises, currency weakness, uncertainty), which smooths the overall ride.",
+            "So gold earns its place as a small slice (commonly **5–10%** of a portfolio) for stability, not as the main wealth engine. Physical jewellery, by the way, is a poor *investment*: you lose 8–25% to making charges and GST, and purity/storage are headaches."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "rule",
+          "title": "Rule of thumb",
+          "text": "Hold gold for diversification, capped at ~5–10% of your investments, and own it in a paper/digital form — never as jewellery bought 'as an investment'."
+        }
+      ]
+    },
+    {
+      "id": "ways",
+      "title": "The modern ways to own gold",
+      "blocks": [
+        {
+          "type": "compare",
+          "title": "Three paper-gold options",
+          "columns": ["", "Digital Gold", "Gold ETF / Gold Fund", "Sovereign Gold Bond (SGB)"],
+          "rows": [
+            ["What it is", "App-bought gold stored by a vendor", "Mutual-fund-style unit tracking gold price, in a Demat/fund", "Govt bond denominated in grams of gold"],
+            ["Extra return", "None (just price)", "None (just price), small expense ratio", "Price + 2.5% p.a. fixed interest"],
+            ["Costs", "~3% GST + spread/fees", "Small expense ratio (~0.5–1%)", "No storage cost; no expense ratio"],
+            ["Best for", "Tiny amounts, convenience", "Liquid, regulated gold exposure", "Long-term (8-yr) gold holding"],
+            ["Catch", "Less regulated; storage with vendor", "Needs Demat or fund account", "New issuances have effectively paused (see below)"]
+          ]
+        },
+        {
+          "type": "text",
+          "paragraphs": [
+            "**Sovereign Gold Bonds (SGBs)** were historically the best way to own gold: issued by the RBI on behalf of the government, they pay **2.5% annual interest on top of gold's price movement**, have no storage cost, and — crucially — their **capital gains are completely tax-free if held to the 8-year maturity**. That combination beat every other form of gold."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Honest 2026 status of SGBs",
+          "text": "The government has effectively stopped issuing NEW SGB tranches (no fresh issues since early 2024), as the scheme became expensive for them. So you usually can't buy a fresh SGB at issue today. You can still buy older SGBs on the stock exchange's secondary market — but they often trade at a premium and with thin liquidity. For most people now, a Gold ETF or gold fund is the practical default; digital gold is fine only for very small amounts."
+        }
+      ]
+    },
+    {
+      "id": "aarav",
+      "title": "What this means for Aarav",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Aarav is 22 with a tiny surplus and a 5-year car goal. **Gold should be a minor character in his story, if at all.** His priorities are the emergency fund and an equity index SIP for long-term growth. A small gold allocation (say ₹500/month into a gold ETF, or none at all) is optional diversification — not a substitute for the equity core."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "A common beginner mistake is over-weighting gold because it 'feels safe' and familiar. But too much gold drags long-term returns versus equity. Keep it small and let equity do the heavy lifting while time is on your side."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Gold is a hedge/diversifier, not a primary growth asset — cap it at ~5–10% of investments.",
+    "Physical jewellery is a poor investment (8–25% making charges + GST, storage/purity issues).",
+    "Own gold on paper: Digital Gold (small amounts), Gold ETF/fund (liquid, regulated), or SGBs.",
+    "SGBs historically best: +2.5% interest, no storage cost, tax-free gains if held to 8-yr maturity.",
+    "But new SGB tranches have effectively paused since early 2024 — buy older ones on the exchange (premium/illiquid) or use a Gold ETF as the practical default.",
+    "For a young investor, gold is optional and minor; the equity index core builds the wealth."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Concept",
+      "difficulty": "Medium",
+      "prompt": "Aarav's relative says 'gold only goes up, put most of your money there instead of risky shares.' What two things are wrong with this?",
+      "hint": "Consider gold's long-term return vs equity, and gold's actual role.",
+      "answer": [
+        "First, gold does *not* only go up — it has long flat or falling stretches, and over long horizons it has generally **trailed equity**, roughly tracking inflation. Calling it a sure thing is wrong. Second, gold's role is a **hedge/diversifier**, not the main growth engine; over-weighting it drags long-term returns precisely when a 22-year-old should be maximising growth.",
+        "The right framing: keep gold a small slice (~5–10%) for stability, and let a low-cost equity index fund — which has the higher long-run return — do the heavy lifting for a multi-decade horizon."
+      ],
+      "keyPoints": ["Gold isn't a guaranteed riser; it has flat/down stretches", "Long-run it trails equity, ~tracks inflation", "Role = hedge/diversifier, not growth engine", "Over-weighting gold drags young-investor returns"]
+    },
+    {
+      "id": "q2",
+      "kind": "Application",
+      "difficulty": "Medium",
+      "prompt": "Aarav wants some gold exposure and read that SGBs are the best way. What should he know before trying to buy one in 2026?",
+      "hint": "Are fresh SGBs being issued? What's the alternative?",
+      "answer": [
+        "He should know that the government has effectively **stopped issuing new SGB tranches** (none since early 2024), so he generally can't subscribe to a fresh SGB at issue price today. He could buy older SGBs on the stock exchange's secondary market, but they often trade at a **premium with thin liquidity**, which erodes the advantage.",
+        "Given that, the practical default for a small, liquid gold allocation today is a **Gold ETF or gold fund**. Either way, he should keep gold a minor slice and prioritise his emergency fund and equity SIP first."
+      ],
+      "keyPoints": ["No new SGB tranches since early 2024", "Secondary-market SGBs: premium + thin liquidity", "Gold ETF/fund is the practical default now", "Keep gold small; equity core comes first"]
+    }
+  ]
+}

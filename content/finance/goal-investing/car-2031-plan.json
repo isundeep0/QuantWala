@@ -1,0 +1,167 @@
+{
+  "slug": "car-2031-plan",
+  "sectionId": "goal-investing",
+  "order": 2,
+  "title": "The 2031 Car Plan — A Step-Up SIP, Built",
+  "tagline": "Everything assembled into one concrete plan: a step-up SIP that funds Aarav's car down payment by 2031, on a strict 5-year horizon, balancing growth with capital protection.",
+  "summary": "A specific step-up SIP plan and asset allocation to fund a car down payment in exactly 5 years.",
+  "difficulty": "Intermediate",
+  "estMinutes": 16,
+  "tags": ["goal-based", "step-up-sip", "car", "module-5"],
+  "prereqs": ["match-vehicle-to-timeline"],
+  "sections": [
+    {
+      "id": "goal",
+      "title": "Step 1 — Define the goal in rupees",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Aarav wants a car by 2031 — a strict 5-year horizon. The smart move for a first car on a modest income is to **fund the down payment** (and registration/insurance buffer) yourself, then take a small loan for the rest, which his by-then-strong CIBIL score (Module 3) will get at a good rate.",
+            "Assume a sensible entry car around **₹6–7 lakh on-road**. A healthy down payment of ~25–30% plus a buffer puts the savings target at roughly **₹2.5 lakh** by 2031. Funding more of the car yourself means a smaller loan and less interest — but never at the cost of draining the emergency fund."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "rule",
+          "title": "Rule of thumb",
+          "text": "Target a down payment of at least 20–30% of the car's price, keep the loan tenure short (≤5 years), and make sure the future EMI fits comfortably inside your budget. A car is a depreciating asset — minimise what you borrow for it."
+        }
+      ]
+    },
+    {
+      "id": "vehicle",
+      "title": "Step 2 — Choose the right vehicle for 5 years",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Five years is a *medium* horizon (from the previous lesson). Pure equity is too risky for a fixed deadline; pure FD won't grow enough. So Aarav uses a **balanced mix with a glide path** — more growth early, shifting to safety as 2031 approaches."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Suggested allocation (a balanced ~10% blended return)",
+          "items": [
+            { "term": "~50–60% in a Nifty 50 / broad index fund (Direct plan)", "detail": "The growth engine for the early years, when there's time to recover from dips." },
+            { "term": "~40–50% in a short-duration debt fund or RD", "detail": "The stable anchor that limits how far the pot can fall." },
+            { "term": "Alternative: a single aggressive-hybrid or balanced-advantage fund", "detail": "One fund that auto-balances equity and debt — simpler for a beginner who doesn't want to manage two funds." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "The glide path is non-negotiable",
+          "text": "In year 4, start moving gains from equity into the debt/RD portion. By the last 6–12 months before 2031, the bulk should be in safe debt/FD so a market crash right before the purchase can't shrink the down payment. Lock in the win as the finish line nears."
+        }
+      ]
+    },
+    {
+      "id": "sip",
+      "title": "Step 3 — The step-up SIP, with numbers",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A **step-up SIP** starts at an affordable amount and increases a set percentage each year as income grows — perfect for Aarav, who starts on ₹20,000 but expects raises. He begins at **₹3,000/month and steps up 10% every year.** At a balanced ~10% blended return, here's how the car fund builds:"
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "₹3,000/month, +10%/year, ~10% return",
+          "columns": ["Year", "Monthly SIP", "Invested that year", "Fund value (year-end)"],
+          "rows": [
+            ["1 (2026)", "₹3,000", "₹36,000", "≈ ₹37,700"],
+            ["2 (2027)", "₹3,300", "₹39,600", "≈ ₹83,100"],
+            ["3 (2028)", "₹3,630", "₹43,560", "≈ ₹1,37,400"],
+            ["4 (2029)", "₹3,993", "₹47,916", "≈ ₹2,02,000"],
+            ["5 (2030)", "₹4,392", "₹52,708", "≈ ₹2,78,300"]
+          ],
+          "caption": "Totals: ~₹2.20 lakh invested → ~₹2.78 lakh by end of year 5. Returns assumed, not guaranteed."
+        },
+        {
+          "type": "formula",
+          "title": "The result vs the goal",
+          "expression": "≈ ₹2.78 lakh accumulated  vs  ₹2.5 lakh target",
+          "where": [
+            { "symbol": "Own money", "meaning": "~₹2.20 lakh of contributions" },
+            { "symbol": "Growth", "meaning": "~₹58,000 from compounding" }
+          ],
+          "result": "He clears the ₹2.5 lakh down-payment goal with a comfortable buffer — and the step-up means most of the heavy lifting came from modestly higher SIPs in the later years, funded by raises rather than belt-tightening."
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Why step-up beats a flat SIP here",
+          "text": "A flat ₹3,000 SIP for 5 years at 10% reaches only ~₹2.32 lakh — short of the goal. Stepping up 10%/year lifts him past ₹2.78 lakh without ever feeling a painful jump, because each increase lands when his income has (hopefully) grown too. Small annual increases, big end difference."
+        }
+      ]
+    },
+    {
+      "id": "guardrails",
+      "title": "Step 4 — Guardrails",
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Emergency fund first, always", "detail": "The car SIP runs alongside — never instead of — the emergency fund. Don't raid the emergency fund for the down payment." },
+            { "title": "Keep this pot separate", "detail": "The car fund is its own SIP/folio, not mixed with retirement or emergency money, so the glide path and goal stay clear." },
+            { "title": "If the market is down in 2030, stay flexible", "detail": "Because of the glide path, most of the money is already safe by then. If equity is still weak, he can delay the purchase a few months or buy a slightly cheaper car — never panic-sell early." },
+            { "title": "Don't let the loan undo the discipline", "detail": "A bigger down payment from this fund means a smaller loan and less interest. Keep the EMI well within budget so the car never threatens the emergency fund or future SIPs." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "win",
+          "text": "This is goal-based investing end to end: a rupee target, an asset mix matched to a 5-year horizon, a step-up SIP sized to the income, a glide path to protect the finish, and guardrails so the rest of Aarav's financial life stays intact. Repeat this template for any future goal — a house, a wedding, higher studies."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Define the goal in rupees first: ~₹2.5 lakh down payment for a ~₹6–7 lakh car by 2031.",
+    "5 years = medium horizon → balanced mix (~50–60% index + ~40–50% debt/RD), not pure equity.",
+    "Step-up SIP: start ₹3,000/month, +10%/year → ~₹2.78 lakh in 5 years at ~10% (clears the goal).",
+    "A flat ₹3,000 SIP reaches only ~₹2.32 lakh — stepping up makes the difference, funded by raises.",
+    "Glide path: shift from equity to debt/FD in years 4–5 so a late crash can't shrink the down payment.",
+    "Guardrails: emergency fund first, keep the car pot separate, stay flexible in 2030, keep the loan small."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Application",
+      "difficulty": "Medium",
+      "prompt": "Why does Aarav use a balanced mix with a glide path for the car, rather than the aggressive all-equity approach recommended for his retirement money?",
+      "hint": "Compare 5 years to recover vs 38 years to recover.",
+      "answer": [
+        "Because the car has a **fixed 5-year deadline** with little time to recover from a crash, while retirement is ~38 years away with plenty of time. Pure equity could be down 30% exactly in 2030–31, leaving him short for the car. A balanced mix limits that downside, and the glide path moves money to safety as 2031 nears so the down payment is protected.",
+        "Retirement money, by contrast, *should* be aggressive equity because decades of compounding outweigh any single crash. Same investor, different horizons, deliberately different strategies — which is the whole point of goal-based investing."
+      ],
+      "keyPoints": ["5-yr deadline = little recovery time", "Balanced mix limits downside", "Glide path protects the finish line", "Retirement (38 yr) can be aggressive equity", "Horizon dictates strategy"]
+    },
+    {
+      "id": "q2",
+      "kind": "Concept",
+      "difficulty": "Medium",
+      "prompt": "A flat ₹3,000 SIP for 5 years reaches only ~₹2.32 lakh, but Aarav's step-up SIP reaches ~₹2.78 lakh. Where does the extra ~₹46,000 come from, and why doesn't it hurt his budget?",
+      "hint": "What changes each year in a step-up SIP, and what's also changing in his life?",
+      "answer": [
+        "The extra comes from the **annual 10% increases** to the monthly SIP (₹3,000 → ₹3,300 → ₹3,630 …), which add more contributions in the later years plus the growth on them. More money invested, sooner-ish, compounding to a larger total.",
+        "It doesn't hurt his budget because the increases are timed to his expected raises — each step-up lands when his income has grown, so he never feels a painful jump. Small, gradual increases ride alongside rising income, which is exactly why step-up SIPs are so effective for someone early in their career."
+      ],
+      "keyPoints": ["Extra from annual 10% step-ups + their growth", "More invested in later years", "Increases timed to income raises", "No painful jump; gradual and affordable"]
+    },
+    {
+      "id": "q3",
+      "kind": "Scenario",
+      "difficulty": "Hard",
+      "prompt": "It's early 2031, the market just dropped 25%, and Aarav was about to buy the car. Because he followed the plan, why is he mostly fine — and what are his options?",
+      "hint": "What did the glide path do to his allocation by 2031?",
+      "answer": [
+        "He's mostly fine because the **glide path** already moved the bulk of his car fund out of equity and into safe debt/FD during years 4–5. So a 25% equity drop hits only a small remaining equity sliver, not the whole down payment — the protected money is intact and predictable.",
+        "Options: (1) proceed with the purchase using the largely-safe corpus; (2) if a small part is still in equity and down, wait a few months for the deadline isn't truly rigid, or simply buy a slightly cheaper car; (3) never panic-sell the protected debt portion. The plan's design — separating the pot and de-risking near the finish — is exactly what turns a scary crash into a non-event."
+      ],
+      "keyPoints": ["Glide path already de-risked most of the fund", "25% drop hits only a small equity sliver", "Protected debt corpus is intact/predictable", "Options: buy now, delay slightly, or buy cheaper", "Design turns a crash into a non-event"]
+    }
+  ]
+}

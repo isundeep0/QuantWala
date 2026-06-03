@@ -115,10 +115,39 @@ uvicorn app.main:app --reload --port 8000
 
 API:
 
-- `GET /api/health` → `{ status, algorithms }`
+- `GET /api/health` → `{ status, algorithms, documents }`
 - `GET /api/categories` → categories with lesson counts
 - `GET /api/algorithms` → lightweight lesson summaries
 - `GET /api/algorithms/{slug}` → full lesson
+- `GET /api/documents` → uploaded library documents
+- `POST /api/documents` → upload a `.pdf`/`.docx` (multipart `file`)
+- `GET /api/documents/{id}/file` → stream the raw file (inline)
+- `PATCH /api/documents/{id}` → rename (`{ "title": "…" }`)
+- `DELETE /api/documents/{id}` → delete from disk
+
+---
+
+## The Library (read your own PDFs / DOCX)
+
+The **Library** module (`/library`) lets you upload a PDF or Word document and
+read it inside the same liquid-glass atmosphere as the rest of the app — pages
+float over the animated nebula with **Paper / Sepia / Night** reading modes,
+continuous lazy-rendered scrolling (handles big textbooks), zoom, page jump, and
+keyboard nav (`←/→`, `j/k`, `+/-`). Reading position + tint are remembered per
+document in `localStorage`.
+
+This is the one feature that needs the backend running — files are stored on the
+server under `backend/storage/documents/` (git-ignored) and are deletable from the
+UI. Rendering is fully client-side: PDFs via [`react-pdf`](https://github.com/wojtekmaj/react-pdf)
+(pdf.js) preserving images/figures, and DOCX via [`mammoth`](https://github.com/mwilliamson/mammoth.js)
+converted to a themed reading column.
+
+- **White-page PDFs:** read them as-is in Paper mode, or flip to **Night** to invert
+  the page so it melts into the dark nebula.
+- **Image/figure-heavy PDFs:** stay in **Paper** (or **Sepia**) so photos render true to source.
+
+Point the frontend at a non-default backend host with a `VITE_API_BASE` env var
+(e.g. `VITE_API_BASE=http://localhost:8000`); it defaults to `http://localhost:8000`.
 
 ---
 

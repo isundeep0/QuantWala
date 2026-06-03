@@ -341,6 +341,137 @@
   } */
 }
 
+/* ----------------------------------------------------------------------------
+   Document Library reader — floating "paper" pages over the liquid nebula.
+   Three reading tints: Paper (as-is), Sepia (warm), Night (inverted/dark).
+---------------------------------------------------------------------------- */
+@layer components {
+  /* The scroll area is transparent so the fixed LiquidBackground shows through
+     the gutters around each page. */
+  .reader-stage {
+    background: transparent;
+  }
+
+  /* A single page rendered as a tactile sheet floating in space. */
+  .paper-page {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow:
+      0 1px 0 0 rgb(255 255 255 / 0.6) inset,
+      0 30px 60px -24px rgb(0 0 0 / 0.7),
+      0 8px 20px -10px rgb(0 0 0 / 0.5);
+    transition: filter 0.3s ease, background-color 0.3s ease;
+  }
+  .paper-page canvas,
+  .paper-page .react-pdf__Page {
+    display: block;
+    border-radius: 10px;
+  }
+  /* react-pdf renders an absolutely-positioned text layer for selection. */
+  .paper-page .react-pdf__Page__textContent {
+    border-radius: 10px;
+  }
+
+  /* --- Sepia --- */
+  .tint-sepia .paper-page {
+    background: #f4ecd8;
+  }
+  .tint-sepia .paper-page canvas {
+    filter: sepia(0.42) saturate(1.05) brightness(0.97) contrast(0.96);
+  }
+
+  /* --- Night --- invert the page so white paper reads as deep charcoal and
+     ink reads as light, melting the page into the surrounding nebula. */
+  .tint-night .paper-page {
+    background: #0c1018;
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.06) inset,
+      0 30px 70px -22px rgb(0 0 0 / 0.85);
+  }
+  .tint-night .paper-page canvas {
+    filter: invert(0.92) hue-rotate(180deg) brightness(0.95) contrast(1.02);
+  }
+
+  /* Placeholder shown before a page lazily renders. */
+  .page-skeleton {
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgb(var(--bg-elev) / 0.35), rgb(var(--bg-sunken) / 0.3));
+    box-shadow: 0 20px 50px -28px rgb(0 0 0 / 0.6);
+  }
+
+  /* ---- DOCX rendered HTML: a real, themed reading column ---- */
+  .docx-page {
+    border-radius: 14px;
+    padding: clamp(2rem, 5vw, 4.5rem) clamp(1.25rem, 4vw, 3.5rem);
+    background: #ffffff;
+    color: #1f2733;
+    box-shadow:
+      0 1px 0 0 rgb(255 255 255 / 0.6) inset,
+      0 30px 60px -24px rgb(0 0 0 / 0.7);
+  }
+  .tint-sepia .docx-page {
+    background: #f4ecd8;
+    color: #43331f;
+  }
+  .tint-night .docx-page {
+    background: rgb(var(--bg-elev) / 0.7);
+    color: rgb(var(--text));
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.08) inset,
+      0 30px 70px -22px rgb(0 0 0 / 0.85);
+  }
+
+  .docx-content {
+    font-family: Georgia, "Times New Roman", "Noto Serif", serif;
+    font-size: 1.075rem;
+    line-height: 1.85;
+    letter-spacing: 0.003em;
+  }
+  .docx-content h1,
+  .docx-content h2,
+  .docx-content h3,
+  .docx-content h4 {
+    font-family: inherit;
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 1.6em 0 0.6em;
+    text-wrap: balance;
+  }
+  .docx-content h1 { font-size: 1.9em; }
+  .docx-content h2 { font-size: 1.5em; }
+  .docx-content h3 { font-size: 1.25em; }
+  .docx-content p { margin: 0 0 1.05em; }
+  .docx-content ul,
+  .docx-content ol { margin: 0 0 1.05em 1.4em; }
+  .docx-content li { margin: 0.3em 0; }
+  .docx-content img { max-width: 100%; height: auto; border-radius: 8px; margin: 1em 0; }
+  .docx-content a { color: #2563eb; text-decoration: underline; text-underline-offset: 2px; }
+  .tint-night .docx-content a { color: #7dd3fc; }
+  .docx-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.2em 0;
+    font-size: 0.95em;
+  }
+  .docx-content th,
+  .docx-content td {
+    border: 1px solid rgb(120 120 120 / 0.35);
+    padding: 0.5em 0.7em;
+    text-align: left;
+  }
+  .docx-content blockquote {
+    margin: 1.2em 0;
+    padding-left: 1.1em;
+    border-left: 3px solid currentColor;
+    opacity: 0.85;
+    font-style: italic;
+  }
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;

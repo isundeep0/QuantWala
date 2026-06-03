@@ -1,0 +1,3 @@
+# Uploaded user documents live here at runtime — never commit them.
+documents/
+!.gitignore

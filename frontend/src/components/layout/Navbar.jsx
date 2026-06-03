@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
-import { Menu, X, Cpu, Network, Boxes, Trophy, Zap } from "lucide-react";
-import { Menu, X, Cpu, Network, Boxes, Trophy, Wallet } from "lucide-react";
+import { Menu, X, Cpu, Network, Boxes, Trophy, Zap, Wallet } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "@/components/ThemeToggle.jsx";
 import { useProgress } from "@/context/ProgressContext.jsx";

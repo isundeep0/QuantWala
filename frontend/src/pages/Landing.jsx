@@ -26,8 +26,6 @@ import {
   KB_TOTAL_PAPERS,
 } from "@/data/kernelBypass.js";
 import { useFinanceProgress } from "@/context/FinanceProgressContext.jsx";
-import { TOTAL_ALGORITHMS } from "@/data/registry.js";
-import { SD_TOTAL_LESSONS } from "@/data/systemDesign.js";
 import { FIN_TOTAL_LESSONS } from "@/data/finance.js";
 import GlassCard from "@/components/liquid/GlassCard.jsx";
 import SwirlProgress from "@/components/liquid/SwirlProgress.jsx";

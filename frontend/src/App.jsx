@@ -36,7 +36,7 @@ export default function App() {
           <Route path="/cp" element={<CPHub />} />
           <Route path="/cp/:phaseId/:themeId" element={<CPThemeDetail />} />
           <Route path="/library" element={<Library />} />
-          <Route path="/library/:id" element={<DocumentReader />} />
+          <Route path="/library/read" element={<DocumentReader />} />
           <Route path="/finance" element={<Finance />} />
           <Route path="/finance/:topicId" element={<FinanceLesson />} />
           <Route path="*" element={<NotFound />} />

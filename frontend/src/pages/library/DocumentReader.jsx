@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ChevronUp,
@@ -10,10 +10,8 @@ import {
   Sun,
   Coffee,
   Moon,
-  Loader2,
-  ServerCrash,
+  FileWarning,
 } from "lucide-react";
-import { getDocument, fileUrl } from "@/lib/documentsApi.js";
 import PdfReader from "@/components/library/PdfReader.jsx";
 import DocxReader from "@/components/library/DocxReader.jsx";
 import { cn } from "@/lib/cn.js";
@@ -28,16 +26,16 @@ const ZOOM_MIN = 0.6;
 const ZOOM_MAX = 2.6;
 const ZOOM_STEP = 0.15;
 
-function prefKey(id) {
-  return `qw.reader.${id}`;
+function prefKey(doc) {
+  return `qw.reader.local.${doc?.id || "temp"}`;
 }
 
 export default function DocumentReader() {
-  const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
+  const doc = location.state?.doc || null;
 
-  const [doc, setDoc] = useState(null);
-  const [status, setStatus] = useState("loading"); // loading | ready | notfound | offline
+  const [status, setStatus] = useState(doc?.fileUrl ? "ready" : "missing"); // ready | missing
   const [tint, setTint] = useState("night");
   const [zoom, setZoom] = useState(1);
   const [numPages, setNumPages] = useState(0);
@@ -48,47 +46,36 @@ export default function DocumentReader() {
   const readerRef = useRef(null);
   const restoredRef = useRef(false);
 
-  // Load metadata + restore saved reading prefs.
   useEffect(() => {
-    let cancelled = false;
-    setStatus("loading");
-    (async () => {
-      try {
-        const meta = await getDocument(id);
-        if (cancelled) return;
-        setDoc(meta);
-        setStatus("ready");
-      } catch (e) {
-        if (cancelled) return;
-        // Distinguish "no such doc" from "server down".
-        setStatus(/404|not found/i.test(e.message) ? "notfound" : "offline");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
-
-  useEffect(() => {
+    if (!doc?.fileUrl) return;
     try {
-      const saved = JSON.parse(localStorage.getItem(prefKey(id)) || "{}");
+      const saved = JSON.parse(localStorage.getItem(prefKey(doc)) || "{}");
       if (saved.tint) setTint(saved.tint);
       if (saved.zoom) setZoom(saved.zoom);
     } catch {
       /* ignore */
     }
-  }, [id]);
+  }, [doc]);
 
   // Persist prefs (+ last page) so reopening lands where you left off.
   useEffect(() => {
     if (status !== "ready") return;
     const saved = { tint, zoom, page: currentPage };
     try {
-      localStorage.setItem(prefKey(id), JSON.stringify(saved));
+      localStorage.setItem(prefKey(doc), JSON.stringify(saved));
     } catch {
       /* ignore */
     }
-  }, [id, tint, zoom, currentPage, status]);
+  }, [doc, tint, zoom, currentPage, status]);
+
+  useEffect(() => {
+    // The upload flow creates an object URL; release it when leaving reader.
+    return () => {
+      if (doc?.localOnly && doc?.fileUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(doc.fileUrl);
+      }
+    };
+  }, [doc]);
 
   // Track the stage width so pages scale to the available space.
   useLayoutEffect(() => {
@@ -112,7 +99,7 @@ export default function DocumentReader() {
       if (!restoredRef.current) {
         restoredRef.current = true;
         try {
-          const saved = JSON.parse(localStorage.getItem(prefKey(id)) || "{}");
+          const saved = JSON.parse(localStorage.getItem(prefKey(doc)) || "{}");
           if (saved.page && saved.page > 1 && saved.page <= n) {
             setTimeout(() => readerRef.current?.scrollToPage(saved.page), 120);
           }
@@ -121,7 +108,7 @@ export default function DocumentReader() {
         }
       }
     },
-    [id],
+    [doc],
   );
 
   const jump = (n) => {
@@ -147,30 +134,15 @@ export default function DocumentReader() {
     return () => window.removeEventListener("keydown", onKey);
   }, [status, isPdf, currentPage, zoom, numPages]);
 
-  if (status === "loading") {
-    return (
-      <div className="grid min-h-[60vh] place-items-center text-muted">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-7 w-7 animate-spin" />
-          <span className="text-sm">Opening document…</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (status === "offline" || status === "notfound") {
+  if (status === "missing") {
     return (
       <div className="mx-auto max-w-lg px-4 py-20 text-center">
         <div className="glass mx-auto grid h-16 w-16 place-items-center rounded-3xl">
-          <ServerCrash className="h-7 w-7 text-amber-400" />
+          <FileWarning className="h-7 w-7 text-amber-400" />
         </div>
-        <h1 className="mt-5 text-xl font-bold lit-text">
-          {status === "notfound" ? "Document not found" : "Can’t reach the library server"}
-        </h1>
+        <h1 className="mt-5 text-xl font-bold lit-text">No active local document</h1>
         <p className="mt-2 text-sm text-muted">
-          {status === "notfound"
-            ? "It may have been deleted. Head back to your library."
-            : "The document library needs the backend running. Start it with “uvicorn app.main:app --port 8000” from the backend/ folder, then reload."}
+          This reader is stateless. Choose a file again from the Library page.
         </p>
         <Link to="/library" className="btn-primary mt-6 inline-flex">
           <ArrowLeft className="h-4 w-4" /> Back to Library
@@ -303,13 +275,13 @@ export default function DocumentReader() {
           {isPdf ? (
             <PdfReader
               ref={readerRef}
-              fileUrl={fileUrl(id)}
+              fileUrl={doc.fileUrl}
               pageWidth={pageWidth}
               onNumPages={onNumPages}
               onVisiblePage={setCurrentPage}
             />
           ) : (
-            <DocxReader fileUrl={fileUrl(id)} pageWidth={pageWidth} zoom={zoom} />
+            <DocxReader fileUrl={doc.fileUrl} pageWidth={pageWidth} zoom={zoom} />
           )}
         </div>
       </div>

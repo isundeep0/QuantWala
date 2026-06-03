@@ -4,6 +4,7 @@ Run with:  uvicorn app.main:app --reload --port 8000   (from the backend/ dir)
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -24,16 +25,25 @@ app = FastAPI(
     description="Serves algorithm learning content + the document library for QuantWala.",
 )
 
-# Allow the Vite dev server (and previews) to call the API. The document
-# library needs POST/DELETE in addition to GET, so allow all methods.
+# Allow local dev + deployed frontend origins. You can override/extend this
+# with QUANTWALA_CORS_ORIGINS as a comma-separated list.
+default_origins = {
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+    "https://isundeep0.github.io",
+}
+extra_origins_raw = os.getenv("QUANTWALA_CORS_ORIGINS", "")
+extra_origins = {
+    origin.strip()
+    for origin in extra_origins_raw.split(",")
+    if origin.strip()
+}
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:4173",
-        "http://127.0.0.1:4173",
-    ],
+    allow_origins=sorted(default_origins | extra_origins),
     allow_methods=["*"],
     allow_headers=["*"],
 )

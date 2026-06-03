@@ -3,11 +3,23 @@
  *
  * The library is the one part of the app that genuinely needs a server (files
  * must persist + be deletable), so it talks to the optional FastAPI backend.
- * Override the host with a `VITE_API_BASE` env var when deploying.
+ * For production (for example GitHub Pages), set VITE_API_BASE to your hosted
+ * backend URL in the build environment.
  */
-const API_BASE = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/\/$/, "");
+const configuredBase = (import.meta.env.VITE_API_BASE || "").trim();
+const fallbackBase = import.meta.env.DEV ? "http://localhost:8000" : "";
+const API_BASE = (configuredBase || fallbackBase).replace(/\/$/, "");
+
+export const hasApiBase = API_BASE.length > 0;
 
 export const apiBase = API_BASE;
+
+function requireApiBase() {
+  if (hasApiBase) return;
+  throw new Error(
+    "Library server is not configured. Set VITE_API_BASE to your hosted backend URL and redeploy.",
+  );
+}
 
 /** URL that streams the raw file bytes (consumed by pdf.js / mammoth). */
 export function fileUrl(id) {
@@ -30,6 +42,9 @@ async function asJson(res) {
 
 /** Quick reachability probe so the UI can guide the user to start the server. */
 export async function checkHealth() {
+  if (!hasApiBase) {
+    return { ok: false, reason: "missing_api_base" };
+  }
   try {
     const res = await fetch(`${API_BASE}/api/health`, { method: "GET" });
     if (!res.ok) return { ok: false };
@@ -41,17 +56,20 @@ export async function checkHealth() {
 }
 
 export async function listDocuments() {
+  requireApiBase();
   const res = await fetch(`${API_BASE}/api/documents`);
   const data = await asJson(res);
   return data.documents || [];
 }
 
 export async function getDocument(id) {
+  requireApiBase();
   const res = await fetch(`${API_BASE}/api/documents/${id}`);
   return asJson(res);
 }
 
 export async function renameDocument(id, title) {
+  requireApiBase();
   const res = await fetch(`${API_BASE}/api/documents/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -61,6 +79,7 @@ export async function renameDocument(id, title) {
 }
 
 export async function deleteDocument(id) {
+  requireApiBase();
   const res = await fetch(`${API_BASE}/api/documents/${id}`, { method: "DELETE" });
   return asJson(res);
 }
@@ -70,6 +89,13 @@ export async function deleteDocument(id) {
  * Resolves with the new document's metadata.
  */
 export function uploadDocument(file, onProgress) {
+  if (!hasApiBase) {
+    return Promise.reject(
+      new Error(
+        "Library server is not configured. Set VITE_API_BASE to your hosted backend URL and redeploy.",
+      ),
+    );
+  }
   return new Promise((resolve, reject) => {
     const form = new FormData();
     form.append("file", file);

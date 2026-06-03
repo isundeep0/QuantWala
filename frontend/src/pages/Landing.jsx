@@ -5,17 +5,28 @@ import {
   Network,
   Cpu,
   Trophy,
+  Wallet,
   ArrowRight,
   PlayCircle,
   Gauge,
   ListChecks,
   Sparkles,
+  FastForward,
 } from "lucide-react";
 import { CP_TOTAL_PROBLEMS } from "@/data/cpRoadmap.js";
 import { useProgress } from "@/context/ProgressContext.jsx";
 import { useSdProgress } from "@/context/SdProgressContext.jsx";
+import { useKbProgress } from "@/context/KbProgressContext.jsx";
 import { TOTAL_ALGORITHMS } from "@/data/registry.js";
 import { SD_TOTAL_LESSONS } from "@/data/systemDesign.js";
+import {
+  CURRICULUM as KB_CURRICULUM,
+  KB_PHASES,
+  KB_TOTAL_DELIVERABLES,
+  KB_TOTAL_PAPERS,
+} from "@/data/kernelBypass.js";
+import { useFinanceProgress } from "@/context/FinanceProgressContext.jsx";
+import { FIN_TOTAL_LESSONS } from "@/data/finance.js";
 import GlassCard from "@/components/liquid/GlassCard.jsx";
 import SwirlProgress from "@/components/liquid/SwirlProgress.jsx";
 
@@ -31,7 +42,7 @@ const fadeUp = {
 function StatPill({ icon: Icon, label }) {
   return (
     <div className="glass-orb flex items-center gap-2 px-3 py-1.5 text-sm text-muted">
-      <Icon className="h-4 w-4 text-brand-400" style={{ filter: "drop-shadow(0 0 4px rgba(59,130,246,0.6))" }} />
+      <Icon className="h-4 w-4 text-brand-500 dark:text-brand-400" />
       {label}
     </div>
   );
@@ -40,6 +51,8 @@ function StatPill({ icon: Icon, label }) {
 export default function Landing() {
   const { overallPercent, completedCount, problemStats } = useProgress();
   const { overallPercent: sdPercent } = useSdProgress();
+  const { overallPercent: kbPercent } = useKbProgress();
+  const { overallPercent: finPercent } = useFinanceProgress();
 
   const modules = [
     {
@@ -85,6 +98,17 @@ export default function Landing() {
       live: false,
       percent: 0,
     },
+    {
+      to: "/finance",
+      eyebrow: "Module 05",
+      title: "Personal Finance & Investing",
+      desc: `A from-scratch money masterclass for the Indian market — ${FIN_TOTAL_LESSONS} lessons across budgeting, compounding, credit & CIBIL, every asset class, goal-based investing, and taxation. Every example built on one real beginner persona.`,
+      icon: Wallet,
+      color: "#14b8a6",
+      status: "Fully available",
+      live: true,
+      percent: finPercent,
+    },
   ];
 
   return (
@@ -98,7 +122,7 @@ export default function Landing() {
             animate="show"
             className="glass-orb inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted"
           >
-            <Sparkles className="h-3.5 w-3.5 text-brand-400" style={{ filter: "drop-shadow(0 0 4px rgba(59,130,246,0.7))" }} />
+            <Sparkles className="h-3.5 w-3.5 text-brand-500 dark:text-brand-400" />
             Learn by seeing — interactive, visual, from-scratch
           </motion.div>
 
@@ -132,7 +156,7 @@ export default function Landing() {
             animate="show"
             className="mt-8 flex flex-wrap items-center gap-3"
           >
-            <Link to="/algorithms" className="btn-primary px-5 py-2.5 text-base" style={{ boxShadow: "0 0 24px rgba(37,99,235,0.45)" }}>
+            <Link to="/algorithms" className="btn-primary px-5 py-2.5 text-base">
               Start learning <ArrowRight className="h-4 w-4" />
             </Link>
             <Link to="/system-design" className="glass glass-interactive btn px-5 py-2.5 text-base">
@@ -149,7 +173,7 @@ export default function Landing() {
           >
             <StatPill icon={Boxes} label={`${TOTAL_ALGORITHMS} algorithms`} />
             <StatPill icon={Network} label={`${SD_TOTAL_LESSONS} system design lessons`} />
-            <StatPill icon={Gauge} label="Step-by-step simulators" />
+            <StatPill icon={Wallet} label={`${FIN_TOTAL_LESSONS} personal finance lessons`} />
             <StatPill icon={ListChecks} label="Curated problem sets" />
           </motion.div>
         </div>
@@ -157,7 +181,7 @@ export default function Landing() {
 
       {/* Module orbs */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {modules.map((m, i) => {
             const Icon = m.icon;
             return (
@@ -175,12 +199,12 @@ export default function Landing() {
                       <span
                         className="grid h-12 w-12 place-items-center rounded-2xl"
                         style={{
-                          background: `radial-gradient(120% 120% at 30% 20%, ${m.color}45, ${m.color}12)`,
-                          boxShadow: `inset 0 0 16px ${m.color}40, 0 0 14px ${m.color}26`,
+                          background: `linear-gradient(160deg, ${m.color}26, ${m.color}0d)`,
+                          boxShadow: `inset 0 0 0 1px ${m.color}2e`,
                           color: m.color,
                         }}
                       >
-                        <Icon className="h-6 w-6" style={{ filter: `drop-shadow(0 0 5px ${m.color})` }} />
+                        <Icon className="h-6 w-6" />
                       </span>
                       {m.live ? (
                         <SwirlProgress value={m.percent} size={58} stroke={6} color={m.color} />
@@ -206,7 +230,7 @@ export default function Landing() {
 
                     <div
                       className="mt-5 flex items-center gap-1.5 text-sm font-semibold"
-                      style={{ color: m.color, textShadow: `0 0 10px ${m.color}55` }}
+                      style={{ color: m.color }}
                     >
                       Enter
                       <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -217,6 +241,110 @@ export default function Landing() {
             );
           })}
         </div>
+      </section>
+
+      {/* Featured: Module 05 — Kernel Bypass */}
+      <section className="mx-auto mt-8 max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-60px" }}
+        >
+          <Link to="/kernel-bypass" className="group block">
+            <GlassCard
+              iris
+              className="relative overflow-hidden rounded-[1.75rem] p-6 sm:p-8"
+              style={{ "--glow": "#22d3eeaa" }}
+            >
+              <div className="absolute inset-0 dot-grid opacity-20" aria-hidden />
+              {/* dual-neon aura */}
+              <div
+                className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full opacity-50 blur-3xl"
+                style={{ background: "radial-gradient(circle, #a855f7, transparent 70%)" }}
+                aria-hidden
+              />
+              <div
+                className="pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full opacity-40 blur-3xl"
+                style={{ background: "radial-gradient(circle, #22d3ee, transparent 70%)" }}
+                aria-hidden
+              />
+
+              <div className="relative flex flex-col gap-7 sm:flex-row sm:items-center sm:justify-between">
+                <div className="max-w-3xl">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="relative grid h-14 w-14 place-items-center rounded-2xl"
+                      style={{
+                        background:
+                          "radial-gradient(120% 120% at 30% 20%, #22d3ee55, #a855f712)",
+                        boxShadow: "inset 0 0 18px #22d3ee40, 0 0 18px #a855f733",
+                        color: "#22d3ee",
+                      }}
+                    >
+                      <Cpu className="h-7 w-7" style={{ filter: "drop-shadow(0 0 6px #22d3ee)" }} />
+                      <FastForward
+                        className="absolute -bottom-1.5 -right-1.5 h-5 w-5"
+                        style={{ color: "#a855f7", filter: "drop-shadow(0 0 5px #a855f7)" }}
+                      />
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold uppercase tracking-[0.22em] text-faint">
+                          {KB_CURRICULUM.moduleCode}
+                        </span>
+                        <span
+                          className="chip text-[10px] font-bold"
+                          style={{ color: "#22d3ee", background: "#22d3ee1a", boxShadow: "inset 0 0 0 1px #22d3ee55" }}
+                        >
+                          NEW
+                        </span>
+                      </div>
+                      <h3 className="mt-0.5 text-2xl font-extrabold tracking-tight lit-text">
+                        Kernel Bypass &amp; Ultra-Low Latency
+                      </h3>
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-muted">{KB_CURRICULUM.description}</p>
+
+                  <div className="mt-5 flex flex-wrap gap-1.5">
+                    {KB_PHASES.map((p) => (
+                      <span
+                        key={p.id}
+                        className="chip border text-[11px] font-medium"
+                        style={{ borderColor: `${p.color}55`, color: p.color }}
+                      >
+                        {p.index}. {p.title}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 flex flex-wrap items-center gap-4">
+                    <span
+                      className="btn inline-flex items-center gap-1.5 px-5 py-2.5 text-base font-semibold text-white"
+                      style={{
+                        background: "linear-gradient(120deg, #22d3ee, #a855f7)",
+                        boxShadow: "0 0 24px #22d3ee55",
+                      }}
+                    >
+                      Enter
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1.5" />
+                    </span>
+                    <span className="text-sm text-muted">
+                      {KB_PHASES.length} phases · {KB_TOTAL_DELIVERABLES} deliverables ·{" "}
+                      {KB_TOTAL_PAPERS} curated papers
+                    </span>
+                  </div>
+                </div>
+
+                <div className="shrink-0 self-center">
+                  <SwirlProgress value={kbPercent} size={140} stroke={11} color="#22d3ee" sublabel="complete" />
+                </div>
+              </div>
+            </GlassCard>
+          </Link>
+        </motion.div>
       </section>
 
       {/* Progress snapshot */}

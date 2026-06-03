@@ -49,27 +49,22 @@ function LessonVessel({ lesson, color, complete, hasViz }) {
   return (
     <Link to={`/hft/${lesson.slug}`} className="group relative block h-full">
       <span
-        className="glass-orb absolute -left-2 -top-2 z-10 grid h-8 w-8 place-items-center text-xs font-bold"
+        className="absolute -left-2 -top-2 z-10 grid h-8 w-8 place-items-center rounded-full border text-xs font-bold transition-colors"
         style={{
           color: complete ? "#fff" : color,
-          background: complete
-            ? `radial-gradient(120% 120% at 30% 22%, #fff6, transparent 45%), ${color}`
-            : undefined,
-          boxShadow: complete ? `0 0 16px ${color}aa` : undefined,
+          background: complete ? color : "rgb(var(--bg-elev))",
+          borderColor: complete ? color : `${color}40`,
         }}
       >
         {complete ? <Check className="h-4 w-4" /> : lesson.order}
       </span>
 
-      <GlassCard
-        className="flex h-full flex-col p-4 pt-5"
-        style={{ borderRadius: "1.5rem 1.5rem 2.2rem 1.5rem", "--glow": `${color}aa` }}
-      >
+      <GlassCard className="flex h-full flex-col rounded-3xl p-4 pt-5" style={{ "--glow": `${color}aa` }}>
         <div className="flex items-start justify-between gap-2">
-          <h4 className="text-sm font-semibold leading-snug lit-text">{lesson.title}</h4>
+          <h4 className="text-sm font-semibold leading-snug">{lesson.title}</h4>
           {hasViz && (
             <span title="Has an interactive visualization" className="shrink-0" style={{ color }}>
-              <PlayCircle className="h-4 w-4" style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
+              <PlayCircle className="h-4 w-4" />
             </span>
           )}
         </div>
@@ -93,17 +88,17 @@ function LessonVessel({ lesson, color, complete, hasViz }) {
 
         <div
           className="mt-auto flex items-center justify-between gap-2 pt-3"
-          style={{ borderTop: "1px solid rgb(var(--glass-stroke) / 0.08)" }}
+          style={{ borderTop: "1px solid rgb(var(--border))" }}
         >
           {lvl ? (
-            <span className="etched-glow font-mono text-[11px]" style={{ "--glow": `${lvl.color}cc`, color: lvl.color }}>
+            <span className="font-mono text-[11px] font-semibold" style={{ color: lvl.color }}>
               {lvl.label}
             </span>
           ) : (
             <span />
           )}
           {lesson.estMinutes && (
-            <span className="etched flex items-center gap-1 font-mono text-[11px]">
+            <span className="flex items-center gap-1 font-mono text-[11px] text-faint">
               <Clock className="h-3 w-3" /> {lesson.estMinutes}m
             </span>
           )}
@@ -119,15 +114,14 @@ export default function HFT() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      {/* ===== Module lens ===== */}
-      <GlassCard interactive={false} iris className="relative overflow-hidden rounded-[2rem] p-6 sm:p-9">
-        <div className="absolute inset-0 dot-grid opacity-30" aria-hidden />
+      {/* ===== Module header ===== */}
+      <GlassCard interactive={false} className="relative overflow-hidden rounded-3xl p-6 sm:p-9">
         <div className="relative flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
           <div className="max-w-2xl">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "#10b981", textShadow: "0 0 12px rgba(16,185,129,0.6)" }}>
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "#10b981" }}>
               <Cpu className="h-4 w-4" /> Module 03
             </div>
-            <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl lit-text">
+            <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
               HFT &amp; Low-Latency Systems
             </h1>
             <p className="mt-3 text-muted">
@@ -139,20 +133,18 @@ export default function HFT() {
 
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <span className="glass-orb px-3 py-1.5 text-sm font-semibold">
-                <span className="etched-glow" style={{ "--glow": "#10b981aa" }}>
-                  {completedCount}/{HFT_TOTAL_LESSONS}
-                </span>{" "}
+                <span style={{ color: "#10b981" }}>{completedCount}/{HFT_TOTAL_LESSONS}</span>{" "}
                 <span className="text-muted">lessons</span>
               </span>
               <span className="glass-orb px-3 py-1.5 text-sm font-semibold">
-                <span className="etched-glow" style={{ "--glow": "#06b6d4aa" }}>{problemStats.solved}</span>{" "}
+                <span style={{ color: "#06b6d4" }}>{problemStats.solved}</span>{" "}
                 <span className="text-muted">questions done</span>
               </span>
               <button
                 onClick={() => {
                   if (confirm("Reset all HFT progress? This clears completion and question status.")) resetAll();
                 }}
-                className="glass-orb glass-interactive flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted hover:text-red-400"
+                className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-faint transition-colors hover:text-red-400"
               >
                 <RotateCcw className="h-3.5 w-3.5" /> Reset progress
               </button>
@@ -197,22 +189,22 @@ export default function HFT() {
           const done = section.lessons.filter((l) => isComplete(l.slug)).length;
           return (
             <section key={section.id} id={section.id} className="scroll-mt-24">
-              <GlassCard className="mb-5 flex items-center gap-4 rounded-2xl px-4 py-3" style={{ "--glow": `${section.color}aa` }}>
+              <div className="mb-5 flex items-center gap-4">
                 <span
                   className="grid h-11 w-11 shrink-0 place-items-center rounded-xl"
                   style={{
-                    background: `radial-gradient(120% 120% at 30% 20%, ${section.color}45, ${section.color}12)`,
-                    boxShadow: `inset 0 0 14px ${section.color}40, 0 0 12px ${section.color}26`,
+                    background: `linear-gradient(160deg, ${section.color}26, ${section.color}0d)`,
+                    boxShadow: `inset 0 0 0 1px ${section.color}2e`,
                     color: section.color,
                   }}
                 >
-                  <SIcon className="h-5 w-5" style={{ filter: `drop-shadow(0 0 4px ${section.color})` }} />
+                  <SIcon className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-3">
-                    <h2 className="truncate text-lg font-bold lit-text">{section.title}</h2>
+                    <h2 className="truncate text-lg font-bold">{section.title}</h2>
                     {section.lessons.length > 0 && (
-                      <span className="etched-glow shrink-0 font-mono text-xs" style={{ "--glow": `${section.color}cc` }}>
+                      <span className="shrink-0 font-mono text-xs text-muted">
                         {done}/{section.lessons.length}
                       </span>
                     )}
@@ -220,10 +212,10 @@ export default function HFT() {
                   <p className="truncate text-sm text-muted">{section.short}</p>
                 </div>
                 {section.lessons.length > 0 && (
-                  <div className="hidden h-2 w-40 overflow-hidden rounded-full sm:block" style={{ background: "rgb(var(--glass-stroke) / 0.12)" }}>
+                  <div className="hidden h-1.5 w-40 overflow-hidden rounded-full sm:block" style={{ background: "rgb(var(--border))" }}>
                     <motion.div
                       className="h-full rounded-full"
-                      style={{ background: `linear-gradient(90deg, ${section.color}99, ${section.color})`, boxShadow: `0 0 10px ${section.color}aa` }}
+                      style={{ background: section.color }}
                       initial={{ width: 0 }}
                       whileInView={{ width: `${pct}%` }}
                       viewport={{ once: true }}
@@ -231,10 +223,10 @@ export default function HFT() {
                     />
                   </div>
                 )}
-              </GlassCard>
+              </div>
 
               {section.lessons.length === 0 ? (
-                <div className="rounded-2xl border border-dashed p-6 text-center text-sm text-faint" style={{ borderColor: "rgb(var(--glass-stroke) / 0.15)" }}>
+                <div className="rounded-2xl border border-dashed p-6 text-center text-sm text-faint" style={{ borderColor: "rgb(var(--border))" }}>
                   Lessons for this section are coming soon.
                 </div>
               ) : (

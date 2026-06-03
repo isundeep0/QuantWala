@@ -47,23 +47,20 @@ function ThemeCard({ phase, theme, solved }) {
   const pct = theme.problems.length ? Math.round((solved / theme.problems.length) * 100) : 0;
   return (
     <Link to={`/cp/${phase.id}/${theme.id}`} className="group block h-full">
-      <GlassCard
-        className="flex h-full flex-col p-4"
-        style={{ borderRadius: "1.5rem 1.5rem 2.2rem 1.5rem", "--glow": `${phase.color}aa` }}
-      >
+      <GlassCard className="flex h-full flex-col rounded-3xl p-4" style={{ "--glow": `${phase.color}aa` }}>
         <div className="flex items-start gap-3">
           <span
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
             style={{
-              background: `radial-gradient(120% 120% at 30% 20%, ${phase.color}40, ${phase.color}10)`,
-              boxShadow: `inset 0 0 12px ${phase.color}33, 0 0 10px ${phase.color}22`,
+              background: `linear-gradient(160deg, ${phase.color}26, ${phase.color}0d)`,
+              boxShadow: `inset 0 0 0 1px ${phase.color}2e`,
               color: phase.color,
             }}
           >
-            <IconByName name={theme.icon} className="h-5 w-5" style={{ filter: `drop-shadow(0 0 4px ${phase.color})` }} />
+            <IconByName name={theme.icon} className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <h4 className="text-sm font-semibold leading-snug lit-text">{theme.title}</h4>
+            <h4 className="text-sm font-semibold leading-snug">{theme.title}</h4>
             {range && (
               <div className="mt-1 flex items-center gap-1.5">
                 <span className="font-mono text-[11px]" style={{ color: ratingColor(range.lo) }}>{range.lo}</span>
@@ -76,17 +73,17 @@ function ThemeCard({ phase, theme, solved }) {
 
         <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-muted">{theme.blurb}</p>
 
-        <div className="mt-auto pt-3" style={{ borderTop: "1px solid rgb(var(--glass-stroke) / 0.08)" }}>
+        <div className="mt-auto pt-3" style={{ borderTop: "1px solid rgb(var(--border))" }}>
           <div className="mt-2 flex items-center justify-between text-[11px]">
-            <span className="etched-glow font-mono" style={{ "--glow": `${phase.color}cc` }}>
+            <span className="font-mono text-muted">
               {solved}/{theme.problems.length} solved
             </span>
             <span className="text-faint">{theme.lessons.length} lesson{theme.lessons.length === 1 ? "" : "s"}</span>
           </div>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full" style={{ background: "rgb(var(--glass-stroke) / 0.12)" }}>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full" style={{ background: "rgb(var(--border))" }}>
             <div
               className="h-full rounded-full"
-              style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${phase.color}99, ${phase.color})`, boxShadow: `0 0 8px ${phase.color}aa` }}
+              style={{ width: `${pct}%`, background: phase.color }}
             />
           </div>
         </div>
@@ -102,11 +99,11 @@ export default function CPHub() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      {/* ===== Module lens ===== */}
-      <GlassCard interactive={false} iris className="relative overflow-hidden rounded-[2rem] p-6 sm:p-9">
+      {/* ===== Module header ===== */}
+      <GlassCard interactive={false} className="relative overflow-hidden rounded-3xl p-6 sm:p-9">
         <div className="relative flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
           <div className="max-w-2xl">
-            <div className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: MODULE_COLOR, textShadow: `0 0 12px ${MODULE_COLOR}99` }}>
+            <div className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: MODULE_COLOR }}>
               Module 04 · Competitive Programming
             </div>
             <h1 className="mt-2 flex items-center gap-3 text-3xl font-extrabold tracking-tight sm:text-4xl lit-text">
@@ -119,15 +116,15 @@ export default function CPHub() {
 
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <span className="glass-orb px-3 py-1.5 text-sm font-semibold">
-                <span className="etched-glow" style={{ "--glow": `${MODULE_COLOR}aa` }}>{solvedTotal}/{CP_TOTAL_PROBLEMS}</span>{" "}
+                <span style={{ color: MODULE_COLOR }}>{solvedTotal}/{CP_TOTAL_PROBLEMS}</span>{" "}
                 <span className="text-muted">problems solved</span>
               </span>
               <span className="glass-orb px-3 py-1.5 text-sm font-semibold">
-                <span className="etched-glow" style={{ "--glow": "#06b6d4aa" }}>{CP_TOTAL_THEMES}</span>{" "}
+                <span style={{ color: "#06b6d4" }}>{CP_TOTAL_THEMES}</span>{" "}
                 <span className="text-muted">patterns</span>
               </span>
               <span className="glass-orb px-3 py-1.5 text-sm font-semibold">
-                <span className="etched-glow" style={{ "--glow": "#22c55eaa" }}>{CP_PHASES.length}</span>{" "}
+                <span style={{ color: "#22c55e" }}>{CP_PHASES.length}</span>{" "}
                 <span className="text-muted">rating tiers</span>
               </span>
             </div>
@@ -140,10 +137,10 @@ export default function CPHub() {
       </GlassCard>
 
       {/* ===== Plan card ===== */}
-      <GlassCard interactive={false} className="mt-6 rounded-[1.75rem] p-6">
+      <GlassCard interactive={false} className="mt-6 rounded-3xl p-6">
         <div className="flex flex-wrap items-center gap-3">
           <CalendarClock className="h-5 w-5" style={{ color: MODULE_COLOR }} />
-          <h2 className="text-lg font-bold lit-text">The 2-hours-a-day plan</h2>
+          <h2 className="text-lg font-bold">The 2-hours-a-day plan</h2>
         </div>
         <p className="mt-2 max-w-3xl text-sm text-muted">
           Work the tiers in order. In each session, pick the lowest theme that isn't green yet and solve 1–3 problems
@@ -155,7 +152,7 @@ export default function CPHub() {
           {HOW_IT_WORKS.map((s) => {
             const Icon = s.icon;
             return (
-              <div key={s.title} className="glass-orb rounded-2xl p-4">
+              <div key={s.title} className="rounded-2xl border p-4" style={{ borderColor: "rgb(var(--border))" }}>
                 <div className="flex items-center gap-2">
                   <Icon className="h-4 w-4" style={{ color: MODULE_COLOR }} />
                   <span className="text-sm font-semibold">{s.title}</span>
@@ -177,13 +174,13 @@ export default function CPHub() {
           const pct = phase.problemCount ? Math.round((solved / phase.problemCount) * 100) : 0;
           return (
             <section key={phase.id} id={phase.id} className="scroll-mt-24">
-              <GlassCard className="mb-5 rounded-2xl px-5 py-4" style={{ "--glow": `${phase.color}aa` }}>
+              <div className="mb-5">
                 <div className="flex flex-wrap items-center gap-4">
                   <span
                     className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-lg font-extrabold"
                     style={{
-                      background: `radial-gradient(120% 120% at 30% 20%, ${phase.color}45, ${phase.color}12)`,
-                      boxShadow: `inset 0 0 14px ${phase.color}40, 0 0 12px ${phase.color}26`,
+                      background: `linear-gradient(160deg, ${phase.color}26, ${phase.color}0d)`,
+                      boxShadow: `inset 0 0 0 1px ${phase.color}2e`,
                       color: phase.color,
                     }}
                   >
@@ -191,7 +188,7 @@ export default function CPHub() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <h2 className="text-xl font-bold lit-text">{phase.title}</h2>
+                      <h2 className="text-xl font-bold">{phase.title}</h2>
                       <span
                         className="chip border font-semibold"
                         style={{ color: phase.color, background: `${phase.color}1a`, borderColor: `${phase.color}44` }}
@@ -203,13 +200,13 @@ export default function CPHub() {
                     <p className="mt-1 max-w-3xl text-sm text-muted">{phase.summary}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <span className="etched-glow font-mono text-sm font-semibold" style={{ "--glow": `${phase.color}cc` }}>
+                    <span className="font-mono text-sm font-semibold text-muted">
                       {solved}/{phase.problemCount}
                     </span>
-                    <div className="h-2 w-40 overflow-hidden rounded-full" style={{ background: "rgb(var(--glass-stroke) / 0.12)" }}>
+                    <div className="h-1.5 w-40 overflow-hidden rounded-full" style={{ background: "rgb(var(--border))" }}>
                       <motion.div
                         className="h-full rounded-full"
-                        style={{ background: `linear-gradient(90deg, ${phase.color}99, ${phase.color})`, boxShadow: `0 0 10px ${phase.color}aa` }}
+                        style={{ background: phase.color }}
                         initial={{ width: 0 }}
                         whileInView={{ width: `${pct}%` }}
                         viewport={{ once: true }}
@@ -218,7 +215,7 @@ export default function CPHub() {
                     </div>
                   </div>
                 </div>
-              </GlassCard>
+              </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {phase.themes.map((theme) => (
@@ -236,9 +233,9 @@ export default function CPHub() {
       </div>
 
       {/* ===== Closing ===== */}
-      <GlassCard interactive={false} className="mt-14 rounded-[1.75rem] p-6 text-center sm:p-8">
-        <Trophy className="mx-auto h-8 w-8" style={{ color: MODULE_COLOR, filter: `drop-shadow(0 0 10px ${MODULE_COLOR})` }} />
-        <h3 className="mt-3 text-lg font-bold lit-text">Solve the ladder, earn the rank</h3>
+      <GlassCard interactive={false} className="mt-14 rounded-3xl p-6 text-center sm:p-8">
+        <Trophy className="mx-auto h-8 w-8" style={{ color: MODULE_COLOR }} />
+        <h3 className="mt-3 text-lg font-bold">Solve the ladder, earn the rank</h3>
         <p className="mx-auto mt-2 max-w-2xl text-sm text-muted">
           {CP_TOTAL_PROBLEMS} hand-curated Codeforces problems take you from Newbie all the way to International
           Grandmaster — over {">"}480 of them rated 1900+. They cover every algorithm in Module 1 with hard variations,
@@ -247,7 +244,7 @@ export default function CPHub() {
         <Link
           to={`/cp/${CP_PHASES[0].id}/${CP_PHASES[0].themes[0].id}`}
           className="btn-primary mt-5 inline-flex"
-          style={{ backgroundColor: MODULE_COLOR, boxShadow: `0 0 24px ${MODULE_COLOR}66` }}
+          style={{ backgroundColor: MODULE_COLOR }}
         >
           Start the first rung <ArrowRight className="h-4 w-4" />
         </Link>

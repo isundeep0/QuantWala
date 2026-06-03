@@ -7,21 +7,21 @@ import {
   ArrowLeft,
   Check,
   Clock,
-  Target,
+  Sparkles,
   ListChecks,
   BookOpen,
   Hash,
 } from "lucide-react";
 import {
-  getSdLesson,
-  getSdSection,
-  getSdAdjacent,
-  SD_DIFFICULTY,
-  SD_LESSON_BY_SLUG,
-} from "@/data/systemDesign.js";
-import { useSdProgress } from "@/context/SdProgressContext.jsx";
-import BlockRenderer from "@/components/system-design/BlockRenderer.jsx";
-import PracticeSet from "@/components/system-design/PracticeSet.jsx";
+  getFinLesson,
+  getFinSection,
+  getFinAdjacent,
+  FIN_DIFFICULTY,
+  FIN_LESSON_BY_SLUG,
+} from "@/data/finance.js";
+import { useFinanceProgress } from "@/context/FinanceProgressContext.jsx";
+import FinBlockRenderer from "@/components/finance/FinBlockRenderer.jsx";
+import FinPracticeSet from "@/components/finance/FinPracticeSet.jsx";
 import { formatInline } from "@/lib/inline.jsx";
 
 function useScrollSpy(ids) {
@@ -46,11 +46,11 @@ function useScrollSpy(ids) {
   return active;
 }
 
-export default function SystemDesignLesson() {
+export default function FinanceLesson() {
   const { topicId } = useParams();
   const navigate = useNavigate();
-  const lesson = getSdLesson(topicId);
-  const { isComplete, setLessonComplete } = useSdProgress();
+  const lesson = getFinLesson(topicId);
+  const { isComplete, setLessonComplete } = useFinanceProgress();
   const topRef = useRef(null);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function SystemDesignLesson() {
   const tocIds = useMemo(() => {
     if (!lesson) return [];
     const ids = (lesson.sections || []).map((s) => s.id);
-    if (lesson.cheatsheet?.length) ids.push("cheatsheet");
+    if (lesson.cheatsheet?.length) ids.push("takeaways");
     if (lesson.questions?.length) ids.push("practice");
     return ids;
   }, [lesson]);
@@ -71,24 +71,24 @@ export default function SystemDesignLesson() {
     return (
       <div className="mx-auto max-w-3xl px-4 py-24 text-center">
         <h1 className="text-2xl font-bold">Lesson not found</h1>
-        <p className="mt-2 text-muted">This system design topic isn't available yet.</p>
-        <Link to="/system-design" className="btn-primary mt-6" style={{ backgroundColor: "#d97706" }}>
-          <ArrowLeft className="h-4 w-4" /> Back to System Design
+        <p className="mt-2 text-muted">This personal finance topic isn't available yet.</p>
+        <Link to="/finance" className="btn-primary mt-6" style={{ backgroundColor: "#14b8a6" }}>
+          <ArrowLeft className="h-4 w-4" /> Back to Personal Finance
         </Link>
       </div>
     );
   }
 
-  const section = getSdSection(lesson.sectionId);
-  const accent = section?.color || "#d97706";
-  const { prev, next } = getSdAdjacent(lesson.slug);
+  const section = getFinSection(lesson.sectionId);
+  const accent = section?.color || "#14b8a6";
+  const { prev, next } = getFinAdjacent(lesson.slug);
   const complete = isComplete(lesson.slug);
-  const diff = SD_DIFFICULTY[lesson.difficulty];
+  const diff = FIN_DIFFICULTY[lesson.difficulty];
 
   const tocItems = [
     ...(lesson.sections || []).map((s) => ({ id: s.id, title: s.title, icon: Hash })),
-    ...(lesson.cheatsheet?.length ? [{ id: "cheatsheet", title: "Interview cheat sheet", icon: Target }] : []),
-    ...(lesson.questions?.length ? [{ id: "practice", title: "Practice questions", icon: ListChecks }] : []),
+    ...(lesson.cheatsheet?.length ? [{ id: "takeaways", title: "Key takeaways", icon: Sparkles }] : []),
+    ...(lesson.questions?.length ? [{ id: "practice", title: "Check your understanding", icon: ListChecks }] : []),
   ];
 
   const scrollTo = (id) => {
@@ -103,11 +103,11 @@ export default function SystemDesignLesson() {
     <div ref={topRef} className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted">
-        <Link to="/system-design" className="hover:text-[color:rgb(var(--text))]">
-          System Design
+        <Link to="/finance" className="hover:text-[color:rgb(var(--text))]">
+          Personal Finance
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <Link to={`/system-design#${section?.id}`} className="hover:text-[color:rgb(var(--text))]">
+        <Link to={`/finance#${section?.id}`} className="hover:text-[color:rgb(var(--text))]">
           {section?.title}
         </Link>
       </div>
@@ -117,7 +117,7 @@ export default function SystemDesignLesson() {
         <div>
           <h1
             className="text-3xl font-extrabold tracking-tight sm:text-4xl"
-            style={{ color: accent }}
+            style={{ color: accent, textShadow: `0 0 18px ${accent}44` }}
           >
             {lesson.title}
           </h1>
@@ -146,11 +146,11 @@ export default function SystemDesignLesson() {
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
               <BookOpen className="h-3.5 w-3.5" /> Best after:
               {lesson.prereqs.map((p) => {
-                const pl = SD_LESSON_BY_SLUG[p];
+                const pl = FIN_LESSON_BY_SLUG[p];
                 return pl ? (
                   <Link
                     key={p}
-                    to={`/system-design/${p}`}
+                    to={`/finance/${p}`}
                     className="chip surface-sunken hover:text-[color:rgb(var(--text))]"
                   >
                     {pl.title}
@@ -212,27 +212,27 @@ export default function SystemDesignLesson() {
                   />
                   <h2 className="text-xl font-bold tracking-tight">{s.title}</h2>
                 </div>
-                <BlockRenderer blocks={s.blocks} />
+                <FinBlockRenderer blocks={s.blocks} />
               </section>
             ))}
 
             {lesson.cheatsheet?.length > 0 && (
-              <section id="cheatsheet" className="scroll-mt-24">
+              <section id="takeaways" className="scroll-mt-24">
                 <div className="mb-5 flex items-center gap-3">
                   <span
                     className="grid h-8 w-8 place-items-center rounded-lg"
                     style={{ backgroundColor: `${accent}1a`, color: accent }}
                   >
-                    <Target className="h-4 w-4" />
+                    <Sparkles className="h-4 w-4" />
                   </span>
-                  <h2 className="text-xl font-bold tracking-tight">Interview cheat sheet</h2>
+                  <h2 className="text-xl font-bold tracking-tight">Key takeaways</h2>
                 </div>
                 <div
                   className="rounded-2xl border p-5"
                   style={{ borderColor: `${accent}33`, backgroundColor: `${accent}0a` }}
                 >
                   <p className="mb-3 text-sm text-muted">
-                    The lines you want to be able to say from memory. If you can recall these, you understand the topic.
+                    The lines worth remembering. If you can recall these, you've got the lesson.
                   </p>
                   <ul className="space-y-2.5">
                     {lesson.cheatsheet.map((c, i) => (
@@ -260,9 +260,9 @@ export default function SystemDesignLesson() {
                   >
                     <ListChecks className="h-4 w-4" />
                   </span>
-                  <h2 className="text-xl font-bold tracking-tight">Practice questions</h2>
+                  <h2 className="text-xl font-bold tracking-tight">Check your understanding</h2>
                 </div>
-                <PracticeSet slug={lesson.slug} questions={lesson.questions} />
+                <FinPracticeSet slug={lesson.slug} questions={lesson.questions} />
               </section>
             )}
           </div>
@@ -272,14 +272,14 @@ export default function SystemDesignLesson() {
             className="mt-12 flex items-center justify-between border-t pt-6"
             style={{ borderColor: "rgb(var(--border))" }}
           >
-            <Link to="/system-design" className="btn-ghost">
+            <Link to="/finance" className="btn-ghost">
               <ArrowLeft className="h-4 w-4" /> Roadmap
             </Link>
             <button
               onClick={() => {
                 setLessonComplete(lesson.slug, true);
-                if (next) navigate(`/system-design/${next.slug}`);
-                else navigate("/system-design");
+                if (next) navigate(`/finance/${next.slug}`);
+                else navigate("/finance");
               }}
               className="btn-primary"
               style={{ backgroundColor: complete ? accent : "#10b981" }}
@@ -291,7 +291,7 @@ export default function SystemDesignLesson() {
           {/* Adjacent */}
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
             {prev ? (
-              <Link to={`/system-design/${prev.slug}`} className="card card-hover flex items-center gap-3 p-4">
+              <Link to={`/finance/${prev.slug}`} className="card card-hover flex items-center gap-3 p-4">
                 <ChevronLeft className="h-5 w-5 text-muted" />
                 <div>
                   <div className="text-xs text-faint">Previous</div>
@@ -303,7 +303,7 @@ export default function SystemDesignLesson() {
             )}
             {next && (
               <Link
-                to={`/system-design/${next.slug}`}
+                to={`/finance/${next.slug}`}
                 className="card card-hover flex items-center justify-end gap-3 p-4 text-right"
               >
                 <div>

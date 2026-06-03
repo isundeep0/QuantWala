@@ -1,0 +1,161 @@
+{
+  "slug": "leaderboard",
+  "sectionId": "case-studies",
+  "order": 20,
+  "title": "Design a Gaming Leaderboard",
+  "tagline": "Rank millions of players by score in real time and answer 'what's my rank?' instantly.",
+  "summary": "Sorted sets, real-time ranking, top-K, rank queries at scale.",
+  "difficulty": "Intermediate",
+  "estMinutes": 24,
+  "tags": ["case-study", "must-know"],
+  "prereqs": ["caching", "databases", "back-of-the-envelope"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Clarify requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Update a player's score (after a match/achievement).",
+            "Get the top K players (e.g., top 10).",
+            "Get a specific player's rank and score.",
+            "Get the players around a given player (e.g., ranks 95–105 — 'your neighborhood')."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Real-time — rank changes should reflect quickly after a score update.",
+            "Low latency on reads (top-K and my-rank are shown constantly).",
+            "Scalable to tens of millions of players.",
+            "High write throughput during peak play."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "The crux is the *rank query*. Computing a player's rank by counting how many players have a higher score is O(n) in a plain table — far too slow at scale. The whole design hinges on a data structure that keeps elements sorted and answers rank in O(log n): a sorted set."
+        }
+      ]
+    },
+    {
+      "id": "naive",
+      "title": "2. Why a SQL ORDER BY doesn't scale",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The naive approach: store (player_id, score) in a table and run `SELECT COUNT(*) FROM scores WHERE score > ?` to get a rank, or `ORDER BY score DESC LIMIT 10` for the top-K. Top-K with an index is fine, but computing an arbitrary player's *rank* means counting all players above them — an expensive scan/aggregate that gets slower as players grow and runs on every score update for millions of users.",
+            "We need a structure that maintains sorted order incrementally and answers 'rank of X' and 'top K' in logarithmic time."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "text": "Recomputing ranks for everyone on each update, or COUNT(*)-style rank queries per request, is the trap. Interviewers want you to recognize this needs a sorted/order-statistic structure, not a relational aggregate."
+        }
+      ]
+    },
+    {
+      "id": "sorted-set",
+      "title": "3. The solution: a sorted set (Redis ZSET)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Redis sorted sets are purpose-built for this. A ZSET keeps members (player ids) ordered by a score, backed by a skip list + hash map, giving O(log n) inserts/updates and rank queries and O(log n + K) range reads."
+          ]
+        },
+        {
+          "type": "code",
+          "title": "The whole leaderboard in a handful of commands",
+          "codes": [
+            { "language": "text", "title": "redis", "source": "# update a player's score (after a match)\nZADD leaderboard <score> player:42\n\n# top 10 (highest first)\nZREVRANGE leaderboard 0 9 WITHSCORES\n\n# a player's rank (0-based, highest = rank 0)\nZREVRANK leaderboard player:42\n\n# a player's score\nZSCORE leaderboard player:42\n\n# the neighborhood around a player (e.g., ranks 95..105)\nZREVRANGE leaderboard 95 105 WITHSCORES" }
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Why it works", "detail": "The skip list keeps members sorted by score so range/top-K reads are direct; the hash map gives O(1) lookup of a member's score. Rank is an order-statistic query in O(log n). All the leaderboard operations map to single built-in commands." },
+            { "term": "In-memory speed", "detail": "Redis holds the set in RAM, so updates and queries are sub-millisecond even at millions of members — exactly the real-time requirement." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Right tool for the job",
+          "text": "This is a case where naming the exact data structure (a sorted set / order-statistic structure) and the tool (Redis ZSET) *is* the senior insight. The follow-ups are all about durability and scale around it."
+        }
+      ]
+    },
+    {
+      "id": "durability-scale",
+      "title": "4. Durability & scaling",
+      "blocks": [
+        {
+          "type": "diagram",
+          "caption": "Redis sorted set is the serving layer; a durable DB is the source of truth.",
+          "groups": [
+            { "label": "Game", "nodes": [{ "label": "Game servers", "sub": "score events", "icon": "Server", "accent": "#0ea5e9" }] },
+            { "label": "Serve", "nodes": [{ "label": "Redis ZSET", "sub": "live ranking", "icon": "Zap", "accent": "#f59e0b" }] },
+            { "label": "Truth", "nodes": [{ "label": "Durable DB", "sub": "scores, history", "icon": "Database", "accent": "#10b981" }] }
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Redis is the serving layer, not the only copy", "detail": "Persist scores to a durable database (source of truth). The ZSET is rebuildable from the DB after a restart. Optionally write through: update the DB and the ZSET together (or update Redis live and stream changes to the DB asynchronously)." },
+            { "term": "Memory at scale", "detail": "Tens of millions of members fit in a single Redis instance's RAM, but for very large or many leaderboards you shard. Time-scoped boards (daily/weekly/seasonal) naturally bound size and are common in games." },
+            { "term": "Sharding a giant board", "detail": "If one board is too big, partition by score range across shards, or keep per-region boards and merge top-Ks. Exact global rank across shards is harder — often approximated, or a single ZSET is kept if it fits (it usually does)." },
+            { "term": "Hot writes", "detail": "A burst of score updates is just many ZADDs — Redis handles high write throughput. Replicate Redis (primary + replicas) for availability; replicas can serve read-heavy top-K/rank queries." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "text": "Senior framing: use the sorted set for fast ranking, but treat Redis as a rebuildable serving layer over a durable store, bound leaderboard size with time windows, and be honest that exact global rank across shards is the hard edge (usually you keep a single ZSET because it fits, or accept approximate cross-shard rank)."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Core challenge is the rank query — counting players above someone is O(n) in a table; you need an order-statistic structure.",
+    "Use a sorted set (Redis ZSET): O(log n) score updates + rank queries, O(log n + K) range/top-K reads, in-memory sub-ms.",
+    "ZADD to update score, ZREVRANGE for top-K and neighborhoods, ZREVRANK for rank, ZSCORE for score.",
+    "Don't recompute ranks for everyone per update, and don't use COUNT(*) rank queries — that's the trap.",
+    "Redis is a rebuildable serving layer; persist scores to a durable DB as the source of truth.",
+    "Bound size with time-scoped boards (daily/weekly/seasonal); replicate Redis for availability + read scaling.",
+    "Exact global rank across shards is the hard edge — usually keep one ZSET (it fits) or accept approximate cross-shard rank."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "Why is computing a player's rank with a relational table slow at scale, and how does a sorted set fix it?",
+      "hint": "Think about what 'rank' costs as an aggregate vs an order-statistic.",
+      "answer": [
+        "In a relational table of (player_id, score), a player's rank means 'how many players have a higher score', which you compute as something like `SELECT COUNT(*) FROM scores WHERE score > ?`. That's an aggregate that, in the worst case, must count a large portion of the table, and it gets slower as the player base grows. Worse, ranks are needed constantly — every player wants to see their rank, and a single score update can change many players' ranks — so you'd be running these expensive counts at high frequency over tens of millions of rows. (Top-K with an index is fine; it's the arbitrary-player *rank* query that's the killer.) Maintaining a precomputed rank column doesn't help either, because one score change can shift the ranks of everyone below it.",
+        "A sorted set fixes this by keeping members continuously ordered by score in a structure (skip list + hash map) that supports order-statistic queries. Updating a score is O(log n), getting a member's rank is O(log n), and reading the top K or a neighborhood is O(log n + K). Nothing needs a full scan, and ranks are derived from the structure's position rather than recomputed. Redis implements exactly this as a ZSET, in memory, so all the operations are sub-millisecond even at millions of members — turning the slow O(n) aggregate into a fast logarithmic lookup."
+      ],
+      "keyPoints": ["Rank = COUNT(*) of higher scores → scans a large portion, slow and frequent", "One score change shifts many ranks → can't cheaply precompute a rank column", "Sorted set (skip list + hash) gives O(log n) update/rank, O(log n + K) range", "Redis ZSET in memory → sub-ms ranking at millions of members"],
+      "followUps": ["How would you support 'top 10 this week' separately from an all-time board?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "Redis holds your leaderboard in memory. What happens if it restarts, and how do you avoid losing the leaderboard?",
+      "hint": "Treat Redis as a serving layer, not the only copy.",
+      "answer": [
+        "If Redis is the only copy and it restarts without persistence, you'd lose the in-memory sorted set and the leaderboard would be gone — unacceptable. The fix is to treat Redis as a fast, rebuildable *serving layer* rather than the system of record. The authoritative scores live in a durable database (and/or Redis's own persistence — AOF/RDB snapshots — can be enabled as a faster recovery path). After a restart, the ZSET is reconstructed from the durable store by loading players and their scores back in with ZADDs, so the leaderboard is fully recoverable.",
+        "To keep the two in sync during normal operation, you either write-through (update the durable DB and the Redis ZSET together on each score change) or update Redis live for low latency and stream the changes to the DB asynchronously (accepting that a crash could lose the last few unflushed updates, which is usually fine for a game leaderboard and reconcilable from match history). For availability you also run Redis with replicas (primary handles writes, replicas serve read-heavy top-K/rank queries), so a single node failure doesn't take the board down and you're not relying on a cold rebuild for every blip. The principle: in-memory structures give the speed, but durability and recoverability come from persisting the source of truth behind them."
+      ],
+      "keyPoints": ["Redis-only + no persistence → restart loses the board (unacceptable)", "Durable DB is the source of truth; rebuild the ZSET from it (or use AOF/RDB)", "Sync via write-through or live-Redis + async stream to DB", "Replicas for availability + read scaling; don't depend on cold rebuilds"],
+      "followUps": ["If you sharded one giant leaderboard across nodes, why does exact global rank become hard?"]
+    }
+  ]
+}

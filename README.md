@@ -17,6 +17,19 @@ Four modules:
   GM, up to rating 3500) and **64 themed patterns**, each mapped back to the exact
   Module 1 lessons that teach the algorithm. **~480 problems are rated 1900+** for a
   deep CM→GM grind. Every theme leads with *pattern‑recognition* coaching (signals →
+- **Module 2 — System Design** *(complete, end‑to‑end)*: **55 in‑depth lessons across 6
+  sections** — Start Here, Fundamentals, Building Blocks, Distributed Systems, Case
+  Studies (21 canonical designs), and a full Interview Playbook. Each lesson is a
+  block‑based long‑form article (text, analogies, callouts, comparison tables,
+  architecture diagrams, code, metrics) with a sticky scroll‑spy table of contents, an
+  **interview cheat sheet**, and a **practice question set** with progressive reveal
+  (hint → model answer → follow‑ups) and per‑question self‑assessment. Progress is
+  `localStorage`‑based, tracked independently from the Algorithms module.
+- **Module 4 — Road to Candidate Master** *(complete, content)*: a Codeforces‑only
+  practice ladder that picks up where Module 1 ends. **393 real, curated Codeforces
+  problems** across **5 rating tiers** (Newbie→Pupil … CM→Master) and **33 themed
+  patterns**, each mapped back to the exact Module 1 lessons that teach the
+  algorithm. Every theme leads with *pattern‑recognition* coaching (signals →
   technique → classic trap → mastery goal). Problems are pulled from the live
   Codeforces API, ordered by rating, and ranked by popularity (`solvedCount`).
   Per‑problem Solved/Review/Stuck status shares the same `localStorage` store.
@@ -24,6 +37,25 @@ Four modules:
   panels (concept, architecture diagram, key points, common questions).
 - **Module 3 — HFT / Low Latency** *(UI shell only)*: full navigation and placeholder
   panels (concept, code snippet, benchmark table, interview questions).
+- **Module 5 — Kernel Bypass & Ultra-Low Latency** *(complete, content)*: an interactive,
+  hierarchical syllabus (5 **phases** → 16 **topics** → 31 checkable **deliverables**)
+  that takes a complete beginner from standard OS internals through DPDK, SPDK, eBPF/XDP,
+  and into the dataplane-OS research frontier. Anchored to primary sources — OSTEP,
+  Kurose & Ross, official DPDK/SPDK/eBPF docs — plus a **Reading Room** of 11 curated
+  research papers (XDP, Arrakis, IX, Shenango, Caladan, Snap, Junction, …), each with a
+  TL;DR, a "why read it", and a guided three-pass reading plan (Keshav). The syllabus is
+  data-driven from `content/kernel-bypass/curriculum.json` and typed by
+  `frontend/src/types/kernelBypass.ts`; deliverable/paper progress uses the same
+  `localStorage` pattern. Routes: `/kernel-bypass` and `/kernel-bypass/:phaseId`.
+- **Module 5 — Personal Finance & Investing** *(complete, content)*: a from‑scratch
+  personal‑finance masterclass for the Indian market. **17 lessons across 8 sections**
+  (mindset → budgeting & emergency fund → compounding → credit/CIBIL → asset classes →
+  goal‑based investing → taxation → a capstone "money system"). Every lesson follows the
+  same shape — *core concept → strict rule of thumb → a worked example* — and every
+  number is anchored to one beginner persona (22, Bengaluru, ₹20,000/month, saving for a
+  car by 2031). Content‑driven like System Design: drop a JSON file in
+  `content/finance/<sectionId>/` and it appears on the roadmap. Progress (lessons +
+  self‑assessed checks) is `localStorage`‑based via `FinanceProgressContext`.
 
 ---
 
@@ -165,9 +197,9 @@ interactive simulator. Possible future enhancements:
 - Per‑problem notes and a spaced‑repetition "review queue".
 - Expand the intentionally lean categories (greedy, stacks/queues) with more lessons.
 
-**Module 2 — System Design — done.** 47 lessons across 6 sections, each with diagrams,
+**Module 2 — System Design — done.** 55 lessons across 6 sections, each with diagrams,
 an interview cheat sheet, and a practice question set. Possible future enhancements:
-- More case studies (e.g., distributed message queue, ad click aggregator, ticketing).
+- More case studies (e.g., distributed cache, web search, ad-serving, payments ledger).
 - An interactive "design canvas" for drawing architectures.
 - Spaced‑repetition review queue across the practice questions.
 

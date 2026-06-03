@@ -1,0 +1,148 @@
+{
+  "slug": "budgeting-50-30-20",
+  "sectionId": "cash-flow",
+  "order": 1,
+  "title": "The 50/30/20 Rule — Adapted for Real Life",
+  "tagline": "The textbook budget rule, and why it breaks on a ₹20,000 income in Bengaluru. How to flip it into a realistic plan that still pays you first.",
+  "summary": "50/30/20 explained, then re-engineered for a low-income, high-cost city.",
+  "difficulty": "Beginner",
+  "estMinutes": 14,
+  "tags": ["budgeting", "cash-flow", "module-1"],
+  "prereqs": ["welcome"],
+  "sections": [
+    {
+      "id": "rule",
+      "title": "The core concept: give every rupee a job",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A budget is not about restriction — it's about **direction**. The point is that every rupee you earn is assigned a job *before* the month starts, so money stops disappearing into a vague fog of UPI payments.",
+            "The most famous framework is the **50/30/20 rule**: split your take-home income into three buckets."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "50% — Needs", "detail": "Things you genuinely cannot skip: rent, groceries, utilities, transport to work, minimum loan payments, phone." },
+            { "term": "30% — Wants", "detail": "Lifestyle: eating out, OTT subscriptions, shopping, trips, gadgets. Life should be livable, not miserable." },
+            { "term": "20% — Savings & investments", "detail": "Emergency fund first, then SIPs and goals. This is 'paying yourself first'." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "rule",
+          "title": "Rule of thumb",
+          "text": "Never let the savings bucket be the leftover. Savings is a fixed bill you pay to your future self on day one — wants flex around it, not the other way around."
+        }
+      ]
+    },
+    {
+      "id": "breaks",
+      "title": "Why 50/30/20 breaks on ₹20,000 in Bengaluru",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Here's where generic advice fails. The textbook rule assumes your **needs** fit in 50% of income. For Aarav, 50% of ₹20,000 is just **₹10,000** — and in Bengaluru that doesn't cover rent and food, let alone transport. The rule isn't wrong; it's just calibrated for a higher income or cheaper city."
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "Textbook split vs Aarav's reality (₹20,000/month)",
+          "columns": ["Bucket", "Textbook 50/30/20", "Realistic Bengaluru cost"],
+          "rows": [
+            ["Needs", "₹10,000 (50%)", "≈ ₹15,000 (75%) — rent + food + transport"],
+            ["Wants", "₹6,000 (30%)", "≈ ₹2,000 (10%)"],
+            ["Savings", "₹4,000 (20%)", "₹3,000 (15%) — protected, automated"]
+          ],
+          "caption": "On a tight income the needs bucket naturally swells. The skill is squeezing wants, not savings."
+        },
+        {
+          "type": "metrics",
+          "title": "A concrete ₹20,000 Bengaluru budget",
+          "items": [
+            { "label": "Shared PG / room rent", "value": "₹7,000", "note": "biggest lever" },
+            { "label": "Food (mess / groceries)", "value": "₹5,000" },
+            { "label": "Transport (bus/metro pass)", "value": "₹1,500" },
+            { "label": "Phone + internet", "value": "₹500" },
+            { "label": "Misc needs (toiletries, etc.)", "value": "₹1,000" },
+            { "label": "Wants (eating out, OTT)", "value": "₹2,000" },
+            { "label": "Savings / investments", "value": "₹3,000", "note": "pay yourself first" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "Aarav's real split is roughly **75/10/15**. That's fine. The 50/30/20 rule is a *target to grow into*, not a law. Every time income rises, the goal is to push the savings bucket back up toward 20%+ instead of inflating wants."
+        }
+      ]
+    },
+    {
+      "id": "execution",
+      "title": "Making it actually happen",
+      "blocks": [
+        {
+          "type": "steps",
+          "title": "The pay-yourself-first mechanic",
+          "items": [
+            { "title": "Automate the ₹3,000 on salary day", "detail": "Set a standing instruction / SIP for the 2nd of every month — the day after salary lands. If it leaves your account automatically, you can't 'forget' to save." },
+            { "title": "Use two accounts", "detail": "A 'spending' account for needs+wants, and a separate account/fund for savings. Out of sight, out of spend." },
+            { "title": "Attack the biggest lever — rent", "detail": "On a low income, rent dominates. A roommate or a PG one locality further out can free ₹2,000–3,000/month — that single change can double the savings bucket." },
+            { "title": "Track for one month, then relax", "detail": "Use any free app or a simple notes sheet for 30 days to see where money truly goes. After that, you mostly just maintain the automation." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Lifestyle creep is the silent killer",
+          "text": "When Aarav's income rises from ₹20k to ₹30k, the instinct is to upgrade rent, food, and gadgets so wants eat the entire raise. Instead, bank at least half of every raise. A raise is the single best chance to permanently lift your savings rate."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "50/30/20 = 50% needs, 30% wants, 20% savings — a target, not a law.",
+    "On ₹20k in Bengaluru, needs realistically take ~75%, so aim for a 75/10/15 split and grow the savings share over time.",
+    "Pay yourself first: automate savings on salary day; wants flex around it, never savings.",
+    "Rent is the biggest lever on a low income — a roommate can double your savings bucket.",
+    "Bank at least half of every future raise to beat lifestyle creep."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Application",
+      "difficulty": "Easy",
+      "prompt": "Aarav's friend says 'the 50/30/20 rule is broken — I can't fit needs into 50% in Bengaluru, so budgeting is pointless.' What's the flaw in that reasoning?",
+      "hint": "Is the rule a fixed law or a target ratio?",
+      "answer": [
+        "The rule is a **target to grow into**, not a hard constraint. On a tight income in a costly city, needs legitimately take more than 50% — so you run something like 75/10/15. The discipline that matters isn't hitting exactly 50/30/20; it's (a) giving every rupee a job and (b) protecting a fixed savings slice paid first.",
+        "Abandoning budgeting because the textbook ratio doesn't fit is throwing away the principle because of the label. Adapt the numbers, keep the habit."
+      ],
+      "keyPoints": ["Ratio is a target, not a law", "Needs can exceed 50% on low income", "Keep the pay-yourself-first principle", "Adapt numbers, keep the habit"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "Aarav gets a raise to ₹26,000. His current savings is ₹3,000/month. What should the new savings number be, and why not just enjoy the extra ₹6,000?",
+      "hint": "Think about lifestyle creep and what a raise represents.",
+      "answer": [
+        "He should bank at least half the raise — roughly ₹3,000 of the ₹6,000 — taking savings from ₹3,000 to about ₹6,000/month and letting the other ₹3,000 improve his lifestyle. That lifts his savings rate from 15% toward ~23%.",
+        "A raise is the best moment to permanently raise your savings rate, because you were already living on the old amount — you won't 'miss' money you never spent. If wants absorb the entire raise, his savings rate stays frozen forever even as he earns more."
+      ],
+      "keyPoints": ["Bank ≥ half of every raise", "Savings ₹3,000 → ~₹6,000", "Raises are the prime defence against lifestyle creep", "You won't miss money you never started spending"]
+    },
+    {
+      "id": "q3",
+      "kind": "Concept",
+      "difficulty": "Easy",
+      "prompt": "Why is 'save whatever is left at month-end' a near-guaranteed way to save nothing?",
+      "hint": "What expands to fill available money?",
+      "answer": [
+        "Spending naturally expands to fill whatever money is available (Parkinson's Law for money). If savings is the leftover, there's almost never a leftover — wants quietly absorb it. Making savings the *first* automated transfer flips this: spending is now forced to fit the remainder, and the savings actually happen."
+      ],
+      "keyPoints": ["Spending expands to available money", "Leftover savings ≈ zero savings", "Automate savings first to invert the logic"]
+    }
+  ]
+}

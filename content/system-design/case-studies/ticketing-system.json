@@ -1,0 +1,181 @@
+{
+  "slug": "ticketing-system",
+  "sectionId": "case-studies",
+  "order": 17,
+  "title": "Design an Online Ticketing System (Ticketmaster / BookMyShow)",
+  "tagline": "Sell every seat exactly once under a thundering-herd flash sale — the canonical concurrency-control problem.",
+  "summary": "Seat reservation, locking, preventing double-booking, flash-sale scale.",
+  "difficulty": "Advanced",
+  "estMinutes": 30,
+  "tags": ["case-study", "must-know"],
+  "prereqs": ["databases", "caching", "idempotency", "distributed-transactions"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Clarify requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Browse events and view available seats.",
+            "Reserve specific seats, hold them briefly, then pay to confirm.",
+            "Each seat is sold to exactly one customer.",
+            "Release held seats if payment isn't completed in time."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Strong consistency on seat inventory — double-selling a seat is unacceptable.",
+            "Handle extreme, bursty load: a popular show on sale creates a thundering herd.",
+            "Read-heavy browsing (many viewers) but consistency-critical writes (booking).",
+            "Fair and responsive even under contention."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "This is fundamentally a concurrency-control problem, not a scale problem. The defining requirement: a seat must be sold exactly once even when thousands of users click it simultaneously. Lead with how you prevent double-booking; scale is secondary."
+        }
+      ]
+    },
+    {
+      "id": "read-write-split",
+      "title": "2. Two very different paths",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Separate the read-heavy browsing path from the consistency-critical booking path — they have opposite needs."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Browsing (read-heavy)", "detail": "Listing events and viewing seat maps is served from caches/CDN and read replicas. Seat availability shown here can be slightly stale ('best effort') — the source of truth is checked at reservation time. This absorbs the huge view traffic cheaply." },
+            { "term": "Booking (consistency-critical)", "detail": "Reserving and purchasing a seat must hit a strongly-consistent store with proper concurrency control. This path is lower-volume but must be exactly right." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "A key realization: you don't need strong consistency for *showing* availability (stale is fine), only for *committing* a reservation. This lets you serve millions of browsers from caches while protecting the small, critical write path."
+        }
+      ]
+    },
+    {
+      "id": "reservation",
+      "title": "3. The reservation flow & preventing double-booking",
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Select & reserve (temporary hold)", "detail": "When a user picks a seat, atomically transition it from AVAILABLE → RESERVED with a short TTL (e.g., 5–10 min) and tie it to that user. The atomic transition is what blocks anyone else from grabbing it." },
+            { "title": "Pay", "detail": "The user has the hold window to complete payment. Their seat is protected during checkout." },
+            { "title": "Confirm or expire", "detail": "On successful payment → RESERVED → SOLD. If the timer expires without payment → RESERVED → AVAILABLE (released for others). A background sweeper or TTL handles expiry." }
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "How to make the reserve step atomic (the crux)",
+          "items": [
+            { "term": "Conditional DB update (optimistic)", "detail": "`UPDATE seats SET status='RESERVED', user=?, hold_until=? WHERE seat_id=? AND status='AVAILABLE'`. The DB guarantees only one such update succeeds (rows affected = 1 wins, 0 means someone beat you). Simple and robust — the database does the locking." },
+            { "term": "Pessimistic row lock (SELECT ... FOR UPDATE)", "detail": "Lock the seat row inside a transaction, check it's available, mark reserved, commit. Holds a lock for the duration — fine for short critical sections, but can contend under heavy load." },
+            { "term": "Distributed lock (Redis)", "detail": "`SET seat:{id} userId NX EX <ttl>` — only one client acquires the lock. Fast and decouples from the DB, but you must handle lock expiry and ensure the DB ultimately reflects the truth." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "The hold timer is essential",
+          "text": "Without a TTL on reservations, abandoned carts would lock seats forever ('inventory leak'). The temporary hold + automatic expiry is what makes the system both correct (no double-sell) and live (seats don't get stuck). Always mention it."
+        }
+      ]
+    },
+    {
+      "id": "flash-sale",
+      "title": "4. Surviving the flash sale (thundering herd)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "When a hot show goes on sale, hundreds of thousands of users hit 'buy' in the same second — almost all for the same small pool of seats. This concentrated contention is the real challenge."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Virtual waiting room / queue", "detail": "Admit users into the purchase flow in controlled batches rather than letting everyone hammer the inventory at once. A queue (often a separate gateway) smooths the spike and gives a fair, orderly experience. This is how real ticketing sites handle mega-events." },
+            { "term": "Shard the hot inventory", "detail": "A single event's seats are a hot spot. Partition seats across DB shards so concurrent reservations spread out instead of all contending on one row/partition." },
+            { "term": "Idempotent requests", "detail": "Anxious users double-click and retry. An idempotency key per reservation/purchase ensures a retry doesn't reserve two seats or charge twice." },
+            { "term": "Fail fast & clear feedback", "detail": "When seats are gone, return 'sold out' quickly rather than queueing doomed requests. Cache the 'sold out' state so you don't pound the DB with hopeless lookups." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "text": "Senior framing: the system is read-heavy at the edges (browsing → caches) but a narrow, fiercely-contended write core (the seats). Protect the core with atomic conditional updates + holds, smooth the arrival rate with a waiting room, spread contention by sharding hot inventory, and make everything idempotent. That combination is the complete answer."
+        }
+      ]
+    },
+    {
+      "id": "data-model",
+      "title": "5. Data model & consistency choice",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Why a relational/ACID store for inventory", "detail": "Seat booking needs atomic, isolated transactions and strong consistency — the textbook case for a relational database with ACID guarantees. The 'conditional update' relies on row-level locking the DB provides. An eventually-consistent store would risk double-selling." },
+            { "term": "Entities", "detail": "Event, Venue, Seat (seat_id, event_id, status, hold_until, user_id, version), Booking/Order, Payment. Status is the concurrency-controlled field." },
+            { "term": "Payments via Saga", "detail": "Reservation (inventory service) + payment (payment service) span services; coordinate with a Saga — if payment fails or times out, the compensating action releases the seat back to AVAILABLE." },
+            { "term": "Browsing data", "detail": "Event listings and seat maps can live in a read-optimized cache/replica; only the authoritative seat status sits in the consistent store." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "If asked 'SQL or NoSQL here?', answer SQL/relational for the inventory — you need ACID transactions and row locking to guarantee a seat sells exactly once. That's a place where strong consistency genuinely beats scale, and saying so confidently is a strong signal."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "It's a concurrency-control problem: sell each seat exactly once under massive simultaneous demand.",
+    "Split paths: browsing is read-heavy (caches/CDN, stale OK); booking is consistency-critical (ACID, no stale).",
+    "Reserve = atomic AVAILABLE→RESERVED with a TTL hold; pay → SOLD; expire → back to AVAILABLE.",
+    "Make reserve atomic via conditional UPDATE ... WHERE status='AVAILABLE' (DB picks one winner), row lock, or Redis SET NX.",
+    "The hold timer prevents inventory leak from abandoned carts — essential for correctness + liveness.",
+    "Flash sale: virtual waiting room to smooth arrivals, shard hot inventory, idempotency keys for retries, fail fast on sold-out.",
+    "Use a relational/ACID store for inventory (need transactions + locking); coordinate reserve+pay with a Saga (compensate = release seat)."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Design",
+      "difficulty": "Hard",
+      "prompt": "Ten thousand users click the same seat in the same second. How do you guarantee exactly one of them gets it?",
+      "hint": "Make the AVAILABLE→RESERVED transition atomic; let one writer win.",
+      "answer": [
+        "The guarantee comes from making the state transition AVAILABLE → RESERVED a single atomic operation that only one of the concurrent requests can succeed at. The simplest robust way is a conditional update in a relational DB: `UPDATE seats SET status='RESERVED', user_id=?, hold_until=now()+10min WHERE seat_id=? AND status='AVAILABLE'`. The database serializes concurrent writes to that row, so exactly one update finds the seat AVAILABLE and affects 1 row (that user wins); all the others find it no longer AVAILABLE and affect 0 rows (they lose and get 'seat taken, pick another'). The DB's row-level locking does the hard concurrency work for us — no application-level coordination needed. Alternatives that achieve the same single-winner property: a pessimistic `SELECT ... FOR UPDATE` inside a transaction, or a Redis `SET seat:{id} userId NX EX <ttl>` distributed lock.",
+        "Crucially the reservation is a *temporary hold* with a TTL, not an immediate sale — the winner then has a few minutes to pay, and on success we move RESERVED → SOLD; if they abandon, expiry returns the seat to AVAILABLE so it isn't leaked. I'd also make the request idempotent (idempotency key) since panicked users double-click, and for a true mega-sale I'd front the flow with a virtual waiting room to admit users in controlled batches and shard the event's seats so the contention isn't all on one hot partition. But the core correctness comes from that one atomic conditional transition: only one writer can flip a seat out of AVAILABLE."
+      ],
+      "keyPoints": ["Atomic conditional UPDATE ... WHERE status='AVAILABLE' → DB serializes, one winner (1 row), others get 0 rows", "DB row locking does the concurrency control (or SELECT FOR UPDATE / Redis SET NX)", "Reservation is a TTL hold → pay → SOLD, or expire → AVAILABLE (no leak)", "Add idempotency for double-clicks; waiting room + sharding for mega-sale contention"],
+      "followUps": ["How do you make sure a user who wins the seat but never pays doesn't lock it out of inventory forever?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Conceptual",
+      "difficulty": "Medium",
+      "prompt": "Why is it OK for the seat-availability shown while browsing to be slightly stale, but not OK when actually booking?",
+      "hint": "Distinguish displaying availability from committing a reservation.",
+      "answer": [
+        "Displaying availability and committing a reservation are fundamentally different operations with different consistency needs. While browsing, a user is just looking — showing that a seat *appears* available a second or two out of date causes no harm: at worst they try to reserve a seat that was just taken and get told 'sorry, gone, pick another.' That's an acceptable, recoverable UX. Because browsing is enormously high-volume (many viewers per buyer), serving it from caches, CDNs, and read replicas with slightly stale data is exactly what makes the system affordable and fast — we'd never want every seat-map view to hit the strongly-consistent source of truth.",
+        "Booking is different: it *mutates* shared inventory and the invariant 'each seat sells exactly once' must hold absolutely. If two bookings both read stale 'available' and both commit, you've double-sold a seat — a real-world failure (two people, one seat) that's unacceptable. So the actual reservation must go through a strongly-consistent store with an atomic conditional transition that re-checks the seat is truly AVAILABLE at commit time, regardless of what the browse view showed. The design principle: optimize the read/display path for scale with eventual consistency, but enforce strong consistency precisely at the commit point where correctness matters. The stale browse view is just a hint; the booking transaction is the source of truth."
+      ],
+      "keyPoints": ["Browsing only displays — stale availability is harmless and recoverable ('pick another')", "High read volume → caches/replicas/CDN with eventual consistency keeps it cheap/fast", "Booking mutates shared inventory; 'sell once' invariant demands strong consistency", "Re-check availability atomically at commit time; browse view is a hint, booking is the truth"],
+      "followUps": ["How would you keep the cached availability reasonably fresh without overloading the consistent store?"]
+    }
+  ]
+}

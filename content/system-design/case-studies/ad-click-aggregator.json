@@ -1,0 +1,177 @@
+{
+  "slug": "ad-click-aggregator",
+  "sectionId": "case-studies",
+  "order": 18,
+  "title": "Design an Ad Click Aggregator (Real-Time Analytics)",
+  "tagline": "Ingest a firehose of click events and answer 'how many clicks per ad per minute?' — fast, at scale, and accurately.",
+  "summary": "Stream ingestion, real-time vs batch (Lambda), windowed aggregation, idempotency.",
+  "difficulty": "Advanced",
+  "estMinutes": 30,
+  "tags": ["case-study", "must-know", "data-intensive"],
+  "prereqs": ["message-queues", "distributed-message-queue", "idempotency"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Clarify requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Record every ad click event (ad_id, user, timestamp, context).",
+            "Query aggregated metrics: clicks per ad over time windows (last minute / hour / day).",
+            "Support near-real-time dashboards and slice/dice by dimensions (ad, campaign, region)."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Massive write throughput — millions of click events/sec.",
+            "Low-latency reads on aggregates for dashboards.",
+            "Scalable and fault-tolerant ingestion (never silently drop events — money depends on it).",
+            "Accurate counts (advertisers are billed on them) but some real-time approximation is acceptable if reconciled later."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "This is a data-intensive / stream-processing problem. The key tension: you need fast approximate results *now* (real-time dashboards) AND accurate results *eventually* (billing). That tension is exactly what the Lambda architecture (fast layer + batch layer) solves — name it."
+        }
+      ]
+    },
+    {
+      "id": "estimation",
+      "title": "2. Back-of-the-envelope",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Write volume", "detail": "Say 1M clicks/sec peak. You cannot write each one synchronously to a query DB — you must buffer in a stream and aggregate. Raw events at ~100 bytes → ~100 MB/sec → ~8.6 TB/day of raw events." },
+            { "term": "Read volume", "detail": "Far lower — dashboards and reporting queries. But they need pre-aggregated data to be fast; you never scan raw events at query time." },
+            { "term": "Cardinality", "detail": "Aggregates are keyed by (ad_id, time_window, dimensions). Millions of ads × minute buckets → large but bounded aggregate tables, ideal for a time-series / OLAP store." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pipeline",
+      "title": "3. The streaming pipeline",
+      "blocks": [
+        {
+          "type": "diagram",
+          "caption": "Buffer raw events in a log, aggregate in a stream processor, serve pre-computed rollups.",
+          "direction": "lr",
+          "groups": [
+            { "label": "Source", "nodes": [{ "label": "Click events", "sub": "ad servers", "icon": "Server", "accent": "#0ea5e9" }] },
+            { "label": "Ingest", "nodes": [{ "label": "Message log", "sub": "Kafka, partitioned by ad_id", "icon": "ListOrdered", "accent": "#d97706" }] },
+            { "label": "Process", "nodes": [{ "label": "Stream processor", "sub": "Flink/Spark — windowed aggregation", "icon": "Workflow", "accent": "#8b5cf6" }] },
+            { "label": "Serve", "nodes": [{ "label": "OLAP / time-series DB", "sub": "pre-aggregated rollups", "icon": "Database", "accent": "#10b981" }, { "label": "Raw store", "sub": "S3 — replay/batch", "icon": "Cloud", "accent": "#f59e0b" }] }
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Ingest into a durable log", "detail": "Ad servers emit click events to a partitioned message log (Kafka). The log absorbs the firehose, provides durability + replay, and decouples producers from the slower aggregation. Partition by ad_id so all events for an ad land together." },
+            { "title": "Stream-aggregate in windows", "detail": "A stream processor (Flink/Spark Streaming) consumes the log and maintains running counts per (ad_id, time window) using tumbling windows (e.g., 1-minute buckets). It emits rollups continuously." },
+            { "title": "Write pre-aggregated rollups", "detail": "Aggregated counts go to an OLAP/time-series store (e.g., a columnar/time-series DB) optimized for fast range queries by ad and time. Dashboards read these pre-computed rollups — never the raw events." },
+            { "title": "Archive raw events", "detail": "Also persist raw events to cheap storage (S3/data lake) for reprocessing, auditing, and the batch layer." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Precompute on write, serve fast on read",
+          "text": "The whole trick is shifting work to write-time: instead of scanning billions of raw events when a dashboard loads, the stream processor continuously rolls events up into small per-window aggregates. Reads then hit tiny pre-computed tables — the same 'precompute offline, serve fast online' pattern as the news feed and typeahead."
+        }
+      ]
+    },
+    {
+      "id": "lambda",
+      "title": "4. Accuracy: the fast layer + batch layer (Lambda)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Real-time stream aggregation is fast but can be slightly off — late-arriving events, out-of-order data, or a processor restart can make live counts approximate. Yet advertisers are billed on these numbers, so they must eventually be exact. The Lambda architecture runs two paths over the same data."
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "The two layers",
+          "columns": ["Layer", "Job", "Property"],
+          "rows": [
+            ["Speed (streaming) layer", "Aggregate the live stream for real-time dashboards", "Low latency, approximate, may miss late events"],
+            ["Batch layer", "Periodically reprocess the full raw-event archive (e.g., hourly/daily)", "High latency, exact, the authoritative source of truth (used for billing)"]
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Reconciliation", "detail": "The batch layer's accurate results overwrite/correct the speed layer's approximations for finalized windows. Dashboards show fresh-but-approximate now; billing uses the reconciled exact numbers later." },
+            { "term": "Event time vs processing time", "detail": "Aggregate by *event time* (when the click happened), not when it arrived, so a delayed event still counts in the right minute. Use watermarks + a grace period to handle stragglers before finalizing a window." },
+            { "term": "Kappa alternative", "detail": "A simpler modern variant: skip the separate batch code and just reprocess the stream from the durable log when you need corrections (one codebase). Worth mentioning as the trade-off — less operational complexity, at the cost of replaying large streams." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "correctness",
+      "title": "5. Correctness, dedup & scale",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Idempotency / dedup", "detail": "At-least-once ingestion means the same click event can appear twice (retries). Give each event a unique id and dedup in the processor, so counts aren't inflated — critical when money is attached." },
+            { "term": "Fraud / bot filtering", "detail": "Inflated clicks (bots, click farms) corrupt billing. A filtering stage (rules + ML) removes invalid clicks before aggregation, or flags them for the batch layer to exclude." },
+            { "term": "Hot keys", "detail": "A viral ad becomes a hot partition. Mitigate by sub-partitioning a hot ad_id (e.g., append a random shard suffix) and summing the shards at read time, so one ad doesn't bottleneck a single processor task." },
+            { "term": "Scaling the processor", "detail": "Stream processors scale by partition — more partitions + more parallel tasks = more throughput. State (running window counts) is checkpointed so a task can recover after a crash without losing the in-flight aggregate." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "text": "Senior framing: (1) durable log to absorb the firehose and enable replay; (2) stream processor doing event-time windowed aggregation with checkpointed state; (3) pre-aggregated OLAP store for fast reads; (4) a batch/reprocessing path for exact, billable truth; (5) dedup + fraud filtering because the numbers are money. Hitting all five shows real data-intensive-systems maturity."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Data-intensive stream problem: ingest millions of click events/sec, serve fast aggregate queries.",
+    "Never write each click to the query DB or scan raw events at read time — buffer in a durable log (Kafka), aggregate, pre-compute rollups.",
+    "Stream processor (Flink/Spark) does event-time windowed aggregation (tumbling buckets) → OLAP/time-series store for fast reads.",
+    "Lambda architecture: speed layer (real-time, approximate dashboards) + batch layer (reprocess raw archive → exact, billable truth); reconcile.",
+    "Aggregate by event time (not arrival) with watermarks + grace period for late/out-of-order events.",
+    "Dedup via unique event ids (at-least-once → duplicates) and filter fraud/bot clicks — the counts are money.",
+    "Hot ad = hot partition → sub-shard the key and sum at read; processors scale by partition with checkpointed state."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Trade-off",
+      "difficulty": "Hard",
+      "prompt": "Advertisers are billed on click counts, but you also need a live dashboard. How do you serve both fast-but-approximate and slow-but-exact numbers?",
+      "hint": "Two layers over the same durable event log.",
+      "answer": [
+        "This is the classic tension the Lambda architecture resolves: run two pipelines over the same durable raw-event log. The **speed (streaming) layer** consumes the live stream and maintains running per-window aggregates (e.g., clicks per ad per minute), powering the real-time dashboard with sub-second freshness. It's fast but approximate — late-arriving, out-of-order, or duplicate events and processor restarts mean the live count can be slightly off. That's acceptable for a dashboard where 'roughly right, right now' is the goal.",
+        "The **batch layer** periodically (say hourly/daily) reprocesses the complete archive of raw events from cheap storage, computing exact counts. Because it sees all events including stragglers and can apply full dedup and fraud filtering, its results are authoritative — and those are the numbers used for billing. A reconciliation step overwrites the speed layer's approximations for finalized time windows with the batch layer's exact values. So the dashboard shows fresh approximate data immediately, then those windows get corrected to exact as the batch layer finalizes them, and advertisers are billed on the reconciled truth.",
+        "I'd also note the modern Kappa alternative: keep a single streaming codebase and, when you need corrections, just replay the stream from the durable log (which retains the raw events) rather than maintaining separate batch code — trading some replay cost for far less operational complexity. Either way, the durable log retaining raw events is what makes exact reprocessing possible."
+      ],
+      "keyPoints": ["Lambda: speed layer (real-time, approximate dashboard) + batch layer (exact, billable)", "Both run over the same durable raw-event log; batch reprocesses the full archive", "Reconcile: batch's exact counts overwrite speed-layer approximations for final windows", "Kappa alternative: one streaming codebase, replay from the log for corrections"],
+      "followUps": ["A click event arrives 5 minutes late. How do you make sure it's counted in the correct minute bucket?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "Your ingestion is at-least-once, so some click events arrive twice. Why is that dangerous here specifically, and how do you fix it?",
+      "hint": "Counts drive billing; duplicates inflate revenue numbers.",
+      "answer": [
+        "Duplicates are especially dangerous in this system because the counts directly determine money — advertisers are billed per click, so double-counting clicks inflates their bills and corrupts revenue reporting. In a system where the aggregate is just a rough metric you might tolerate small duplication, but here every duplicated event is an incorrect charge, which is both a correctness bug and a trust/legal problem. At-least-once delivery (the sensible default, since we'd rather risk a duplicate than drop a billable click) guarantees these duplicates will happen on retries and reprocessing.",
+        "The fix is to make aggregation idempotent by deduplicating on a unique event identifier. Each click event carries a globally unique id (generated at the ad server). The stream processor (and the batch layer) track which event ids have already been counted — for a bounded real-time window this can be an in-memory/secondary set keyed by event id within the window, and the authoritative batch layer can dedup exactly over the full archive (e.g., counting distinct event ids). So a re-delivered event with an already-seen id is ignored rather than added again. This is the same exactly-once-*effect* principle from the message-queue case: at-least-once delivery plus idempotent processing yields counts that aren't inflated by duplicates. Combined with fraud/bot filtering (which removes invalid-but-unique clicks), it keeps the billable numbers trustworthy."
+      ],
+      "keyPoints": ["Counts drive billing → duplicates = overcharging + corrupted revenue, not just a soft metric", "At-least-once delivery guarantees duplicates on retries/reprocessing", "Dedup on a unique event id (windowed set in streaming; distinct-id in batch)", "Exactly-once effect = at-least-once + idempotent processing; plus fraud filtering"],
+      "followUps": ["Where would you store the 'seen event ids' for dedup, and how do you bound that state from growing forever?"]
+    }
+  ]
+}

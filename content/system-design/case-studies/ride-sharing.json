@@ -1,0 +1,174 @@
+{
+  "slug": "ride-sharing",
+  "sectionId": "case-studies",
+  "order": 14,
+  "title": "Design a Ride-Sharing Service (Uber / Lyft)",
+  "tagline": "Match a rider to the best nearby driver in seconds, track everyone in real time, and never double-book a car.",
+  "summary": "Geo-matching, real-time location, dispatch, surge, exactly-once trips.",
+  "difficulty": "Advanced",
+  "estMinutes": 32,
+  "tags": ["case-study", "must-know"],
+  "prereqs": ["proximity-service", "realtime-communication", "idempotency"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Clarify requirements",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Ride-sharing combines two hard sub-problems: a geospatial 'find nearby drivers' search (the proximity-service problem) and a real-time matching/dispatch engine that pairs one rider with one driver under heavy contention. Scope which you'll focus on — usually matching is the headline."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Riders request a ride from A to B; the system finds and assigns a nearby driver.",
+            "Drivers broadcast their location continuously and accept/decline requests.",
+            "Both sides see each other's live location and ETA during the trip.",
+            "Fare calculation, trip lifecycle (requested → matched → in-progress → completed)."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Low latency on matching — riders abandon if it takes more than a few seconds.",
+            "High availability — an outage means lost rides and revenue, and stranded users.",
+            "Location updates at massive write volume (millions of drivers pinging every few seconds).",
+            "Consistency where it counts: a driver must never be assigned to two riders at once."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Two insights to lead with: (1) driver location is high-frequency, ephemeral, write-heavy data → keep it in an in-memory geo-index, not a disk DB; (2) assigning a driver to a rider is a contention/consistency problem → it needs a lock or a single-threaded-per-driver decision so two riders can't grab the same car."
+        }
+      ]
+    },
+    {
+      "id": "estimation",
+      "title": "2. Back-of-the-envelope",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Drivers & pings", "detail": "Say 1M active drivers each sending a location every 4s → 1M / 4 = 250,000 location writes/sec. This dominates write load and rules out a disk-based store for live locations." },
+            { "term": "Ride requests", "detail": "Far lower — maybe ~10k–50k requests/sec at peak. The expensive part of each is the geo-search + matching, not raw volume." },
+            { "term": "Storage", "detail": "Completed trips are durable records (a few KB each) → a relational/wide-column store; tens of millions of trips/day. Live locations are ephemeral and stay in memory." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "3. High-level design",
+      "blocks": [
+        {
+          "type": "diagram",
+          "caption": "Separate the high-write location pipeline from the trip/matching path. WebSockets keep both sides live.",
+          "groups": [
+            { "label": "Apps", "nodes": [{ "label": "Rider app", "icon": "Smartphone", "accent": "#0ea5e9" }, { "label": "Driver app", "sub": "pings every ~4s" }] },
+            { "label": "Edge", "nodes": [{ "label": "Gateway / WS", "sub": "persistent conns", "icon": "Scale", "accent": "#ef4444" }] },
+            { "label": "Services", "nodes": [{ "label": "Location Svc", "sub": "ingest pings", "icon": "MapPin", "accent": "#d97706" }, { "label": "Matching Svc", "sub": "find + assign", "icon": "Workflow", "accent": "#8b5cf6" }, { "label": "Trip Svc", "sub": "lifecycle" }] },
+            { "label": "Data", "nodes": [{ "label": "In-memory geo-index", "sub": "Redis / quadtree", "icon": "Zap", "accent": "#f59e0b" }, { "label": "Trips DB", "icon": "Database", "accent": "#10b981" }] }
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Drivers stream location", "detail": "Driver apps send GPS pings over a persistent connection. The Location Service updates the driver's cell in an in-memory geospatial index (Redis geo / quadtree) keyed by geohash. Old positions are overwritten — only the current location matters." },
+            { "title": "Rider requests a ride", "detail": "The Matching Service computes the rider's geohash cell, queries the in-memory index for available drivers in that cell + neighboring cells, and ranks candidates by ETA (real road distance, not straight-line)." },
+            { "title": "Dispatch & lock", "detail": "It offers the ride to the best driver and locks that driver (status = 'offered') so no other match can grab them. If the driver declines or times out, release the lock and offer the next candidate." },
+            { "title": "Trip lifecycle", "detail": "On acceptance, create a durable trip record (matched). Both apps get live updates via WebSocket. On completion, compute fare and persist the trip." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "matching",
+      "title": "4. The matching & dispatch engine (the hard part)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Matching is where the design earns its keep. The core challenge: many riders and drivers in the same hot area, and you must assign each driver to exactly one rider with low latency and no double-booking."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Avoid the double-assignment race", "detail": "Two riders' searches can return the same driver simultaneously. Serialize the assignment: either use a distributed lock on the driver id (e.g., Redis SET NX with a TTL), or route all decisions for a driver/region through a single owner (consistent-hash drivers to matching workers) so one worker decides per driver. The TTL ensures a crashed worker doesn't lock a driver forever." },
+            { "term": "Rank by ETA, not distance", "detail": "The closest driver as the crow flies may be across a river. Rank candidates by predicted time-to-pickup using a routing/ETA service that accounts for roads and traffic." },
+            { "term": "Offer → accept → fallback", "detail": "Lock the chosen driver, offer the trip, and wait a few seconds. On decline/timeout, release and try the next candidate. This sequential offer protocol keeps assignment atomic." },
+            { "term": "Batch matching (optional, advanced)", "detail": "Instead of greedily matching each request as it arrives, collect requests over a short window and solve a global assignment (bipartite matching) to minimize total wait — better outcomes in dense areas at the cost of a small delay." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "The hot-cell problem",
+          "text": "During a concert or rush hour, one geohash cell gets a flood of both location pings and ride requests. Mitigate with finer-grained cells in dense areas (or an adaptive quadtree), shard the matching workers by region, and replicate the in-memory index. Be ready to discuss this — it's the classic follow-up."
+        }
+      ]
+    },
+    {
+      "id": "realtime-surge",
+      "title": "5. Real-time tracking, surge & consistency",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Live tracking", "detail": "During a trip, the driver's pings are pushed to the rider over a WebSocket (and vice-versa) so the map updates in real time. This rides on the same location pipeline, filtered to the trip's participants." },
+            { "term": "Surge pricing", "detail": "A background job continuously computes the supply/demand ratio per region (available drivers vs open requests) and sets a surge multiplier. This is naturally eventually consistent and computed from the same location/request streams." },
+            { "term": "Trip state consistency", "detail": "The trip lifecycle (requested → matched → ongoing → completed) must be strongly consistent and idempotent — a retried 'accept' must not create two trips. Use an idempotency key on trip creation and a state machine with valid transitions." },
+            { "term": "Payments", "detail": "On completion, charge via the payment system asynchronously (queue the fare event); apply idempotency so a retry never double-charges. (See the payment-system case study.)" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "text": "Frame the whole system as two decoupled pipelines: a write-heavy, eventually-consistent location/geo pipeline (in-memory, sharded by region), and a strongly-consistent, idempotent trip/matching pipeline that locks drivers to avoid double-booking. Knowing which half needs which consistency model is the senior signal."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Two sub-problems: geospatial 'find nearby drivers' (proximity) + real-time matching/dispatch under contention.",
+    "Driver locations are high-frequency, ephemeral, write-heavy (~250k pings/sec) → in-memory geo-index (Redis geo / quadtree), not a disk DB.",
+    "Match: geohash the rider, query the cell + neighbors, rank candidates by ETA (road/traffic), not straight-line distance.",
+    "Prevent double-assignment: distributed lock on driver id (Redis SET NX + TTL) or consistent-hash drivers to one matching worker.",
+    "Offer → accept → fallback (sequential), or batch matching over a short window for globally better assignments.",
+    "Hot-cell problem (events/rush hour): finer cells, shard matching by region, replicate the index.",
+    "Trip lifecycle is a strongly-consistent, idempotent state machine; live tracking + surge ride on the location streams (eventually consistent)."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Design",
+      "difficulty": "Hard",
+      "prompt": "Two riders request a ride at the same instant and your geo-search returns the same nearby driver for both. How do you guarantee that driver is assigned to only one of them?",
+      "hint": "Serialize the assignment decision per driver.",
+      "answer": [
+        "This is a classic race: two independent matching computations both see the same available driver and could both assign it. The fix is to serialize the *assignment decision* for any given driver so only one can win. Two clean approaches: (1) a distributed lock keyed on the driver id — before offering, do an atomic `SET driver:{id}:lock = tripId NX EX <ttl>` in Redis; only the request that successfully sets it may offer the ride, the other sees the key exists and moves to its next candidate. The TTL is essential so a matching worker that crashes mid-offer doesn't lock the driver forever. (2) Consistent-hash drivers to matching workers so every decision about a given driver is owned by exactly one worker/thread, which then makes assignments sequentially with no cross-worker race.",
+        "Either way, once a driver is locked we mark them 'offered/assigned' so subsequent geo-searches exclude them. If the driver declines or the offer times out, we release the lock (or it expires) and the driver becomes available again. The driver's status transitions through a small state machine (available → offered → on-trip → available), and trip creation uses an idempotency key so even a retried 'accept' can't spawn two trips. The key principle: geo-search can be eventually consistent and parallel, but the assignment must funnel through a single serialized decision per driver."
+      ],
+      "keyPoints": ["Serialize assignment per driver — geo-search alone isn't enough", "Distributed lock (Redis SET NX + TTL) or consistent-hash driver→one worker", "TTL/expiry so a crashed worker doesn't lock a driver forever", "Driver state machine + idempotent trip creation; exclude locked drivers from searches"],
+      "followUps": ["A driver declines after being offered — how do you fall back quickly without re-running the whole search from scratch?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "1M drivers each send a location update every 4 seconds. Where do you store these and why not a traditional database?",
+      "hint": "~250k writes/sec of ephemeral data where only the latest value matters.",
+      "answer": [
+        "That's ~250,000 writes/sec, and crucially the data is ephemeral — only a driver's *current* location matters, not the history of every ping. Writing 250k rows/sec to a disk-backed relational database would be a brutal, pointless write storm: you'd be paying durability and indexing costs for data you overwrite seconds later, and disk-based geo queries would add latency to the matching hot path.",
+        "Instead, keep live locations in an in-memory geospatial index — Redis with its geo commands, or an in-memory quadtree/grid keyed by geohash. Each ping updates the driver's position in place (overwriting the old one), which is a cheap memory operation, and 'find drivers near this cell' is a fast in-memory lookup. We only periodically checkpoint to durable storage for crash recovery, and we persist *completed trips* (which are durable, valuable records) to a proper database. This split — ephemeral high-write location data in memory, durable trip records on disk — is exactly the regime distinction from the proximity-service problem: tailor the store to whether the data is transient and write-heavy or durable and queryable."
+      ],
+      "keyPoints": ["~250k writes/sec of ephemeral 'latest location only' data", "Disk DB = wasteful write storm + slow geo queries on the hot path", "In-memory geo-index (Redis geo / quadtree), update in place; periodic checkpoint", "Persist completed trips to a durable DB; split ephemeral vs durable storage"],
+      "followUps": ["How would you handle a hot cell (a stadium emptying out) flooding both pings and ride requests?"]
+    }
+  ]
+}

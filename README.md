@@ -11,6 +11,14 @@ Four modules:
   language switcher, a curated 5‑problem set, and an interactive step‑by‑step
   simulator — **all 55 lessons have a simulator** (50 simulator components, several
   parametrised). Progress is `localStorage`‑based with a locked/unlocked roadmap.
+- **Module 2 — System Design** *(complete, end‑to‑end)*: **55 in‑depth lessons across 6
+  sections** — Start Here, Fundamentals, Building Blocks, Distributed Systems, Case
+  Studies (21 canonical designs), and a full Interview Playbook. Each lesson is a
+  block‑based long‑form article (text, analogies, callouts, comparison tables,
+  architecture diagrams, code, metrics) with a sticky scroll‑spy table of contents, an
+  **interview cheat sheet**, and a **practice question set** with progressive reveal
+  (hint → model answer → follow‑ups) and per‑question self‑assessment. Progress is
+  `localStorage`‑based, tracked independently from the Algorithms module.
 - **Module 4 — Road to Candidate Master** *(complete, content)*: a Codeforces‑only
   practice ladder that picks up where Module 1 ends. **393 real, curated Codeforces
   problems** across **5 rating tiers** (Newbie→Pupil … CM→Master) and **33 themed
@@ -173,9 +181,9 @@ interactive simulator. Possible future enhancements:
 - Per‑problem notes and a spaced‑repetition "review queue".
 - Expand the intentionally lean categories (greedy, stacks/queues) with more lessons.
 
-**Module 2 — System Design — done.** 47 lessons across 6 sections, each with diagrams,
+**Module 2 — System Design — done.** 55 lessons across 6 sections, each with diagrams,
 an interview cheat sheet, and a practice question set. Possible future enhancements:
-- More case studies (e.g., distributed message queue, ad click aggregator, ticketing).
+- More case studies (e.g., distributed cache, web search, ad-serving, payments ledger).
 - An interactive "design canvas" for drawing architectures.
 - Spaced‑repetition review queue across the practice questions.
 

@@ -18,11 +18,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <SdProgressProvider>
             <HftProgressProvider>
               <KbProgressProvider>
-                <App />
+                <FinanceProgressProvider>
+                  <App />
+                </FinanceProgressProvider>
               </KbProgressProvider>
-              <FinanceProgressProvider>
-                <App />
-              </FinanceProgressProvider>
             </HftProgressProvider>
           </SdProgressProvider>
         </ProgressProvider>

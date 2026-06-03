@@ -11,11 +11,12 @@ Four modules:
   language switcher, a curated 5‑problem set, and an interactive step‑by‑step
   simulator — **all 55 lessons have a simulator** (50 simulator components, several
   parametrised). Progress is `localStorage`‑based with a locked/unlocked roadmap.
-- **Module 4 — Road to Candidate Master** *(complete, content)*: a Codeforces‑only
-  practice ladder that picks up where Module 1 ends. **393 real, curated Codeforces
-  problems** across **5 rating tiers** (Newbie→Pupil … CM→Master) and **33 themed
-  patterns**, each mapped back to the exact Module 1 lessons that teach the
-  algorithm. Every theme leads with *pattern‑recognition* coaching (signals →
+- **Module 4 — Road to Grandmaster** *(complete, content)*: a Codeforces‑only
+  practice ladder that picks up where Module 1 ends. **750 real, curated Codeforces
+  problems** across **8 rating tiers** (Newbie→Pupil … Grandmaster → International
+  GM, up to rating 3500) and **64 themed patterns**, each mapped back to the exact
+  Module 1 lessons that teach the algorithm. **~480 problems are rated 1900+** for a
+  deep CM→GM grind. Every theme leads with *pattern‑recognition* coaching (signals →
   technique → classic trap → mastery goal). Problems are pulled from the live
   Codeforces API, ordered by rating, and ranked by popularity (`solvedCount`).
   Per‑problem Solved/Review/Stuck status shares the same `localStorage` store.

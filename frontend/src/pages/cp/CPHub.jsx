@@ -111,7 +111,7 @@ export default function CPHub() {
             </div>
             <h1 className="mt-2 flex items-center gap-3 text-3xl font-extrabold tracking-tight sm:text-4xl lit-text">
               <Trophy className="h-8 w-8" style={{ color: MODULE_COLOR, filter: `drop-shadow(0 0 8px ${MODULE_COLOR})` }} />
-              Road to Candidate Master
+              {CP_ROADMAP.title}
             </h1>
             <p className="mt-3 text-muted">
               You finished the algorithm course — now turn that toolbox into rating. {CP_ROADMAP.tagline}
@@ -147,8 +147,9 @@ export default function CPHub() {
         </div>
         <p className="mt-2 max-w-3xl text-sm text-muted">
           Work the tiers in order. In each session, pick the lowest theme that isn't green yet and solve 1–3 problems
-          from it. When a tier is ~80% solved, move up. Two focused hours a day, sustained, is more than enough to
-          reach Candidate Master within your timeline — the ladder below is the path; your job is to think hard on each rung.
+          from it. When a tier is ~80% solved, move up. Two focused hours a day, sustained over a couple of years, takes
+          you from the basics through Candidate Master and Master toward Grandmaster — the ladder below is the path;
+          your job is to think hard on each rung before peeking at anything.
         </p>
         <div className="mt-5 grid gap-4 sm:grid-cols-3">
           {HOW_IT_WORKS.map((s) => {
@@ -239,8 +240,9 @@ export default function CPHub() {
         <Trophy className="mx-auto h-8 w-8" style={{ color: MODULE_COLOR, filter: `drop-shadow(0 0 10px ${MODULE_COLOR})` }} />
         <h3 className="mt-3 text-lg font-bold lit-text">Solve the ladder, earn the rank</h3>
         <p className="mx-auto mt-2 max-w-2xl text-sm text-muted">
-          {CP_TOTAL_PROBLEMS} hand-curated Codeforces problems stand between you and Candidate Master. They cover every
-          algorithm in Module 1 with hard variations, so you should never meet an idea you haven't trained. Pick a tier and start climbing.
+          {CP_TOTAL_PROBLEMS} hand-curated Codeforces problems take you from Newbie all the way to International
+          Grandmaster — over {">"}480 of them rated 1900+. They cover every algorithm in Module 1 with hard variations,
+          so you should never meet an idea you haven't trained. Pick a tier and start climbing.
         </p>
         <Link
           to={`/cp/${CP_PHASES[0].id}/${CP_PHASES[0].themes[0].id}`}

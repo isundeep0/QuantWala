@@ -56,8 +56,8 @@ export default function Landing() {
     {
       to: "/cp",
       eyebrow: "Module 04",
-      title: "Road to Candidate Master",
-      desc: `A Codeforces-only ladder of ${CP_TOTAL_PROBLEMS} real, curated problems that turns the Module 1 toolbox into rating — grouped by pattern, ramped by difficulty, from Newbie all the way to Master.`,
+      title: "Road to Grandmaster",
+      desc: `A Codeforces-only ladder of ${CP_TOTAL_PROBLEMS} real, curated problems that turns the Module 1 toolbox into rating — grouped by pattern, ramped by difficulty, from Newbie all the way to International Grandmaster.`,
       icon: Trophy,
       color: "#a855f7",
       status: "Fully available",

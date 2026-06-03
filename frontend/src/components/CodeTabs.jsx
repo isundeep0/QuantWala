@@ -1,7 +1,7 @@
 import { useState } from "react";
 import CodeBlock from "./CodeBlock.jsx";
 
-const LANG_LABEL = { cpp: "C++", python: "Python", java: "Java", js: "JavaScript" };
+const LANG_LABEL = { cpp: "C++", python: "Python", java: "Java", js: "JavaScript", shell: "Shell", bash: "Bash" };
 
 // Renders one or more code snippets with a language switcher.
 // `blocks` is [{ language, title, source }]. Falls back gracefully to a single

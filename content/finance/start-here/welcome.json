@@ -1,0 +1,118 @@
+{
+  "slug": "welcome",
+  "sectionId": "start-here",
+  "order": 1,
+  "title": "Welcome — Money Is a Skill, Not a Salary",
+  "tagline": "Before any spreadsheet, the mindset. Why most people earning well still feel broke, the one persona we'll use for every example, and how to actually finish this course.",
+  "summary": "The psychology that decides wealth, our beginner persona, and how to use the course.",
+  "difficulty": "Beginner",
+  "estMinutes": 10,
+  "tags": ["mindset", "start-here"],
+  "sections": [
+    {
+      "id": "why",
+      "title": "Why this course exists",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Here is an uncomfortable truth: **how much you earn and how wealthy you become are only loosely related.** People earning ₹2 lakh a month go broke; people who earned modest salaries their whole life retire with crores. The difference is almost never income — it is **behaviour over time**.",
+            "Wealth is what you *don't* see. It's the car not bought, the upgrade resisted, the money quietly invested every month for years. That's why this is a course about **habits and systems**, not hot stock tips. Get the system right on ₹20,000 a month and it will scale beautifully when you earn ₹2,00,000."
+          ]
+        },
+        {
+          "type": "analogy",
+          "title": "The two games",
+          "text": "Personal finance is two games played at once. The **defensive game** is keeping money you've earned — budgeting, an emergency fund, avoiding debt traps. The **offensive game** is growing it — compounding, SIPs, the right assets. You must win defence first: there is no offence if every rupee leaks out before month-end."
+        },
+        {
+          "type": "callout",
+          "variant": "reality",
+          "title": "What this course will NOT do",
+          "text": "No get-rich-quick schemes, no 'double your money' tips, no crypto moonshots. Realistic Indian returns, real Bengaluru costs, and maths you can verify yourself. If anything here ever promises guaranteed high returns, you've misread it."
+        }
+      ]
+    },
+    {
+      "id": "persona",
+      "title": "Meet Aarav — our persona for every example",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Generic advice like 'just save ₹50,000 a month' is useless to a real beginner. So every number in this course is built around **one concrete person**. When you see a budget or a SIP, it's Aarav's — and you can map it onto your own life."
+          ]
+        },
+        {
+          "type": "stat",
+          "items": [
+            { "value": "22", "label": "Years old — time is the biggest asset" },
+            { "value": "Bengaluru", "label": "High cost of living, shared PG life" },
+            { "value": "₹20,000/mo", "label": "Take-home income to start" },
+            { "value": "Car by 2031", "label": "A strict 5-year goal" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "At 22, Aarav's single biggest advantage isn't money — it's **time**. A rupee invested at 22 is worth far more at 60 than a rupee invested at 30, because it compounds for eight extra years. Module 2 proves this with exact numbers."
+        }
+      ]
+    },
+    {
+      "id": "how",
+      "title": "How to use this course",
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Go in order", "detail": "The six modules build on each other. Defence (budgeting, emergency fund) before offence (investing). Don't jump to 'which fund should I buy' before you have an emergency fund." },
+            { "title": "Each lesson has the same shape", "detail": "Core concept explained simply → a strict rule of thumb → a worked example using Aarav's numbers. Read the example slowly; the maths is the point." },
+            { "title": "Use the 'Check your understanding' at the end", "detail": "Answer in your own words before revealing the model answer. Mark each question Got it / Review / Stuck — your progress is saved on this device." },
+            { "title": "Pause at the Module 3 checkpoint", "detail": "After credit & CIBIL there's a deliberate checkpoint to consolidate the 'defensive game' before the heavier investing modules. Don't skip it." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "rule",
+          "title": "The one rule to remember from page one",
+          "text": "Pay yourself first. The moment money arrives, a fixed slice goes to savings/investments before a single rupee is spent. Everything else in this course is just making that slice bigger and smarter."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Wealth is driven by behaviour over time, not by income alone.",
+    "Win the defensive game (keep money) before the offensive game (grow money).",
+    "At 22, time is your biggest asset — compounding rewards starting early far more than starting big.",
+    "Pay yourself first: save/invest a fixed slice the moment money arrives.",
+    "No get-rich-quick anything — only realistic Indian returns and verifiable maths."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Mindset",
+      "difficulty": "Easy",
+      "prompt": "Two friends both earn ₹60,000/month. After 10 years one has ₹40 lakh invested and the other has ₹0. Same income — what most likely explains the gap?",
+      "hint": "Income was identical. So the variable isn't earning.",
+      "answer": [
+        "The gap is **behaviour over time**, not income. The wealthy friend almost certainly automated saving a fixed slice every month (pay yourself first), avoided high-interest debt like revolving credit-card balances, and let compounding work for a decade.",
+        "The other friend likely let lifestyle expand to match income (lifestyle creep), saved 'whatever was left' (which is usually nothing), and possibly carried EMIs or card debt. Identical salaries, opposite systems."
+      ],
+      "keyPoints": ["Income ≠ wealth", "Pay-yourself-first vs save-what's-left", "Avoiding debt traps", "Time + compounding for the saver"],
+      "followUps": ["Which of these two systems is yours right now, honestly?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Concept",
+      "difficulty": "Easy",
+      "prompt": "Why does this course insist on winning the 'defensive game' before the 'offensive game'?",
+      "hint": "What happens to an investment plan the first time an emergency hits with no buffer?",
+      "answer": [
+        "Because offence is impossible if money leaks out. If you have no budget and no emergency fund, the first medical bill or job gap forces you to sell investments at the worst time — or take expensive debt. That wipes out years of compounding.",
+        "Defence (a working budget + an emergency fund) is the foundation that lets your investments stay invested through life's shocks. Build the floor before you build the tower."
+      ],
+      "keyPoints": ["No offence if money leaks", "Emergencies force bad selling without a buffer", "Defence protects compounding", "Foundation before growth"]
+    }
+  ]
+}

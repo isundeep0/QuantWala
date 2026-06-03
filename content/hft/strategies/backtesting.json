@@ -1,0 +1,120 @@
+{
+  "slug": "backtesting",
+  "sectionId": "strategies",
+  "order": 5,
+  "title": "Backtesting Without Fooling Yourself",
+  "tagline": "The discipline of testing a strategy on history honestly — because the easiest person to fool is you.",
+  "level": "Advanced",
+  "track": ["research", "dev", "trader"],
+  "estMinutes": 18,
+  "concept": {
+    "analogy": "Backtesting is like a flight simulator for trading. A good simulator faithfully models gravity, weather, and engine limits, so the skills transfer to a real plane. A bad one lets you fly through mountains and refuel mid-air — you'll 'land' every time and learn nothing useful. Most failed strategies aren't bad ideas; they're good-looking results from a simulator that quietly cheated.",
+    "paragraphs": [
+      "A backtest simulates how a strategy would have performed on historical data. Done well, it's the core tool of quant research; done badly, it's a machine for generating false confidence. The central danger is that it's trivially easy to produce a beautiful backtest that has zero predictive value, because subtle biases let the strategy 'see the future' or test on a non-representative sample.",
+      "The big biases to defend against: lookahead bias (using data not available at decision time — e.g., today's close to make today's open decision); survivorship bias (testing only on instruments that still exist, ignoring the ones that went bankrupt/delisted); overfitting (tuning parameters until the strategy fits historical noise); and ignoring transaction costs, slippage, market impact, and realistic fill assumptions (assuming you'd get filled at the touch with no queue, no impact).",
+      "An event-driven backtester replays historical market data message-by-message in time order and feeds the strategy only the information it would have had at each instant, simulating order placement, queue position, fills, and costs. This is far more faithful than a vectorized backtest that computes signals over whole arrays (which makes lookahead bias easy to introduce).",
+      "The gold standard for trusting a result: rigorous out-of-sample testing, walk-forward validation, accounting for all costs, modeling fills conservatively, and being deeply suspicious of any strategy that looks too good. A modest, robust edge that survives honest assumptions beats a spectacular one that doesn't."
+    ],
+    "points": [
+      "A backtest is only as good as its honesty — biases manufacture fake edges.",
+      "Lookahead bias: using future/unavailable information at decision time.",
+      "Survivorship bias: testing only on instruments that survived.",
+      "Overfitting: tuning to historical noise; defend with out-of-sample / walk-forward validation.",
+      "Model costs, slippage, impact, queue position, and realistic fills — optimism here is fatal."
+    ],
+    "keyIdea": "Backtesting's value is entirely in its honesty. Defend against lookahead, survivorship, and overfitting, model real costs and fills, and validate out-of-sample — a robust small edge under honest assumptions beats a spectacular fragile one."
+  },
+  "deepDive": {
+    "intro": "How to build and read a backtest you can actually trust.",
+    "steps": [
+      {
+        "title": "Event-driven vs vectorized",
+        "detail": "A vectorized backtest computes signals/returns over whole arrays — fast and great for exploration, but it makes lookahead bias easy (you can accidentally use future array elements). An event-driven backtest replays data in time order, delivering each event to the strategy and simulating orders/fills — slower but far more realistic and the right tool for execution-sensitive HFT strategies."
+      },
+      {
+        "title": "Model fills honestly",
+        "detail": "The most common way to inflate results is optimistic fills. Did your limit order actually reach the front of the queue before the level traded through? Did your market order pay the spread and walk the book? Did you cause impact? Conservative fill modeling (assume you're at the back of the queue, pay realistic spread/fees, apply an impact model) is essential — especially for HFT where the spread is the whole edge."
+      },
+      {
+        "title": "Account for every cost",
+        "detail": "Exchange fees/rebates, the spread you cross, slippage vs. your decision price, market impact, borrow costs for shorts, and latency (you act later than the signal fires). A gross-profitable strategy is frequently net-negative once these are included. Always report net-of-cost results."
+      },
+      {
+        "title": "Guard against overfitting",
+        "detail": "Reserve out-of-sample data the model never touches. Use walk-forward analysis (fit on a rolling past window, test on the next, roll forward). Beware multiple-testing: if you try 1,000 parameter sets, some look great by luck (the 'deflated Sharpe' / multiple-comparisons problem). Prefer few, economically-motivated parameters and robustness across them."
+      },
+      {
+        "title": "Stress and sanity checks",
+        "detail": "Test across regimes (calm and volatile, different years), perturb parameters (does a small change collapse the edge? then it's overfit), and check the trade log for absurdities (impossible fills, trading during halts). A robust strategy degrades gracefully; a fragile one falls off a cliff."
+      }
+    ],
+    "notes": [
+      {
+        "title": "Paper trading and the sim-to-live gap",
+        "detail": "Even a careful backtest differs from live: real latency, partial fills, exchange quirks, and your own market impact appear. Forward-test (paper trade / small live size) before scaling, and continuously compare live results to the backtest's expectations — a divergence means your model was wrong somewhere."
+      }
+    ],
+    "pitfalls": [
+      "Optimistic fills (assuming front-of-queue, no impact) — the #1 way HFT backtests lie.",
+      "Lookahead via using bar-close data to make in-bar decisions, or whole-series statistics on past points.",
+      "Survivorship bias from a dataset missing delisted/bankrupt names.",
+      "Overfitting by searching many parameters and reporting the best without out-of-sample validation.",
+      "Reporting gross (pre-cost) returns — always net of fees, spread, slippage, and impact."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-lookahead",
+        "q": "Give three distinct ways lookahead bias can creep into a backtest, and how you'd prevent each.",
+        "tag": "Research",
+        "a": [
+          "(1) Using a bar's close price to make a decision 'during' that bar (you couldn't know the close until the bar ended) — prevent by acting only on data timestamped before the decision, ideally event-driven replay. (2) Normalizing features with statistics computed over the whole dataset (mean/std including future data) — prevent by using rolling, backward-only windows. (3) Point-in-time data errors, e.g., using restated fundamentals or index membership as known earlier than it was published — prevent with properly versioned, point-in-time datasets.",
+          "The unifying principle: at every decision instant, the strategy may use only information that genuinely existed at that instant. Event-driven backtesting that delivers data in time order enforces this structurally and is the best defense."
+        ]
+      },
+      {
+        "id": "q-overfit",
+        "q": "Your colleague tested 500 parameter combinations and found one with a Sharpe of 4. Why are you skeptical, and how would you validate it?",
+        "tag": "Research",
+        "a": [
+          "Searching 500 combinations is multiple testing: even if none has real edge, some will look great by chance. The reported Sharpe is the maximum over many trials, which is upward-biased — the 'best' is often just the luckiest fit to historical noise (overfitting). A Sharpe of 4 from such a search is a red flag, not a triumph.",
+          "Validate by: holding out true out-of-sample data the search never touched and checking performance there; walk-forward analysis (refit rolling, test forward) to see if it persists; checking robustness — does the edge survive small parameter perturbations, or is it a knife-edge? — and adjusting for the number of trials (deflated Sharpe). Also sanity-check costs and fills. If the edge only exists at one fragile parameter set on in-sample data, it isn't real."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-sharpe",
+        "title": "Annualized Sharpe ratio from returns",
+        "difficulty": "Core",
+        "statement": "Given a list of periodic returns (e.g., daily) and the number of periods per year P (e.g., 252), compute the annualized Sharpe ratio: (mean(returns)/std(returns)) * sqrt(P), using a risk-free rate of 0. If there are fewer than 2 returns or std is 0, return 0.",
+        "hint": "Sharpe = mean/std of per-period returns, scaled by sqrt(periods per year). Use sample std.",
+        "tests": "A core performance metric you must compute without hesitation.",
+        "solution": {
+          "approach": [
+            "Compute the mean and sample standard deviation of the per-period returns. The per-period Sharpe is mean/std (risk-free = 0).",
+            "Annualize by multiplying by sqrt(P) (this assumes i.i.d. returns; it's the standard convention). Guard against <2 points or zero volatility."
+          ],
+          "complexity": { "time": "O(n)", "space": "O(1)" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "sharpe.cpp",
+              "source": "#include <vector>\n#include <cmath>\ndouble sharpe(const std::vector<double>& r, double P){\n    int n = r.size();\n    if (n < 2) return 0.0;\n    double mean = 0; for (double x : r) mean += x; mean /= n;\n    double var = 0; for (double x : r) var += (x - mean) * (x - mean);\n    var /= (n - 1);                 // sample variance\n    double sd = std::sqrt(var);\n    if (sd == 0) return 0.0;\n    return (mean / sd) * std::sqrt(P);\n}"
+            },
+            {
+              "language": "python",
+              "title": "sharpe.py",
+              "source": "import statistics, math\n\ndef sharpe(returns, P):\n    n = len(returns)\n    if n < 2:\n        return 0.0\n    mean = sum(returns) / n\n    sd = statistics.stdev(returns)   # sample std\n    if sd == 0:\n        return 0.0\n    return (mean / sd) * math.sqrt(P)"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Advances in Financial Machine Learning", "by": "Marcos López de Prado", "note": "Excellent on backtest overfitting, the deflated Sharpe, and proper validation." },
+    { "title": "Quantitative Trading", "by": "Ernest Chan", "note": "Accessible intro to backtesting pitfalls and methodology." }
+  ]
+}

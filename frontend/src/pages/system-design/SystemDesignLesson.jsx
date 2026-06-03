@@ -117,7 +117,7 @@ export default function SystemDesignLesson() {
         <div>
           <h1
             className="text-3xl font-extrabold tracking-tight sm:text-4xl"
-            style={{ color: accent, textShadow: `0 0 18px ${accent}44` }}
+            style={{ color: accent }}
           >
             {lesson.title}
           </h1>

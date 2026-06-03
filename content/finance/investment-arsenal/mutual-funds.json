@@ -1,0 +1,178 @@
+{
+  "slug": "mutual-funds",
+  "sectionId": "investment-arsenal",
+  "order": 2,
+  "title": "Mutual Funds: Active vs Index, Direct vs Regular",
+  "tagline": "The beginner's best vehicle for equity. How pooled funds work, why low-cost index funds beat most active funds over time, and the expense-ratio trick that quietly steals lakhs — fixed by one word: 'Direct'.",
+  "summary": "Active vs passive/index funds, expense ratios, and why Direct plans beat Regular plans.",
+  "difficulty": "Intermediate",
+  "estMinutes": 16,
+  "tags": ["mutual-funds", "index", "expense-ratio", "module-4"],
+  "prereqs": ["fd-rd"],
+  "sections": [
+    {
+      "id": "what",
+      "title": "What a mutual fund is",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A **mutual fund** pools money from thousands of investors and invests it as one big basket, managed by a professional Asset Management Company (AMC). When Aarav puts ₹3,000 into an equity mutual fund, he instantly owns a tiny slice of dozens of companies — diversification he could never afford buying shares individually.",
+            "He invests via a **SIP** (fixed amount monthly) and receives **units** priced at the fund's NAV (Net Asset Value). It's the simplest way for a beginner to own equity without picking individual stocks."
+          ]
+        },
+        {
+          "type": "analogy",
+          "title": "The thali",
+          "text": "Buying single stocks is à la carte — you pick each dish and bear the risk if one is bad. A mutual fund is a thali: one plate, many items, balanced for you. If one item disappoints, the rest of the plate carries the meal."
+        }
+      ]
+    },
+    {
+      "id": "active-vs-passive",
+      "title": "Active vs Passive (Index) funds",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "There are two philosophies for running that basket. **Active funds** employ a fund manager who tries to *beat* the market by picking 'winning' stocks and timing trades. **Passive / index funds** simply *copy* a market index — a Nifty 50 index fund just holds the 50 largest companies in the same proportions as the index, with no manager trying to outguess anyone."
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "The two philosophies",
+          "columns": ["", "Active fund", "Index / passive fund"],
+          "rows": [
+            ["Goal", "Beat the index", "Match the index"],
+            ["Run by", "A fund manager making bets", "Rules that mirror the index"],
+            ["Expense ratio", "High (~1.0–2.0%)", "Low (~0.1–0.3%)"],
+            ["Risk", "Manager may underperform", "You get the market return, minus tiny costs"],
+            ["Beginner fit", "Need to pick a good manager", "Simple, cheap, predictable"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "The uncomfortable evidence",
+          "text": "Over long periods, a large majority of active funds FAIL to beat their benchmark index after fees — and the few that win are hard to identify in advance. So for a beginner, a low-cost Nifty 50 / Nifty 500 index fund is usually the smarter default: you accept the market's return instead of paying extra to (probably) trail it."
+        },
+        {
+          "type": "callout",
+          "variant": "note",
+          "text": "Historical Indian large-cap equity has returned roughly ~11–12% CAGR over long horizons — but with big year-to-year swings (some years −20%, some +30%). That return is the reward for tolerating the volatility, which is why equity is for long-term money."
+        }
+      ]
+    },
+    {
+      "id": "expense-ratio",
+      "title": "Expense ratio: the fee that compounds against you",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The **expense ratio** is the annual fee the AMC charges to run the fund, expressed as a percentage of your invested amount. A 1% expense ratio means 1% of your money is taken each year for costs — quietly, deducted from the NAV, so you never see a separate bill.",
+            "It sounds tiny, but because it's charged *every year on your whole balance*, it compounds against you exactly like returns compound for you. Over decades the difference between a 0.2% and a 1.5% fund is enormous."
+          ]
+        },
+        {
+          "type": "formula",
+          "title": "What a 1.3% fee difference costs over 30 years",
+          "expression": "₹3,000/month for 30 years",
+          "where": [
+            { "symbol": "Low-cost index", "meaning": "~11.8% net (12% − 0.2% expense)" },
+            { "symbol": "Pricey active", "meaning": "~10.5% net (12% − 1.5% expense)" }
+          ],
+          "result": "The low-cost fund ends near **₹1.00 crore**; the pricier one near **₹75.5 lakh** — roughly **₹25 lakh lost to fees**, for the same gross market. A fraction of a percent, compounded for decades, is a fortune."
+        },
+        {
+          "type": "callout",
+          "variant": "rule",
+          "title": "Rule of thumb",
+          "text": "Costs are the one thing you can control with certainty — you can't control returns, but you can always choose the cheaper fund. For index funds, prefer expense ratios under ~0.3%."
+        }
+      ]
+    },
+    {
+      "id": "direct-vs-regular",
+      "title": "Direct vs Regular: the free upgrade everyone misses",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Every mutual fund scheme comes in two versions: **Regular** and **Direct**. They hold *exactly the same portfolio*. The only difference is that a **Regular** plan pays a commission to a distributor/agent who sold it to you, baked into a higher expense ratio. A **Direct** plan cuts out that commission — you buy straight from the AMC — so its expense ratio is lower (typically ~0.5–1% lower) and its NAV grows faster.",
+            "Same fund, same manager, same stocks — but Direct keeps the commission in *your* pocket instead of the agent's. Over a long horizon that gap compounds into lakhs."
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "Direct vs Regular — identical fund",
+          "columns": ["", "Regular plan", "Direct plan"],
+          "rows": [
+            ["Portfolio", "Identical", "Identical"],
+            ["Distributor commission", "Yes — built into fees", "None"],
+            ["Expense ratio", "Higher (e.g. 1.5%)", "Lower (e.g. 0.5–1.0%)"],
+            ["Your long-term return", "Lower", "Higher (you keep the commission)"],
+            ["Bought via", "Agent / many bank apps", "AMC website, or direct platforms (e.g. MF Central, Zerodha Coin, Groww direct)"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "How people get stuck in Regular plans",
+          "text": "Many bank relationship managers and 'free' advisory apps default you into Regular plans because they earn the commission. It's rarely explained. Always check that your plan name says 'Direct' — if it says 'Regular', you're paying an ongoing fee for advice you may not even be getting."
+        },
+        {
+          "type": "callout",
+          "variant": "rule",
+          "title": "The verdict",
+          "text": "For a do-it-yourself investor, Direct plans are strictly better — same fund, lower cost, higher returns, with zero downside. The only reason to use Regular is if a genuinely valuable advisor is guiding you and you'd rather pay via commission than a separate fee."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "A mutual fund pools money into one diversified basket; beginners invest via monthly SIPs.",
+    "Active funds try to beat the index (high fees); index funds copy it (low fees) — most active funds trail the index after costs.",
+    "A Nifty 50 / broad index fund is a strong, simple default; long-run Indian equity ≈ ~11–12% CAGR, with big swings.",
+    "Expense ratio is an annual fee on your whole balance; a ~1.3% difference can cost ~₹25 lakh over 30 years.",
+    "Direct plans = same fund as Regular but no distributor commission → lower expense ratio → higher returns.",
+    "Always confirm your plan says 'Direct'; banks/agents often default you into 'Regular'."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Concept",
+      "difficulty": "Medium",
+      "prompt": "Aarav's bank app shows the exact same fund as 'HDFC Nifty 50 Index — Regular' (expense 0.6%) and 'HDFC Nifty 50 Index — Direct' (expense 0.2%). Which should he pick and what's the catch?",
+      "hint": "Same portfolio — what's the only difference?",
+      "answer": [
+        "He should pick the **Direct** plan. Both hold the identical Nifty 50 portfolio; the only difference is the Regular plan bakes in a distributor commission, making its expense ratio higher (0.6% vs 0.2%). Lower fees mean a faster-growing NAV and more money for Aarav over time.",
+        "The 'catch' is purely that the Regular plan pays the agent/app, which is why apps often surface it first. There's no portfolio or safety difference — Direct is strictly better for a DIY investor. He just needs to make sure he selects the one literally labelled 'Direct'."
+      ],
+      "keyPoints": ["Choose Direct", "Same portfolio, lower expense ratio", "Regular pays a distributor commission", "Direct = higher long-term return, no downside for DIY"]
+    },
+    {
+      "id": "q2",
+      "kind": "Critical thinking",
+      "difficulty": "Medium",
+      "prompt": "A relationship manager pitches Aarav an active fund: 'It returned 18% last year, way more than the boring index.' Why should Aarav be cautious?",
+      "hint": "Think about past vs future, fees, and survivorship.",
+      "answer": [
+        "One great year doesn't predict future years — past performance isn't a reliable guide, and last year's chart-topper is often a middling or poor performer the next year. The pitch also ignores the **higher expense ratio** dragging long-term returns and the well-documented fact that most active funds fail to beat their index over long periods after fees.",
+        "He should also ask whether it's a Regular plan paying the manager a commission (a conflict of interest). A cheaper index fund gives the market return with near-certainty; chasing a hot active fund is a bet that this manager will keep winning — which the evidence says is unlikely. Cautious, not necessarily 'never' — but the burden of proof is high."
+      ],
+      "keyPoints": ["Past performance ≠ future returns", "Higher expense ratio drags long-term returns", "Most active funds trail the index over time", "Possible commission conflict (Regular plan)", "Index gives market return near-certainly"]
+    },
+    {
+      "id": "q3",
+      "kind": "Concept",
+      "difficulty": "Easy",
+      "prompt": "Why does a seemingly tiny expense ratio matter so much over 20–30 years?",
+      "hint": "It's charged every year on your entire balance.",
+      "answer": [
+        "Because it's deducted **every year from your whole balance**, so it compounds against you the same way returns compound for you. A 1% fee isn't 1% once — it's 1% of an ever-growing corpus, year after year. Over 30 years a ~1.3% fee gap can erase ₹20+ lakh from a portfolio that's otherwise identical. Since you can't control returns but you *can* control costs, minimising the expense ratio is one of the few guaranteed ways to boost your net outcome."
+      ],
+      "keyPoints": ["Charged yearly on the full balance", "Compounds against you like returns compound for you", "Small % → lakhs over decades", "Cost is controllable; returns aren't"]
+    }
+  ]
+}

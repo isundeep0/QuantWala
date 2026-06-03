@@ -1,0 +1,121 @@
+{
+  "slug": "the-hiring-funnel",
+  "sectionId": "interview",
+  "order": 1,
+  "title": "The Hiring Funnel by Role",
+  "tagline": "What each round actually tests for quant dev, quant researcher/trader, and low-latency systems roles — and how to prepare for the real bar.",
+  "level": "Core",
+  "track": ["dev", "research", "systems", "trader"],
+  "estMinutes": 18,
+  "concept": {
+    "analogy": "Applying to a quant firm is like trying out for a specialist sports team, not a general gym membership. They don't ask 'are you fit?'; they run position-specific drills. The keeper faces penalties, the striker takes shots. If you train generically you'll fail the drills; if you know which drills your position runs, you train exactly the right skills. This lesson maps the drills for each quant position.",
+    "paragraphs": [
+      "Quant firms (Jane Street, Citadel/Citadel Securities, HRT, Jump, Two Sigma, Optiver, IMC, DRW, SIG, DE Shaw, and many prop shops) run famously rigorous, multi-stage processes. The stages are broadly similar — application/referral, an online assessment, phone/virtual technical screens, then a 'superday' or final onsite — but what each stage tests depends heavily on the role you're targeting. Knowing the target role's bar is the single biggest lever in preparing efficiently.",
+      "The three main graduate tracks: Quant Developer / Software Engineer — strong CS fundamentals, data structures & algorithms (often at a high bar), and, for low-latency teams, deep C++ and systems knowledge (the content of the C++ and Systems sections). Quant Researcher / Quant Trader — heavy probability, statistics, expected value, mental math, and market-making/estimation games, plus (for researchers) modeling/ML and data rigor. Low-Latency Systems Engineer — overlaps with quant dev but skews harder into OS/hardware, networking, and performance (caches, lock-free, kernel bypass, measurement). Many roles blend these, but interviews are still organized around one primary lens.",
+      "Common stages decoded: the online assessment is usually timed coding (DS&A) and/or a mental-math/probability test (e.g., Zetamac-style arithmetic for trading roles). Technical phone screens go deeper on coding and role-specific topics. The onsite/superday mixes hard coding, role-specific deep dives (C++/systems design for dev/systems; probability/markets/mental-math/trading games for research/trading), and behavioral/fit conversations. Trading roles add live estimation and market-making games under time pressure; dev/systems roles add a low-latency or systems-design discussion.",
+      "The meta-strategy: identify your primary track, then weight your prep to its bar. A would-be quant dev should grind DS&A to a high standard and master C++/systems if targeting low-latency teams. A would-be trader/researcher should drill mental math daily, get fluent in EV/conditional probability/Bayes, and practice market-making games out loud. Everyone benefits from clear communication of their thinking, because interviewers grade reasoning, not just answers. This section gives you the map; the rest of the module gives you the skills."
+    ],
+    "points": [
+      "Process is multi-stage: application/referral → online assessment → technical screens → superday/onsite.",
+      "Three tracks with different bars: Quant Dev (DS&A + C++/systems), Researcher/Trader (probability + mental math + games + modeling), Systems Engineer (OS/hardware/networking/perf).",
+      "Online assessments: timed coding (DS&A) and/or mental-math/probability tests (Zetamac-style).",
+      "Onsite mixes hard coding, role-specific deep dives, and fit; trading adds live estimation/market-making games.",
+      "Strategy: pick your primary track and weight prep to its specific bar; communicate reasoning, not just answers."
+    ],
+    "callouts": [
+      { "type": "tip", "title": "Mental math is a hard filter for trading", "body": "Many trading-role assessments include a fast arithmetic test (e.g., 'Zetamac': as many correct sums/products in 2 minutes as you can). It's a genuine gate — practice it daily for weeks before applying." },
+      { "type": "info", "title": "The bar is reasoning + speed", "body": "Top firms care how you think under uncertainty and pressure, not just whether you reach the answer. Narrate your assumptions, estimate, sanity-check, and update — that's what gets graded." }
+    ],
+    "keyIdea": "Quant hiring is a multi-stage, role-specific gauntlet. Identify your primary track — quant dev, researcher/trader, or systems engineer — and weight your preparation to its actual bar (DS&A + C++/systems for dev; probability + mental math + market games for trading/research; OS/hardware/networking/perf for systems). Across all of them, interviewers grade clear reasoning under pressure, not just final answers."
+  },
+  "deepDive": {
+    "intro": "Each track's stages and bar, what specifically is tested, and how to prepare efficiently.",
+    "steps": [
+      {
+        "title": "Quant Developer / SWE",
+        "detail": "Bar: strong CS fundamentals and DS&A at a high level (LeetCode medium-hard fluency, clean code, correct complexity analysis), plus language depth — for low-latency teams, serious C++ (the cost model, move semantics, templates, memory model from this module). Stages: coding OA → 1–2 coding/technical screens → onsite with multiple coding rounds, a C++/low-latency deep dive, often a systems-design or 'design a fast X' round, and behavioral. Prep: grind DS&A to reflex, study C++ and the Systems section, and be able to reason about performance (caches, allocation, branches)."
+      },
+      {
+        "title": "Quant Researcher / Quant Trader",
+        "detail": "Bar: probability and statistics fluency (EV, conditional probability, Bayes, distributions, variance), fast and accurate mental math, and structured reasoning under uncertainty; traders especially face market-making and estimation games. Researchers add modeling/ML, time-series, and data rigor (avoiding lookahead/overfitting). Stages: mental-math/probability OA → probability + brainteaser + markets screens → onsite with probability deep dives, live market-making games, estimation ('Fermi') questions, and (research) a modeling/stats discussion or take-home. Prep: drill mental math daily, master the Quant-Math section, and practice games out loud with a partner."
+      },
+      {
+        "title": "Low-Latency Systems Engineer",
+        "detail": "Bar: everything a strong dev has, weighted toward operating systems, computer architecture, networking, and measured performance. Expect questions on caches/false sharing, lock-free structures and the memory model, kernel bypass, NUMA/pinning, and how to profile and reduce tail latency, plus a systems-design round for a trading component (feed handler, order book, low-latency queue). Prep: the C++, Systems, and Architecture sections of this module, and be ready to defend concrete latency/jitter trade-offs with numbers."
+      },
+      {
+        "title": "Shared rounds: behavioral & fit",
+        "detail": "All tracks include conversations about your projects, motivation for trading/this firm, how you handle being wrong, and collaboration. Firms with strong cultures (e.g., Jane Street's emphasis on curiosity and clear thinking) weight communication heavily. Have 2–3 deep project stories ready, know why this firm/role, and be honest and precise — bluffing is quickly exposed by follow-ups."
+      },
+      {
+        "title": "How to weight your prep",
+        "detail": "Time is finite: choose a primary track and spend ~70% of prep on its core bar, ~30% on adjacent skills (a dev should still be comfortable with basic probability; a trader should still code a clean function). Build a routine: daily mental math (if trading/research), regular timed coding (if dev/systems), and weekly mock interviews where you practice narrating your reasoning. Track weak areas and drill them deliberately."
+      }
+    ],
+    "notes": [
+      { "title": "Referrals and timing matter", "detail": "Many of these firms recruit early and competitively; internships are a primary pipeline to full-time offers. Apply early in the cycle, and a referral or a strong competition record (Codeforces/IOI/IMO/Putnam, Kaggle) meaningfully helps get past the first filter." },
+      { "title": "Generalist vs specialist firms", "detail": "Some firms hire generalists and place you later; others hire into a specific desk. Read the JD: it tells you which lens (dev/research/trader/systems) the interview will use." },
+      { "title": "It's okay to not know — show how you'd find out", "detail": "Interviewers probe edges to see how you reason when you don't immediately know. 'I'm not sure, but here's how I'd approach it / estimate it / test it' scores far better than bluffing." }
+    ],
+    "complexity": {
+      "time": "Months of targeted prep",
+      "timeReason": "Reaching the bar (DS&A reflex, C++/systems depth, or mental-math speed + probability fluency) takes sustained, deliberate practice — but only along your chosen track, which is why targeting matters.",
+      "space": "n/a",
+      "spaceReason": "This lesson is about process and strategy, not an algorithm."
+    },
+    "pitfalls": [
+      "Preparing generically instead of to your target track's specific bar.",
+      "Neglecting mental math for trading roles — it's an early, hard filter.",
+      "For low-latency dev/systems, knowing C++ syntax but not the performance reasoning interviewers actually probe.",
+      "Giving answers without narrating assumptions and reasoning — interviewers grade thinking.",
+      "Applying late, with no referral, and no deep project stories ready for the behavioral rounds."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-track",
+        "q": "How does interview preparation differ for a quant developer versus a quant trader role?",
+        "tag": "Career",
+        "a": [
+          "A quant developer is primarily tested on CS fundamentals and data structures & algorithms at a high bar (clean, correct, optimal-complexity code), plus language and systems depth — for low-latency teams, serious C++ (cost model, move semantics, templates, memory model) and performance reasoning (caches, allocation, branches), often with a systems-design or 'build a fast component' round. So prep weights toward timed coding practice and the C++/Systems material.",
+          "A quant trader is primarily tested on probability and expected value, fast and accurate mental math, structured reasoning under uncertainty, and live market-making/estimation games played out loud under time pressure. So prep weights toward daily mental-math drilling, mastering EV/conditional probability/Bayes, and practicing trading games with a partner. Both value clear communication of reasoning and cultural fit, but the core skills they filter on are different — which is why you pick a primary track and weight your prep to its bar."
+        ],
+        "followups": ["What does a typical superday look like?", "How would you prep for a systems-engineer role specifically?"]
+      },
+      {
+        "id": "q-stages",
+        "q": "Walk me through the typical stages of a quant firm's graduate hiring process.",
+        "tag": "Career",
+        "a": [
+          "Broadly: (1) Application/referral — apply early; referrals and strong competition/research records help pass the first filter. (2) Online assessment — timed coding (DS&A) for dev/systems and/or a mental-math and probability test (Zetamac-style arithmetic, probability questions) for trading/research. (3) Technical phone/virtual screens — deeper role-specific questions: harder coding and C++/systems for dev/systems; probability, brainteasers, and markets for trading/research. (4) Superday/onsite — multiple rounds mixing hard coding, role-specific deep dives (C++/systems design, or probability + live market-making/estimation games), and behavioral/fit conversations.",
+          "Throughout, the firms grade reasoning under pressure as much as final answers, so narrating assumptions, estimating, sanity-checking, and updating is essential. The specifics vary by firm and desk — read the job description to know which lens the interview will apply."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-plan",
+        "title": "Build your personal prep plan",
+        "difficulty": "Core",
+        "statement": "Pick a primary target track (quant dev, quant trader/researcher, or low-latency systems engineer). Write a concrete preparation plan: the specific skills you'll drill, which sections of this module map to each interview stage for that track, your weekly practice routine, and how you'll measure readiness. Justify your time allocation.",
+        "hint": "Map each interview stage to skills, then to module sections; ~70% on core bar, ~30% adjacent; include daily/weekly drills and a self-assessment metric.",
+        "tests": "Translating the funnel into an actionable plan.",
+        "solution": {
+          "approach": [
+            "Example (low-latency quant dev/systems): Stages → skills → module mapping. Online coding OA → DS&A reflex (use the Algorithms module + timed LeetCode). C++/systems screen → C++ section (cost model, move semantics, templates, memory model) + Systems section (caches, false sharing, branch prediction, lock-free). Systems-design round → Architecture section (feed handler, order book, OMS, risk) and Measuring Latency. Behavioral → 2–3 project stories. Allocate ~70% to the core bar (DS&A + C++/systems performance reasoning) and ~30% adjacent (basic probability so you can reason about fills, plus communication practice).",
+            "Weekly routine: timed coding several times a week (mediums to hards, analyze complexity), one deep C++/systems topic with a small hands-on benchmark (e.g., implement and measure an SPSC ring or false-sharing demo) to make the knowledge concrete and defensible, one systems-design mock per week (design a fast order book / feed handler out loud), and a weekly full mock interview where you narrate reasoning.",
+            "Measure readiness: can you solve a fresh medium-hard cleanly in ~25–30 min with correct complexity? Can you explain and defend a latency/jitter trade-off with numbers (e.g., why release/acquire over seq_cst, why SoA, p99 vs mean)? Can you design and critique a feed handler or order book end-to-end? Track weak areas in a list and drill them deliberately until these criteria are consistently met.",
+            "(A trader/researcher plan would instead center daily mental-math drills, the Quant-Math section, market-making game practice with a partner, and modeling/data rigor for researchers — same structure, different weighting, because the track's bar is different.)"
+          ],
+          "complexity": { "time": "Sustained weekly routine over months", "space": "n/a" }
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "A Practical Guide To Quantitative Finance Interviews", "by": "Xinfeng Zhou ('the green book')", "note": "Standard prep for probability/brainteaser/quant rounds." },
+    { "title": "Heard on the Street", "by": "Timothy Crack", "note": "Classic quant interview questions across probability and finance." },
+    { "title": "Zetamac arithmetic game; firm careers pages (Jane Street, Citadel, HRT, Optiver, IMC, Jump)", "note": "Practice the math filter and read each firm's stated process/values." }
+  ]
+}

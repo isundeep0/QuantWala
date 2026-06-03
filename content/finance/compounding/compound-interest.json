@@ -1,0 +1,139 @@
+{
+  "slug": "compound-interest",
+  "sectionId": "compounding",
+  "order": 1,
+  "title": "Compound Interest & The Time Value of Money",
+  "tagline": "The single most important idea in finance: money grows on money. The formula, the Rule of 72, and why ₹100 today is worth more than ₹100 next year.",
+  "summary": "Compounding, the time value of money, and the Rule of 72 — with a worked SIP example.",
+  "difficulty": "Beginner",
+  "estMinutes": 14,
+  "tags": ["compounding", "core", "module-2"],
+  "prereqs": ["emergency-fund"],
+  "sections": [
+    {
+      "id": "concept",
+      "title": "Simple vs compound: the snowball",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "**Simple interest** pays you only on the original amount. **Compound interest** pays you on the original amount *plus all the interest already earned* — so your interest starts earning interest. That feedback loop is what turns small, steady savings into large sums.",
+            "Early on the difference looks tiny and boring. That's the trap — most people quit before the curve bends. Compounding does almost nothing for years, then becomes explosive. The longer the runway, the more violent the final acceleration."
+          ]
+        },
+        {
+          "type": "analogy",
+          "title": "The snowball",
+          "text": "A snowball rolling downhill picks up snow; the bigger it gets, the more snow it grabs per turn, so it grows faster and faster. Your invested money is the snowball, returns are the snow, and time is the length of the hill. A longer hill beats a bigger starting snowball."
+        }
+      ]
+    },
+    {
+      "id": "formula",
+      "title": "The maths, kept simple",
+      "blocks": [
+        {
+          "type": "formula",
+          "title": "Compound growth of a lump sum",
+          "expression": "A  =  P × (1 + r) ^ n",
+          "where": [
+            { "symbol": "A", "meaning": "final amount" },
+            { "symbol": "P", "meaning": "principal (what you invest)" },
+            { "symbol": "r", "meaning": "annual return rate (e.g. 0.12 for 12%)" },
+            { "symbol": "n", "meaning": "number of years" }
+          ],
+          "result": "₹1,00,000 at 12% for 20 years = 1,00,000 × (1.12)^20 ≈ **₹9,64,629** — nearly 10× — without adding a single rupee."
+        },
+        {
+          "type": "callout",
+          "variant": "rule",
+          "title": "Rule of 72 — mental maths for doubling",
+          "text": "Years to double your money ≈ 72 ÷ annual return %. At 12%, money doubles every 72/12 = 6 years. At 8%, every 9 years. Use it to sanity-check any 'returns' claim instantly — if someone promises doubling in 2 years, that's 36%/year, which is a red flag."
+        },
+        {
+          "type": "stat",
+          "title": "₹1 lakh at 12%, by the Rule of 72",
+          "items": [
+            { "value": "₹2L", "label": "after 6 years" },
+            { "value": "₹4L", "label": "after 12 years" },
+            { "value": "₹8L", "label": "after 18 years" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tvm",
+      "title": "The Time Value of Money",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The flip side of compounding is the **Time Value of Money (TVM)**: a rupee today is worth more than a rupee tomorrow, because today's rupee can be invested and start growing immediately. Money has a 'rent' — the return it could earn — so timing matters as much as amount.",
+            "This is why **delaying investing is expensive even if you eventually invest the same amount**. Every year you wait is a year of compounding you can never get back. It also explains inflation's bite: if prices rise ~6% a year, cash hidden under a mattress *loses* about 6% of its buying power annually — money must grow just to stand still."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Why SIPs harness this so well",
+          "text": "A SIP (Systematic Investment Plan) invests a fixed sum every month. Each instalment starts its own compounding clock and, as a bonus, you automatically buy more units when markets are low and fewer when high (rupee-cost averaging). Steady monthly investing + long time = the beginner's superpower."
+        },
+        {
+          "type": "formula",
+          "title": "Future value of a monthly SIP",
+          "expression": "FV  =  P × [ ((1+i)^m − 1) / i ]",
+          "where": [
+            { "symbol": "P", "meaning": "monthly investment" },
+            { "symbol": "i", "meaning": "monthly return = annual rate ÷ 12" },
+            { "symbol": "m", "meaning": "number of months" }
+          ],
+          "result": "Aarav invests ₹3,000/month at 12% (i = 0.01) for 10 years (m = 120). FV ≈ ₹3,000 × 230.04 ≈ **₹6.9 lakh**, of which only ₹3.6 lakh is his own money — the other ₹3.3 lakh is pure compounding."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Compound interest = interest earning interest; the snowball does little early, then explodes late.",
+    "Lump sum: A = P × (1 + r)^n.",
+    "Rule of 72: years to double ≈ 72 ÷ return%. At 12%, money doubles every 6 years.",
+    "Time Value of Money: a rupee today > a rupee tomorrow, because it can start compounding now.",
+    "Inflation (~6%) erodes idle cash, so money must grow just to hold its buying power.",
+    "SIPs harness compounding + rupee-cost averaging — ideal for beginners."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Mental maths",
+      "difficulty": "Easy",
+      "prompt": "Using the Rule of 72: a scheme promises to double your money in 3 years. What annual return is that, and why should you be suspicious?",
+      "hint": "72 ÷ years = return %.",
+      "answer": [
+        "72 ÷ 3 = **24% per year**, sustained. Equity markets in India have historically delivered ~12% long-term; a guaranteed 24% is roughly double that with supposedly no risk. Anything promising guaranteed doubling in a few years is almost always a Ponzi scheme, a scam, or hiding enormous risk. The Rule of 72 turns a flashy pitch into a sober number you can judge instantly."
+      ],
+      "keyPoints": ["72/3 = 24%/yr", "~2× historical equity returns", "Guaranteed + very high return = red flag", "Rule of 72 as a scam filter"]
+    },
+    {
+      "id": "q2",
+      "kind": "Concept",
+      "difficulty": "Medium",
+      "prompt": "In Aarav's 10-year SIP example, he invested ₹3.6 lakh of his own money but ended with ₹6.9 lakh. Where did the extra ₹3.3 lakh come from, and what does it teach about *when* to start?",
+      "hint": "What part of the total did he not contribute himself?",
+      "answer": [
+        "The extra ₹3.3 lakh is **compounded returns** — growth on his contributions plus growth on that growth. He nearly doubled his money without doing anything except staying invested.",
+        "The lesson: the compounding portion grows disproportionately with time. Most of that ₹3.3 lakh was generated in the later years, when the corpus was largest. Starting earlier gives those late, high-growth years more runway — which is exactly the case for not waiting (proven with numbers in the next lesson)."
+      ],
+      "keyPoints": ["Extra = compounded returns (growth on growth)", "Most growth happens in later years", "Bigger corpus → bigger absolute gains", "Earlier start = more high-growth years"]
+    },
+    {
+      "id": "q3",
+      "kind": "Concept",
+      "difficulty": "Easy",
+      "prompt": "Why is keeping all your long-term savings as cash in a savings account actually a slow loss, despite the balance never going down?",
+      "hint": "Compare the ~3% interest to inflation.",
+      "answer": [
+        "Because of the Time Value of Money and inflation. If prices rise ~6% a year but the savings account pays ~3%, your money's **buying power** falls by roughly 3% annually even though the rupee figure rises. The number on the screen grows, but what it can actually buy shrinks. To preserve and grow real wealth, long-term money must earn more than inflation — which is why it belongs in growth assets, not idle cash."
+      ],
+      "keyPoints": ["Nominal balance ≠ real value", "Inflation ~6% > savings ~3%", "Buying power erodes ~3%/yr", "Long-term money must beat inflation"]
+    }
+  ]
+}

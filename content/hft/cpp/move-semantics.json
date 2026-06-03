@@ -1,0 +1,124 @@
+{
+  "slug": "move-semantics",
+  "sectionId": "cpp",
+  "order": 2,
+  "title": "Move Semantics & Avoiding Copies",
+  "tagline": "Transfer ownership instead of duplicating — the C++11 feature that eliminates needless allocations.",
+  "level": "Intermediate",
+  "track": ["dev", "systems"],
+  "estMinutes": 18,
+  "concept": {
+    "analogy": "Imagine handing off a heavy suitcase. A copy means buying an identical suitcase and repacking every item — slow and wasteful. A move means just handing over the handle: the suitcase (and everything in it) is now yours, and the other person is left holding nothing. Move semantics lets C++ pass the handle instead of repacking the bag.",
+    "paragraphs": [
+      "Before C++11, returning or passing a big object often meant deep-copying its heap data. Move semantics added the ability to 'steal' the internals of a temporary (or explicitly moved-from) object — transferring ownership of its heap buffer by swapping pointers, rather than allocating and copying. A move is typically O(1) (copy a few pointers/sizes) versus an O(n) copy plus allocation.",
+      "The mechanism rests on rvalue references (T&&) and two special members: the move constructor and move assignment operator, which take the resources from the source and leave it in a valid but unspecified (usually empty) state. The standard library types (vector, string, unique_ptr) all implement them, so moving them is cheap.",
+      "std::move doesn't move anything — it's a cast that says 'treat this lvalue as an rvalue, you may move from it.' You use it when you're done with an object and want to transfer its guts (e.g., pushing a local into a container, or initializing a member from a sink parameter). After moving from something, don't use its value (only reassign or destroy it).",
+      "Two related ideas: perfect forwarding (templates forwarding arguments while preserving their value category, via T&& + std::forward) lets generic code avoid extra copies; and copy elision / RVO often makes returning by value free without any move at all. Together these mean idiomatic modern C++ rarely needs to copy big objects."
+    ],
+    "points": [
+      "Move = transfer ownership (swap pointers), O(1), vs. copy = allocate + deep-copy, O(n).",
+      "Move ctor / move assignment 'steal' resources, leaving the source valid-but-empty.",
+      "std::move is just a cast to rvalue — it enables a move, it doesn't perform one.",
+      "Don't read a moved-from object's value; only reassign or destroy it.",
+      "RVO/copy elision often makes returning by value free; perfect forwarding avoids copies in generic code."
+    ],
+    "keyIdea": "Move semantics replaces expensive deep copies with cheap ownership transfers. Use std::move when you're finished with an object, rely on RVO for returns, and your hot path stops allocating to duplicate data it could simply hand over."
+  },
+  "deepDive": {
+    "intro": "From rvalue references to the idioms you'll write and be asked about.",
+    "steps": [
+      {
+        "title": "lvalues, rvalues, and T&&",
+        "detail": "An lvalue has a name/address (e.g., a variable); an rvalue is a temporary (e.g., the result of an expression, a literal). `T&&` is an rvalue reference — it binds to temporaries and to things cast with std::move. Overloading on `const T&` (copy) vs `T&&` (move) lets the compiler pick the cheap path for temporaries automatically."
+      },
+      {
+        "title": "Writing move operations",
+        "detail": "A move constructor takes the source's pointers/sizes, then nulls the source so its destructor does nothing harmful. The std::vector move ctor, for instance, copies the source's data pointer + size + capacity and zeroes the source — O(1), no allocation. Mark them noexcept: containers only move (instead of copy) on reallocation if the move is noexcept."
+      },
+      {
+        "title": "std::move and sink parameters",
+        "detail": "`v.push_back(std::move(local))` moves local into the vector instead of copying. The 'pass by value and move' idiom: `void setName(std::string n) { name_ = std::move(n); }` — the caller's argument is copied or moved into n once, then moved into the member; efficient for both lvalue and rvalue callers."
+      },
+      {
+        "title": "Copy elision / RVO",
+        "detail": "Returning a local object by value is often elided entirely: the compiler constructs it directly in the caller's storage (mandatory elision for prvalues in C++17, NRVO for named locals as an optimization). So `return bigObject;` is usually free — don't contort code with out-parameters to 'avoid the copy' unless profiling shows a real problem."
+      },
+      {
+        "title": "Perfect forwarding",
+        "detail": "In a template, `template<class T> void wrap(T&& x) { sink(std::forward<T>(x)); }` forwards x preserving whether it was an lvalue or rvalue, so no extra copy is introduced. This is how std::make_unique, emplace_back, etc., avoid copies. `T&&` in a template is a 'forwarding reference', not a plain rvalue reference."
+      }
+    ],
+    "notes": [
+      {
+        "title": "noexcept matters for moves",
+        "detail": "std::vector will only use your type's move constructor during reallocation if it's noexcept; otherwise it falls back to copying (to preserve the strong exception guarantee). So forgetting noexcept on a move constructor can silently turn cheap moves back into expensive copies — a classic performance bug."
+      }
+    ],
+    "pitfalls": [
+      "Using an object after std::move-ing from it (its value is unspecified).",
+      "Forgetting noexcept on move operations — containers then copy instead of move on reallocation.",
+      "Adding std::move to a return of a local — it can disable RVO and pessimize; just `return local;`.",
+      "Thinking std::move moves — it's only a cast; the move happens in the move ctor/assignment it enables.",
+      "Confusing forwarding references (T&& in a template) with rvalue references (T&& on a concrete type)."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-move",
+        "q": "What does std::move actually do, and what's the state of an object after you move from it?",
+        "tag": "C++",
+        "a": [
+          "std::move performs no movement — it's an unconditional cast of its argument to an rvalue reference. That cast makes the object eligible to bind to a move constructor / move assignment overload, which is what actually transfers the resources. So std::move 'enables' a move; the move itself is done by the type's move operations.",
+          "After being moved from, an object is in a 'valid but unspecified' state. For standard library types that typically means empty (a moved-from vector/string is usually empty), but in general you should not rely on its value — the only safe operations are reassigning it or letting it be destroyed. Reading its value is a bug."
+        ]
+      },
+      {
+        "id": "q-rvo",
+        "q": "Should you write `return std::move(localVector);` to make returning efficient? Why or why not?",
+        "tag": "C++",
+        "a": [
+          "No — for returning a local by value, just write `return localVector;`. The compiler applies (Named) Return Value Optimization / copy elision and often constructs the object directly in the caller's storage, which is even better than a move (zero operations).",
+          "Adding std::move can actually *disable* NRVO because the return expression is no longer the name of a local object — it's an rvalue reference — so you may force a move where elision would have given you nothing at all. The guidance: return locals by value without std::move; let the compiler elide. (std::move on return is only appropriate in narrow cases, e.g., returning a member or a function parameter where elision can't apply.)"
+        ]
+      },
+      {
+        "id": "q-noexcept",
+        "q": "Why should move constructors be marked noexcept, especially for types stored in a std::vector?",
+        "tag": "C++",
+        "a": [
+          "std::vector provides the strong exception guarantee on operations like push_back that may reallocate. When it grows, it must relocate existing elements to the new buffer. If an element's move constructor could throw, a throw mid-relocation would leave the vector in a broken state, so the standard says: only use the move constructor during reallocation if it's noexcept; otherwise fall back to the copy constructor (which can be rolled back safely).",
+          "Consequence: if your type's move constructor isn't noexcept, vector reallocation will *copy* every element instead of moving — silently turning cheap O(1) moves into expensive O(n) copies-with-allocation. So mark move operations noexcept whenever they truly can't throw (they usually just swap pointers), to keep moves cheap."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-movector",
+        "title": "Write a move constructor for a buffer type",
+        "difficulty": "Intermediate",
+        "statement": "Given a simple class owning a heap buffer (a raw pointer `data_` and a `size_` ), implement the move constructor and move assignment operator so a move is O(1) (transfers ownership, leaves the source empty and safe to destroy), and mark them noexcept. Assume the destructor does `delete[] data_`.",
+        "hint": "Steal the source's pointer and size, then null out the source so its destructor is a no-op. For move assignment, free your own buffer first (and guard self-assignment).",
+        "tests": "The mechanics of ownership transfer that make moves cheap.",
+        "solution": {
+          "approach": [
+            "The move constructor copies the source's data_ and size_ into the new object, then sets the source's data_ = nullptr and size_ = 0, so when the source is destroyed it deletes nothing — ownership has transferred. No allocation, no element copy: O(1).",
+            "Move assignment must first release the buffer it currently owns (else a leak), guard against self-assignment, then steal the source's resources and null the source. Both are marked noexcept since they only manipulate pointers/integers and can't throw."
+          ],
+          "complexity": { "time": "O(1)", "space": "O(1)" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "buffer.cpp",
+              "source": "#include <cstddef>\n#include <utility>\nclass Buffer {\n    int*   data_ = nullptr;\n    size_t size_ = 0;\npublic:\n    Buffer() = default;\n    explicit Buffer(size_t n) : data_(new int[n]), size_(n) {}\n    ~Buffer() { delete[] data_; }\n\n    // Move constructor: steal resources, leave source empty.\n    Buffer(Buffer&& other) noexcept\n        : data_(other.data_), size_(other.size_) {\n        other.data_ = nullptr;\n        other.size_ = 0;\n    }\n\n    // Move assignment: free ours, guard self-assign, steal, null source.\n    Buffer& operator=(Buffer&& other) noexcept {\n        if (this != &other) {\n            delete[] data_;\n            data_ = other.data_;\n            size_ = other.size_;\n            other.data_ = nullptr;\n            other.size_ = 0;\n        }\n        return *this;\n    }\n\n    // (Copy ops omitted; delete or implement per rule of five.)\n    Buffer(const Buffer&) = delete;\n    Buffer& operator=(const Buffer&) = delete;\n};"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Effective Modern C++", "by": "Scott Meyers", "note": "Items 23–30 cover move, forwarding, and reference collapsing precisely." },
+    { "title": "Back to Basics: Move Semantics (CppCon)", "note": "Several clear introductory talks on the topic." }
+  ]
+}

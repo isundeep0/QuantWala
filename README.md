@@ -3,7 +3,7 @@
 A learning platform for competitive programmers and engineers prepping for
 top‑company OAs, system‑design interviews, and HFT / low‑latency roles.
 
-Three modules:
+Four modules:
 
 - **Module 1 — Algorithms** *(complete, end‑to‑end)*: 55 lessons across 12 categories,
   each with a 5‑step flow (Intuition → Logic → Dry Run → Interactive Simulator →
@@ -19,8 +19,27 @@ Three modules:
   **interview cheat sheet**, and a **practice question set** with progressive reveal
   (hint → model answer → follow‑ups) and per‑question self‑assessment. Progress is
   `localStorage`‑based, tracked independently from the Algorithms module.
+- **Module 4 — Road to Candidate Master** *(complete, content)*: a Codeforces‑only
+  practice ladder that picks up where Module 1 ends. **393 real, curated Codeforces
+  problems** across **5 rating tiers** (Newbie→Pupil … CM→Master) and **33 themed
+  patterns**, each mapped back to the exact Module 1 lessons that teach the
+  algorithm. Every theme leads with *pattern‑recognition* coaching (signals →
+  technique → classic trap → mastery goal). Problems are pulled from the live
+  Codeforces API, ordered by rating, and ranked by popularity (`solvedCount`).
+  Per‑problem Solved/Review/Stuck status shares the same `localStorage` store.
+- **Module 2 — System Design** *(UI shell only)*: full navigation and placeholder
+  panels (concept, architecture diagram, key points, common questions).
 - **Module 3 — HFT / Low Latency** *(UI shell only)*: full navigation and placeholder
   panels (concept, code snippet, benchmark table, interview questions).
+- **Module 5 — Personal Finance & Investing** *(complete, content)*: a from‑scratch
+  personal‑finance masterclass for the Indian market. **17 lessons across 8 sections**
+  (mindset → budgeting & emergency fund → compounding → credit/CIBIL → asset classes →
+  goal‑based investing → taxation → a capstone "money system"). Every lesson follows the
+  same shape — *core concept → strict rule of thumb → a worked example* — and every
+  number is anchored to one beginner persona (22, Bengaluru, ₹20,000/month, saving for a
+  car by 2031). Content‑driven like System Design: drop a JSON file in
+  `content/finance/<sectionId>/` and it appears on the roadmap. Progress (lessons +
+  self‑assessed checks) is `localStorage`‑based via `FinanceProgressContext`.
 
 ---
 
@@ -42,29 +61,23 @@ ready for when the platform goes public.
 
 ```
 Gare/
-├── content/                      # Source of truth for all lesson content
-│   ├── schema.json               # JSON schema for an algorithm lesson file
-│   ├── algorithms/
-│   │   ├── sorting-searching/    # one JSON per algorithm
-│   │   ├── arrays-two-pointers/
-│   │   ├── linked-lists/
-│   │   ├── stacks-queues/
-│   │   ├── trees/
-│   │   ├── graphs/
-│   │   ├── dynamic-programming/
-│   │   ├── greedy/
-│   │   ├── backtracking/
-│   │   ├── segment-trees-bit/
-│   │   ├── strings/
-│   │   └── math-number-theory/
-│   └── system-design/            # one JSON per system-design lesson
-│       ├── schema.json           # JSON schema for an SD lesson file
-│       ├── start-here/
-│       ├── fundamentals/
-│       ├── building-blocks/
-│       ├── distributed-systems/
-│       ├── case-studies/
-│       └── interview-playbook/
+├── content/                      # Source of truth for algorithm content
+│   ├── schema.json               # JSON schema for a lesson file
+│   ├── cp/
+│   │   └── roadmap.json          # Module 4 ladder (generated from the CF API)
+│   └── algorithms/
+│       ├── sorting-searching/    # one JSON per algorithm
+│       ├── arrays-two-pointers/
+│       ├── linked-lists/
+│       ├── stacks-queues/
+│       ├── trees/
+│       ├── graphs/
+│       ├── dynamic-programming/
+│       ├── greedy/
+│       ├── backtracking/
+│       ├── segment-trees-bit/
+│       ├── strings/
+│       └── math-number-theory/
 │
 ├── frontend/                     # React + Tailwind app (Vite)
 │   ├── index.html
@@ -139,25 +152,24 @@ No rebuild config needed — Vite's `import.meta.glob` auto‑discovers new JSON
 
 ---
 
-## Adding / editing system‑design content
+## Regenerating the Module 4 ladder (Road to Candidate Master)
 
-1. Create `content/system-design/<sectionId>/<slug>.json` following
-   `content/system-design/schema.json`. Valid `sectionId`s: `start-here`,
-   `fundamentals`, `building-blocks`, `distributed-systems`, `case-studies`,
-   `interview-playbook`.
-2. Set `order` to position the lesson within its section roadmap.
-3. The lesson body is a list of `sections`, each containing `blocks`. The renderer
-   (`frontend/src/components/system-design/BlockRenderer.jsx`) supports these block
-   `type`s: `text`, `analogy`, `key`, `callout` (variants: tip/warning/note/insight/
-   interview/junior/senior), `bullets`, `steps`, `compare` (tables), `tradeoffs`,
-   `diagram`, `code`, `metrics`, `stat`. Inline markdown (`**bold**`, `` `code` ``,
-   `*italic*`) works inside strings.
-4. Add an `cheatsheet` (string array) and a `questions` array (prompt → hint → model
-   answer → follow‑ups) for the interview‑prep panels.
+The CP ladder is **generated**, not hand‑written, so links and ratings stay
+accurate. The authored part (rating tiers, themes, and the signals/technique/trap
+pattern‑recognition prose) lives in the generator; the problems are pulled live
+from Codeforces.
 
-Section metadata (titles, colors, icons, order) lives in
-`frontend/src/data/systemDesign.js`. Like the Algorithms module, new JSON files are
-auto‑discovered via `import.meta.glob` — no wiring required.
+```bash
+python3 tools/cp-roadmap/build_roadmap.py     # → content/cp/roadmap.json
+```
+
+It fetches `https://codeforces.com/api/problemset.problems`, then for each theme
+keeps problems matching the theme's tag filter, ramps the rating in sub‑bands,
+ranks each band by `solvedCount` (popularity ≈ "famous, worth‑doing"), globally
+de‑duplicates, and sorts the final ladder ascending. To add a theme or retune a
+rating window, edit the `PHASES` list in `tools/cp-roadmap/build_roadmap.py` and
+re‑run. The frontend reads `content/cp/roadmap.json` via the `@content` alias
+(`frontend/src/data/cpRoadmap.js`), so no other wiring is needed.
 
 ---
 
@@ -174,11 +186,6 @@ an interview cheat sheet, and a practice question set. Possible future enhanceme
 - More case studies (e.g., distributed cache, web search, ad-serving, payments ledger).
 - An interactive "design canvas" for drawing architectures.
 - Spaced‑repetition review queue across the practice questions.
-
-**Module 3 — HFT / Low Latency (content):**
-- Real C++/Python snippets with syntax highlighting, runnable benchmarks, and the
-  benchmark/comparison tables.
-- Firm‑specific interview tracks (Jane Street, Citadel, Tower, HRT, Optiver).
 
 **Platform:**
 - Optional accounts + DB to sync progress across devices (the current `localStorage`

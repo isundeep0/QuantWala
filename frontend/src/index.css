@@ -28,12 +28,12 @@
     --text-muted: 160 170 190;
     --text-faint: 120 132 154;
     --ring: 96 165 250;
-    /* Liquid-glass tuning */
-    --glass-elev: 0.56;
-    --glass-sunken: 0.46;
+    /* Liquid-glass tuning — calmer, more legible surfaces */
+    --glass-elev: 0.72;
+    --glass-sunken: 0.56;
     --glass-stroke: 255 255 255;
-    --glass-stroke-alpha: 0.14;
-    --glass-spec: 0.16;
+    --glass-stroke-alpha: 0.11;
+    --glass-spec: 0.1;
   }
 
   * {
@@ -45,11 +45,11 @@
   }
 
   :root {
-    --glass-elev: 0.66;
-    --glass-sunken: 0.5;
+    --glass-elev: 0.85;
+    --glass-sunken: 0.66;
     --glass-stroke: 255 255 255;
-    --glass-stroke-alpha: 0.6;
-    --glass-spec: 0.7;
+    --glass-stroke-alpha: 0.42;
+    --glass-spec: 0.4;
   }
 
   body {
@@ -58,19 +58,19 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     background-color: rgb(var(--bg));
-    /* Deep "interstellar" base so the fixed nebula never flashes white. */
+    /* Soft tinted base — a calm wash rather than a busy nebula. */
     background-image:
-      radial-gradient(120% 90% at 12% -10%, rgb(37 99 235 / 0.16), transparent 60%),
-      radial-gradient(120% 90% at 95% 0%, rgb(139 92 246 / 0.14), transparent 55%),
-      radial-gradient(130% 100% at 50% 120%, rgb(16 185 129 / 0.10), transparent 60%);
+      radial-gradient(120% 90% at 12% -10%, rgb(37 99 235 / 0.08), transparent 60%),
+      radial-gradient(120% 90% at 95% 0%, rgb(139 92 246 / 0.06), transparent 55%),
+      radial-gradient(130% 100% at 50% 120%, rgb(16 185 129 / 0.05), transparent 60%);
     background-attachment: fixed;
   }
 
   .dark body {
     background-image:
-      radial-gradient(120% 90% at 10% -10%, rgb(37 99 235 / 0.22), transparent 55%),
-      radial-gradient(120% 90% at 98% 5%, rgb(124 58 237 / 0.20), transparent 50%),
-      radial-gradient(140% 110% at 50% 125%, rgb(13 148 136 / 0.16), transparent 60%);
+      radial-gradient(120% 90% at 10% -10%, rgb(37 99 235 / 0.14), transparent 55%),
+      radial-gradient(120% 90% at 98% 5%, rgb(124 58 237 / 0.12), transparent 50%),
+      radial-gradient(140% 110% at 50% 125%, rgb(13 148 136 / 0.10), transparent 60%);
   }
 
   ::selection {
@@ -128,7 +128,7 @@
     @apply -translate-y-0.5;
     box-shadow:
       0 1px 0 0 rgb(var(--glass-stroke) / calc(var(--glass-spec) * 0.5)) inset,
-      0 18px 50px -18px rgb(0 0 0 / 0.55);
+      0 14px 36px -22px rgb(0 0 0 / 0.32);
   }
 
   .btn {
@@ -215,13 +215,12 @@
         rgb(var(--bg-elev) / calc(var(--glass-elev) + 0.06)),
         rgb(var(--bg-elev) / calc(var(--glass-elev) - 0.06))
       );
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
     border: 1px solid rgb(var(--glass-stroke) / calc(var(--glass-stroke-alpha) * 0.5));
     box-shadow:
-      0 1px 0 0 rgb(var(--glass-stroke) / var(--glass-spec)) inset,
-      0 -1px 1px 0 rgb(0 0 0 / 0.15) inset,
-      0 16px 44px -20px rgb(0 0 0 / 0.5);
+      0 1px 0 0 rgb(var(--glass-stroke) / calc(var(--glass-spec) * 0.6)) inset,
+      0 10px 30px -20px rgb(0 0 0 / 0.32);
   }
   /* Iridescent refracting rim */
   .glass::before {
@@ -242,7 +241,8 @@
       linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
-    opacity: 0.55;
+    opacity: 0.22;
+    transition: opacity 0.35s ease;
     z-index: -1;
     pointer-events: none;
   }
@@ -266,13 +266,13 @@
     transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease;
   }
   .glass-interactive:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
   }
   .glass-interactive:hover::after {
-    opacity: 1;
+    opacity: 0.7;
   }
   .glass-interactive:hover::before {
-    opacity: 0.9;
+    opacity: 0.42;
   }
 
   /* Frosted spherical element (progress orbs, toggle, markers) */
@@ -283,44 +283,35 @@
     background:
       radial-gradient(120% 120% at 30% 22%, rgb(var(--glass-stroke) / calc(var(--glass-spec) * 0.7)), transparent 0%),
       linear-gradient(160deg, rgb(var(--bg-elev) / 0.6), rgb(var(--bg-sunken) / 0.5));
-    backdrop-filter: blur(14px) saturate(160%);
-    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
     border: 1px solid rgb(var(--glass-stroke) / calc(var(--glass-stroke-alpha) * 0.7));
     box-shadow:
-      0 2px 0 0 rgb(var(--glass-stroke) / var(--glass-spec)) inset,
-      0 -2px 6px 0 rgb(0 0 0 / 0.25) inset,
-      0 10px 26px -12px rgb(0 0 0 / 0.5);
+      0 1px 0 0 rgb(var(--glass-stroke) / calc(var(--glass-spec) * 0.7)) inset,
+      0 6px 18px -12px rgb(0 0 0 / 0.35);
   }
 
-  /* Etched / engraved text — looks pressed into the glass surface */
+  /* Quiet label text (kept as a hook; no heavy engraving shadow). */
   .etched {
     color: rgb(var(--text-muted));
-    text-shadow:
-      0 1px 0 rgb(var(--glass-stroke) / 0.18),
-      0 -1px 1px rgb(0 0 0 / 0.45);
   }
   .etched-glow {
     color: rgb(var(--text));
-    text-shadow:
-      0 0 8px var(--glow, rgb(59 130 246 / 0.65)),
-      0 1px 0 rgb(var(--glass-stroke) / 0.16);
+    text-shadow: 0 0 5px var(--glow, rgb(59 130 246 / 0.4));
   }
 
-  /* Text that appears lit from within the glass */
+  /* Crisp, high-legibility heading text (kept as a hook so existing markup
+     still works, but without the contrast-reducing fade + glow). */
   .lit-text {
-    background: linear-gradient(180deg, rgb(var(--text)), rgb(var(--text-muted)));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    filter: drop-shadow(0 0 10px rgb(var(--glass-stroke) / 0.25));
+    color: rgb(var(--text));
   }
 
   /* Flowing sheen streak that drifts across a band (top nav) */
-  .glass-sheen {
+  /* .glass-sheen {
     position: relative;
     overflow: hidden;
-  }
-  .glass-sheen::after {
+  } */
+  /* .glass-sheen::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -338,7 +329,7 @@
     pointer-events: none;
     mix-blend-mode: screen;
     z-index: -1;
-  }
+  } */
 }
 
 @layer utilities {

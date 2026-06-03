@@ -1,0 +1,132 @@
+{
+  "slug": "order-types",
+  "sectionId": "microstructure",
+  "order": 1,
+  "title": "Order Types: Limit, Market, IOC, FOK & More",
+  "tagline": "The vocabulary of trading — every instruction you can give an exchange and what it costs you.",
+  "level": "Core",
+  "track": ["dev", "research", "trader", "systems"],
+  "estMinutes": 16,
+  "concept": {
+    "analogy": "Ordering at a busy deli. A market order is 'I'll take whatever you've got, right now, at whatever price' — instant, but you might overpay if stock is low. A limit order is 'I'll buy, but only at $6 or less' — you pin it on the board and wait; you might never get served. IOC is 'fill what you can this instant, cancel the rest.' FOK is 'all of it now, or nothing.' Each instruction trades off certainty of execution against control of price.",
+    "paragraphs": [
+      "An order is an instruction to an exchange. The two fundamental types are the market order (execute immediately against the best available prices, prioritizing speed/certainty over price) and the limit order (rest in the book at a chosen price, prioritizing price over certainty of execution).",
+      "Layered on top are 'time-in-force' and execution qualifiers. IOC (Immediate-Or-Cancel): fill whatever you can right now, cancel the unfilled remainder. FOK (Fill-Or-Kill): fill the entire quantity immediately or cancel the whole thing. GTC (Good-Til-Canceled) and DAY control how long a resting order lives. There are also stop orders (trigger when price crosses a level), pegged orders (track the bid/ask/mid), and hidden/iceberg orders (don't fully display size).",
+      "For HFT, the most-used tools are limit orders (to make markets and earn rebates), IOC orders (to take liquidity precisely without leaving a resting order behind), and aggressive cancels/replaces (to update stale quotes fast). The post-only modifier — 'only add liquidity; reject if I'd cross and take' — is heavily used to guarantee maker rebates and avoid accidentally paying the taker fee.",
+      "Every order type encodes a trade-off between three things: certainty of execution, price control, and information leakage (how much your intent is revealed). Choosing the right one is a core skill."
+    ],
+    "points": [
+      "Market order: immediate, takes liquidity, price uncertain (can walk the book).",
+      "Limit order: price-controlled, may rest unfilled, can earn maker rebate.",
+      "IOC: take now, cancel remainder. FOK: all-or-nothing immediately.",
+      "Post-only: never take; reject if it would cross — guarantees maker treatment.",
+      "Hidden/iceberg & pegged: manage information leakage and track the market."
+    ],
+    "keyIdea": "Every order type is a knob on the trade-off between execution certainty, price control, and information leakage. HFT leans on limit, IOC, post-only, and fast cancel/replace."
+  },
+  "deepDive": {
+    "intro": "Let's nail the semantics precisely — sloppiness here causes real bugs and bad fills.",
+    "steps": [
+      {
+        "title": "Market order: walking the book",
+        "detail": "A market buy consumes the cheapest asks first, then the next, etc., until filled. If your size exceeds the top level, you 'walk the book' and pay progressively worse prices — your average price can be far from the touch. This is why large market orders are dangerous and why most pros slice them."
+      },
+      {
+        "title": "Limit order: price-time priority",
+        "detail": "A limit order rests at its price. Orders at the same price are filled in time priority (FIFO at most venues) — earlier orders fill first. So 'queue position' (how far back you are at a price) hugely affects whether a passive order actually fills, especially for rebate capture."
+      },
+      {
+        "title": "IOC vs FOK",
+        "detail": "IOC fills the available quantity at acceptable prices immediately and cancels the rest — useful to take exactly what's there without leaving a footprint. FOK requires the entire quantity to be available immediately or nothing happens — useful when a partial fill is useless (e.g., a hedge that must be complete)."
+      },
+      {
+        "title": "Post-only and the maker guarantee",
+        "detail": "A post-only (a.k.a. add-liquidity-only) order is rejected or repriced if it would immediately cross and take. HFT market makers use it to guarantee they earn the maker rebate and never accidentally cross the spread (which would cost the taker fee and signal aggression)."
+      },
+      {
+        "title": "Stop, pegged, hidden, iceberg",
+        "detail": "Stop orders activate when price crosses a trigger (used for risk/exit, can cascade in crashes). Pegged orders auto-track a reference (bid/ask/mid) so you don't constantly cancel/replace. Hidden orders don't display; iceberg orders display only a slice and refresh — both reduce information leakage for large orders, at the cost of queue priority."
+      },
+      {
+        "title": "Cancel/replace and the modify race",
+        "detail": "Updating a quote means cancel-and-new (or an atomic modify if the venue supports it). Whether a modify keeps queue priority varies by venue and by what you change (changing price usually loses priority; reducing size may keep it). Knowing these rules is essential for fast, correct quoting."
+      }
+    ],
+    "notes": [
+      {
+        "title": "Self-trade prevention",
+        "detail": "Exchanges and firms implement self-trade prevention (STP) so your own buy doesn't trade against your own sell (which is wash trading and prohibited). When you run many strategies, STP rules decide which of your orders gets cancelled in a self-match — a detail that bites in practice."
+      }
+    ],
+    "pitfalls": [
+      "Sending a large market order and being shocked at the average fill price — it walked the book.",
+      "Assuming a limit order at the best price will fill — you may be at the back of a long queue and never reach the front.",
+      "Forgetting post-only semantics and accidentally crossing the spread, paying the taker fee and revealing aggression.",
+      "Assuming a price-modify keeps queue priority — at most venues it does not."
+    ]
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-ioc-fok",
+        "q": "Precisely distinguish IOC and FOK, and give a scenario where you'd strongly prefer each.",
+        "tag": "Microstructure",
+        "a": [
+          "IOC (Immediate-Or-Cancel): execute as much as is immediately available at acceptable prices, cancel any remainder — partial fills are fine. FOK (Fill-Or-Kill): execute the entire requested quantity immediately or cancel the whole order — no partials.",
+          "Prefer IOC when you want to take exactly the liquidity that's there without leaving a resting order or revealing intent (e.g., sweeping the top of book for whatever size is available). Prefer FOK when a partial fill is useless or risky — e.g., one leg of an arbitrage or hedge that must be complete to be valid; a half-fill would leave you with naked, unintended risk."
+        ],
+        "followups": ["Why might FOK be rare in practice for large size?", "How does an IOC interact with hidden liquidity?"]
+      },
+      {
+        "id": "q-postonly",
+        "q": "Why do market makers use post-only orders, and what happens if a post-only order would cross the spread?",
+        "tag": "Microstructure",
+        "a": [
+          "Post-only guarantees the order only adds liquidity (rests in the book) and never removes it. Market makers want this to reliably earn the maker rebate and to avoid accidentally taking — taking costs the taker fee, crosses the spread (a loss versus their quote), and signals aggression/intent.",
+          "If a post-only order would immediately cross (its price would match a resting order on the other side), the venue either rejects it or reprices/slides it to a non-crossing price, depending on the venue's rules. The key point: it will not execute as a taker."
+        ]
+      },
+      {
+        "id": "q-queue",
+        "q": "Two market makers post a limit buy at the same best price. One posted 5ms earlier. Who fills first when a sell hits, and why does this matter for strategy?",
+        "tag": "Microstructure",
+        "a": [
+          "Under price-time (FIFO) priority — the most common model — the earlier order fills first. Time priority within a price level rewards being early to the queue.",
+          "This matters enormously for passive/rebate strategies: your fill probability depends on queue position, not just price. It motivates being fast to post when a new level forms, careful about modifications that reset priority, and aware that a long queue at the touch may mean you rarely fill there. Some venues use pro-rata priority (fills split by size), which changes the incentives toward posting more size."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-walk-book",
+        "title": "Average price of a market order walking the book",
+        "difficulty": "Core",
+        "statement": "Given the ask side of a book as a list of (price, size) levels sorted ascending, and a market buy of quantity Q, compute the total cost and the average fill price. If Q exceeds total available size, fill what you can and report the shortfall.",
+        "hint": "Greedily consume levels cheapest-first; track filled quantity and accumulated cost until Q is met or the book is exhausted.",
+        "tests": "Order-book mechanics; the cost of taking liquidity beyond the top level.",
+        "solution": {
+          "approach": [
+            "Iterate the ask levels from cheapest to most expensive. At each level, take min(remaining, level size) shares at that level's price, add price×taken to cost, and reduce remaining.",
+            "Stop when remaining hits 0 (fully filled) or you run out of levels (partial fill; shortfall = remaining). Average price = cost / filled. This directly models 'walking the book'."
+          ],
+          "complexity": { "time": "O(L) over levels touched", "space": "O(1)" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "walk_book.cpp",
+              "source": "#include <vector>\n#include <utility>\nstruct Fill { double cost; long long filled; long long shortfall; double avg; };\nFill marketBuy(const std::vector<std::pair<double,long long>>& asks, long long Q){\n    double cost = 0; long long rem = Q;\n    for (auto& [px, sz] : asks){\n        if (rem == 0) break;\n        long long take = std::min(rem, sz);\n        cost += px * take; rem -= take;\n    }\n    long long filled = Q - rem;\n    return { cost, filled, rem, filled ? cost / filled : 0.0 };\n}"
+            },
+            {
+              "language": "python",
+              "title": "walk_book.py",
+              "source": "def market_buy(asks, Q):\n    # asks: list of (price, size) ascending by price\n    cost, rem = 0.0, Q\n    for px, sz in asks:\n        if rem == 0:\n            break\n        take = min(rem, sz)\n        cost += px * take\n        rem -= take\n    filled = Q - rem\n    avg = cost / filled if filled else 0.0\n    return {\"cost\": cost, \"filled\": filled, \"shortfall\": rem, \"avg\": avg}"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Your exchange's order-type spec (e.g., Nasdaq, Cboe)", "note": "The authoritative semantics — read the actual venue docs; details vary." }
+  ]
+}

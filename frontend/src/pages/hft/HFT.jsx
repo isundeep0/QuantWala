@@ -1,81 +1,248 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Cpu, ArrowRight, Activity, Gauge, Code2, Network, Briefcase } from "lucide-react";
-import { HFT_SECTIONS } from "@/data/hft.js";
+import {
+  Compass,
+  BookOpen,
+  LineChart,
+  Sigma,
+  Code2,
+  Gauge,
+  Network,
+  Briefcase,
+  Check,
+  Clock,
+  RotateCcw,
+  Cpu,
+  PlayCircle,
+  ChevronRight,
+} from "lucide-react";
+import { HFT_LESSONS_BY_SECTION, HFT_TOTAL_LESSONS } from "@/data/hftRegistry.js";
+import { HFT_LEVEL, HFT_TRACK } from "@/data/hftSections.js";
+import { useHftProgress } from "@/context/HftProgressContext.jsx";
+import GlassCard from "@/components/liquid/GlassCard.jsx";
+import SwirlProgress from "@/components/liquid/SwirlProgress.jsx";
 
-const ACCENT = "#059669";
 const SECTION_ICON = {
-  foundations: Activity,
-  "low-latency-engineering": Gauge,
-  "cpp-for-hft": Code2,
-  "trading-architecture": Network,
-  "interview-prep": Briefcase,
+  foundations: Compass,
+  microstructure: BookOpen,
+  strategies: LineChart,
+  "quant-math": Sigma,
+  cpp: Code2,
+  systems: Gauge,
+  architecture: Network,
+  interview: Briefcase,
 };
 
-const FIRMS = ["Jane Street", "Citadel Securities", "Tower Research", "Hudson River Trading", "Jump Trading", "Optiver"];
+const FIRMS = [
+  "Jane Street",
+  "Citadel Securities",
+  "Hudson River Trading",
+  "Jump Trading",
+  "Optiver",
+  "Tower Research",
+  "DRW",
+  "Two Sigma",
+];
+
+function LessonVessel({ lesson, color, complete, hasViz }) {
+  const lvl = HFT_LEVEL[lesson.level] || null;
+  return (
+    <Link to={`/hft/${lesson.slug}`} className="group relative block h-full">
+      <span
+        className="absolute -left-2 -top-2 z-10 grid h-8 w-8 place-items-center rounded-full border text-xs font-bold transition-colors"
+        style={{
+          color: complete ? "#fff" : color,
+          background: complete ? color : "rgb(var(--bg-elev))",
+          borderColor: complete ? color : `${color}40`,
+        }}
+      >
+        {complete ? <Check className="h-4 w-4" /> : lesson.order}
+      </span>
+
+      <GlassCard className="flex h-full flex-col rounded-3xl p-4 pt-5" style={{ "--glow": `${color}aa` }}>
+        <div className="flex items-start justify-between gap-2">
+          <h4 className="text-sm font-semibold leading-snug">{lesson.title}</h4>
+          {hasViz && (
+            <span title="Has an interactive visualization" className="shrink-0" style={{ color }}>
+              <PlayCircle className="h-4 w-4" />
+            </span>
+          )}
+        </div>
+        {lesson.tagline && <p className="mt-1 line-clamp-2 text-xs text-muted">{lesson.tagline}</p>}
+
+        <div className="mt-2 flex flex-wrap gap-1">
+          {(lesson.track || []).slice(0, 3).map((t) => {
+            const tm = HFT_TRACK[t];
+            if (!tm) return null;
+            return (
+              <span
+                key={t}
+                className="rounded px-1.5 py-0.5 text-[9px] font-semibold"
+                style={{ color: tm.color, background: `${tm.color}18` }}
+              >
+                {tm.label}
+              </span>
+            );
+          })}
+        </div>
+
+        <div
+          className="mt-auto flex items-center justify-between gap-2 pt-3"
+          style={{ borderTop: "1px solid rgb(var(--border))" }}
+        >
+          {lvl ? (
+            <span className="font-mono text-[11px] font-semibold" style={{ color: lvl.color }}>
+              {lvl.label}
+            </span>
+          ) : (
+            <span />
+          )}
+          {lesson.estMinutes && (
+            <span className="flex items-center gap-1 font-mono text-[11px] text-faint">
+              <Clock className="h-3 w-3" /> {lesson.estMinutes}m
+            </span>
+          )}
+        </div>
+      </GlassCard>
+    </Link>
+  );
+}
 
 export default function HFT() {
+  const { overallPercent, completedCount, sectionCompletion, isComplete, resetAll, problemStats } =
+    useHftProgress();
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      {/* Hero */}
-      <div className="relative overflow-hidden rounded-3xl border p-8 sm:p-12" style={{ borderColor: `${ACCENT}33`, backgroundColor: `${ACCENT}0a` }}>
-        <div className="absolute inset-0 dot-grid opacity-40" aria-hidden />
-        <div className="relative">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider" style={{ color: ACCENT }}>
-            <Cpu className="h-4 w-4" /> Module 03 · UI Preview
-          </div>
-          <h1 className="mt-3 max-w-3xl text-4xl font-extrabold tracking-tight">
-            HFT & Low-Latency Systems
-          </h1>
-          <p className="mt-3 max-w-2xl text-muted">
-            Understand the engineering landscape of quantitative trading — market microstructure,
-            the relentless pursuit of low latency, C++ mastery, and the architecture of real
-            trading systems. Built for cracking quant-dev and low-latency SWE interviews.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-2">
-            {FIRMS.map((f) => (
-              <span key={f} className="chip border font-mono text-xs" style={{ borderColor: `${ACCENT}44`, color: ACCENT }}>
-                {f}
+      {/* ===== Module header ===== */}
+      <GlassCard interactive={false} className="relative overflow-hidden rounded-3xl p-6 sm:p-9">
+        <div className="relative flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
+          <div className="max-w-2xl">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "#10b981" }}>
+              <Cpu className="h-4 w-4" /> Module 03
+            </div>
+            <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
+              HFT &amp; Low-Latency Systems
+            </h1>
+            <p className="mt-3 text-muted">
+              A complete, beginner-to-job-ready path into high-frequency trading. Start with the business and the
+              market, master the probability and mental-math interview core, go deep on modern C++ and the systems
+              engineering where nanoseconds are won, then assemble a real trading system and drill the interview.
+              Built for <span className="font-semibold">quant-dev, research, and low-latency systems</span> roles.
+            </p>
+
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <span className="glass-orb px-3 py-1.5 text-sm font-semibold">
+                <span style={{ color: "#10b981" }}>{completedCount}/{HFT_TOTAL_LESSONS}</span>{" "}
+                <span className="text-muted">lessons</span>
               </span>
-            ))}
+              <span className="glass-orb px-3 py-1.5 text-sm font-semibold">
+                <span style={{ color: "#06b6d4" }}>{problemStats.solved}</span>{" "}
+                <span className="text-muted">questions done</span>
+              </span>
+              <button
+                onClick={() => {
+                  if (confirm("Reset all HFT progress? This clears completion and question status.")) resetAll();
+                }}
+                className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-faint transition-colors hover:text-red-400"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Reset progress
+              </button>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-1.5">
+              {FIRMS.map((f) => (
+                <span key={f} className="chip border font-mono text-[11px]" style={{ borderColor: "#10b98144", color: "#10b981" }}>
+                  {f}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="shrink-0 self-center">
+            <SwirlProgress value={overallPercent} size={150} stroke={11} color="#10b981" sublabel="complete" />
           </div>
         </div>
+      </GlassCard>
+
+      {/* ===== How to use ===== */}
+      <div className="mt-8 grid gap-3 sm:grid-cols-3">
+        {[
+          { t: "Follow it in order", d: "Each section builds on the last — foundations → domain → math → C++ → systems → architecture → interview." },
+          { t: "Theory + practice", d: "Every lesson ends with interview questions and build/coding problems. Answer out loud, then check yourself." },
+          { t: "Play with the sims", d: "Lessons marked ▶ have a hands-on visualization — an order book, a ring buffer, a market-making game, and more." },
+        ].map((c) => (
+          <div key={c.t} className="rounded-2xl border p-4" style={{ borderColor: "rgb(var(--border))" }}>
+            <div className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: "#10b981" }}>
+              <ChevronRight className="h-4 w-4" /> {c.t}
+            </div>
+            <p className="mt-1.5 text-sm text-muted">{c.d}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Sections */}
-      <div className="mt-10 space-y-10">
-        {HFT_SECTIONS.map((section) => {
+      {/* ===== Sections ===== */}
+      <div className="mt-12 space-y-14">
+        {HFT_LESSONS_BY_SECTION.map((section) => {
           const SIcon = SECTION_ICON[section.id] || Cpu;
+          const pct = sectionCompletion(section.id);
+          const done = section.lessons.filter((l) => isComplete(l.slug)).length;
           return (
-            <motion.section
-              key={section.id}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-            >
-              <div className="mb-4 flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ backgroundColor: `${ACCENT}1a`, color: ACCENT }}>
+            <section key={section.id} id={section.id} className="scroll-mt-24">
+              <div className="mb-5 flex items-center gap-4">
+                <span
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-xl"
+                  style={{
+                    background: `linear-gradient(160deg, ${section.color}26, ${section.color}0d)`,
+                    boxShadow: `inset 0 0 0 1px ${section.color}2e`,
+                    color: section.color,
+                  }}
+                >
                   <SIcon className="h-5 w-5" />
                 </span>
-                <div>
-                  <h2 className="text-lg font-bold">{section.title}</h2>
-                  <p className="text-sm text-muted">{section.blurb}</p>
-                </div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {section.topics.map((t) => (
-                  <Link key={t.id} to={`/hft/${t.id}`} className="card card-hover group flex items-center justify-between gap-3 p-4">
-                    <div>
-                      <span className="chip border text-[10px] font-mono" style={{ color: ACCENT, backgroundColor: `${ACCENT}14`, borderColor: `${ACCENT}33` }}>
-                        {t.tag}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-3">
+                    <h2 className="truncate text-lg font-bold">{section.title}</h2>
+                    {section.lessons.length > 0 && (
+                      <span className="shrink-0 font-mono text-xs text-muted">
+                        {done}/{section.lessons.length}
                       </span>
-                      <h3 className="mt-2 text-sm font-semibold leading-snug">{t.title}</h3>
-                    </div>
-                    <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1" style={{ color: ACCENT }} />
-                  </Link>
-                ))}
+                    )}
+                  </div>
+                  <p className="truncate text-sm text-muted">{section.short}</p>
+                </div>
+                {section.lessons.length > 0 && (
+                  <div className="hidden h-1.5 w-40 overflow-hidden rounded-full sm:block" style={{ background: "rgb(var(--border))" }}>
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ background: section.color }}
+                      initial={{ width: 0 }}
+                      whileInView={{ width: `${pct}%` }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.9, ease: "easeOut" }}
+                    />
+                  </div>
+                )}
               </div>
-            </motion.section>
+
+              {section.lessons.length === 0 ? (
+                <div className="rounded-2xl border border-dashed p-6 text-center text-sm text-faint" style={{ borderColor: "rgb(var(--border))" }}>
+                  Lessons for this section are coming soon.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                  {section.lessons.map((lesson) => (
+                    <LessonVessel
+                      key={lesson.slug}
+                      lesson={lesson}
+                      color={section.color}
+                      complete={isComplete(lesson.slug)}
+                      hasViz={Boolean(lesson.visualizer)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
           );
         })}
       </div>

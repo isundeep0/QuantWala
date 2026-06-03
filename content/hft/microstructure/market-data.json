@@ -1,0 +1,138 @@
+{
+  "slug": "market-data",
+  "sectionId": "microstructure",
+  "order": 4,
+  "title": "Market Data: Feeds, ITCH/OUCH & FIX",
+  "tagline": "How the market tells you what's happening — and the protocols an HFT system must parse at wire speed.",
+  "level": "Intermediate",
+  "track": ["dev", "systems", "research"],
+  "estMinutes": 18,
+  "concept": {
+    "analogy": "Market data is the stadium's live scoreboard and play-by-play feed combined. A 'snapshot' is the full scoreboard right now (everyone's score). 'Incremental updates' are the play-by-play — 'team A scored 3', 'team B subbed a player' — tiny messages you apply to your own copy of the scoreboard. To stay in sync you number every play; if you miss play #58, you know to grab a fresh scoreboard before trusting your view again.",
+    "paragraphs": [
+      "Market data is the stream of information exchanges publish about orders and trades. It comes in two complementary forms: snapshots (the complete current book state) and incremental updates (compact messages: order added/modified/deleted, trade executed). A consumer applies increments in sequence to a local book, using occasional snapshots to initialize or recover.",
+      "Protocols matter. Nasdaq's ITCH is a binary, order-by-order (L3) market-data feed — tiny fixed-layout messages designed for fast parsing. OUCH is its order-entry counterpart (you send orders). FIX is an older, text/tag-based protocol widely used for order entry and institutional connectivity — flexible but heavier to parse than binary feeds. Most exchanges also offer their own binary order-entry and data protocols.",
+      "Feeds are usually delivered over UDP multicast for low latency and one-to-many fan-out, often on two redundant lines (A and B) so a consumer can recover lost packets by arbitrating between them. UDP means no automatic retransmission — your handler must detect gaps via sequence numbers and recover, and must be robust to duplicates and reordering.",
+      "Parsing this at wire speed — tens of millions of messages per second — with zero allocation and minimal copying is a defining HFT engineering challenge, and a favorite interview/project topic (an ITCH parser)."
+    ],
+    "points": [
+      "Two forms: snapshots (full state) and incremental updates (add/modify/delete/trade).",
+      "ITCH = binary L3 market data; OUCH = order entry; FIX = tag-based, flexible, heavier.",
+      "Delivered over UDP multicast (low latency, fan-out), often on redundant A/B lines.",
+      "No retransmission on UDP — detect gaps by sequence number, recover via snapshot or the other line.",
+      "Goal: parse at wire speed with zero allocation and minimal copying."
+    ],
+    "keyIdea": "Market data is sequenced messages you apply to a local book. Binary L3 feeds (ITCH) over UDP multicast are parsed with zero-copy, gap-detecting handlers — the entrance to the whole trading pipeline."
+  },
+  "deepDive": {
+    "intro": "From the wire to a usable book, here's the pipeline and the protocol realities.",
+    "steps": [
+      {
+        "title": "Depth levels: L1 / L2 / L3",
+        "detail": "L1 = top of book (best bid/ask + sizes). L2 = aggregated depth per price level (size at each price, not individual orders). L3 = order-by-order (every order with an ID), letting you track queue position. ITCH is L3. Richer depth = more data to process and more signal."
+      },
+      {
+        "title": "Binary vs text protocols",
+        "detail": "Binary feeds (ITCH, exchange-native) use fixed or compact layouts you can often map directly onto a struct and read fields by offset — extremely fast. FIX is human-readable tag=value pairs delimited by SOH characters; flexible and ubiquitous for order entry, but parsing/serializing text is comparatively slow, so latency-critical paths prefer binary."
+      },
+      {
+        "title": "Sequencing and gap recovery",
+        "detail": "Each message carries a sequence number. The handler tracks the expected next seq. A gap means lost packets: recover by reading the redundant line (A/B arbitration — take whichever line delivers first, fill gaps from the other), requesting a retransmission if available, or re-snapshotting. Until recovered, you should not trust the book."
+      },
+      {
+        "title": "Zero-copy, allocation-free parsing",
+        "detail": "On the hot path you parse directly from the receive buffer (a view/span over the bytes) without copying into intermediate objects, and you reuse fixed buffers/object pools so there's no malloc per message. You decode just the fields you need. This is where C++ and careful memory layout pay off."
+      },
+      {
+        "title": "Timestamps and time sync",
+        "detail": "Accurate, low-jitter timestamps (often hardware/NIC timestamps, with clocks disciplined by PTP) are essential to order events across feeds and to measure your own latency. We cover time sync in the networking lesson."
+      }
+    ],
+    "notes": [
+      {
+        "title": "The SIP vs direct feeds",
+        "detail": "In US equities, the consolidated SIP feed aggregates the NBBO across venues but is slower; HFT firms subscribe to direct exchange feeds and build their own consolidated view faster than the SIP. The latency difference between the SIP and direct feeds has itself been a competitive and regulatory topic."
+      }
+    ],
+    "pitfalls": [
+      "Allocating per message (e.g., constructing objects/strings) — kills throughput; parse in place into reused structures.",
+      "Trusting the book through a sequence gap — detect and recover first.",
+      "Assuming UDP delivers in order and exactly once — handle reordering and duplicates.",
+      "Confusing ITCH (market data, inbound) with OUCH (order entry, outbound)."
+    ]
+  },
+  "benchmark": {
+    "intro": "Rough throughput/latency intuition for parsing approaches (illustrative — exact numbers depend on hardware and message mix).",
+    "columns": ["Approach", "Per-message", "Allocations", "Notes"],
+    "rows": [
+      { "cells": ["FIX text parse into objects", "~µs", "Many", "Flexible, ubiquitous for order entry; too slow for the data hot path."], "best": false },
+      { "cells": ["Binary parse, copy to structs", "~100s ns", "Some", "Better, but the copies and any allocation still cost."], "best": false },
+      { "cells": ["Zero-copy view over buffer", "~10s ns", "None", "Read fields by offset from the receive buffer; reuse buffers/pools. The HFT standard."], "best": true }
+    ],
+    "takeaway": "Binary, zero-copy, allocation-free parsing turns a per-message cost from microseconds into tens of nanoseconds — the difference between keeping up with the feed and falling behind it."
+  },
+  "practice": {
+    "interviewQuestions": [
+      {
+        "id": "q-snap-inc",
+        "q": "Why do feeds provide both snapshots and incremental updates? How do they work together?",
+        "tag": "Systems",
+        "a": [
+          "Incremental updates are compact and let you keep a live book cheaply by applying small add/modify/delete/trade messages in sequence. But you need a starting point and a recovery mechanism — that's the snapshot, a full picture of the book at a known sequence number.",
+          "Workflow: on startup (or after a gap), take a snapshot at seq N, then apply increments N+1, N+2, … to keep the book current. If you detect a gap you can't fill from the redundant line, you re-snapshot to a new base and resume. Snapshots bound recovery cost; increments give low steady-state overhead."
+        ]
+      },
+      {
+        "id": "q-itch-fix",
+        "q": "Compare ITCH and FIX. Why might an HFT firm parse ITCH for data but tolerate FIX elsewhere?",
+        "tag": "Protocols",
+        "a": [
+          "ITCH is a compact binary, order-by-order market-data protocol with fixed message layouts you can read by offset with zero copy — built for speed and the high message rates of L3 data. FIX is a flexible, text-based tag=value protocol used widely for order entry and institutional connectivity; parsing/encoding text is slower and allocates more.",
+          "So firms use the fastest binary feed (ITCH or exchange-native) on the latency-critical data path, where every nanosecond and the message rate matter. FIX is acceptable on less latency-critical connections (e.g., some order entry, institutional links, or where a counterparty requires it) because its flexibility and ubiquity outweigh its speed cost there. Where order entry is latency-critical, firms use binary order-entry protocols (e.g., OUCH/native) instead."
+        ]
+      },
+      {
+        "id": "q-gap",
+        "q": "Your UDP multicast handler sees sequence jump from 1041 to 1043. What happened and what do you do?",
+        "tag": "Systems",
+        "a": [
+          "You missed message 1042 (a dropped/late UDP packet). UDP doesn't retransmit, so your local book may now be wrong.",
+          "Recovery: first try the redundant feed line (A/B arbitration) — the other multicast line likely delivered 1042, so you fill the gap from it. If that fails, use the venue's retransmission/recovery service if available, or re-snapshot to a fresh base sequence and resume applying increments. Critically, until you've recovered 1042 and re-synced, you treat the book as untrusted and stop quoting in that instrument to avoid acting on corrupt state."
+        ]
+      }
+    ],
+    "problems": [
+      {
+        "id": "p-seq",
+        "title": "Sequence-gap detector",
+        "difficulty": "Core",
+        "statement": "Implement a handler that processes messages tagged with monotonically increasing sequence numbers. It must: ignore duplicates/old messages (seq <= last applied), apply the next-in-line message (seq == last+1), and on a gap (seq > last+1) report the missing range [last+1, seq-1] and NOT apply the message (until recovery). Return the action taken for each incoming seq.",
+        "hint": "Track lastApplied. Three cases: seq <= lastApplied → 'duplicate'; seq == lastApplied+1 → 'apply' and advance; seq > lastApplied+1 → 'gap' covering lastApplied+1..seq-1.",
+        "tests": "Sequencing logic — the gate every feed handler needs.",
+        "solution": {
+          "approach": [
+            "Keep a single integer lastApplied (start at the snapshot's base seq). For each message compare its seq to lastApplied+1.",
+            "If it's the expected next, apply and advance. If it's not greater than lastApplied, it's a duplicate/stale and is ignored. If it skips ahead, you have a gap of [lastApplied+1, seq-1]; report it and do not advance (real systems would now recover via the B-line or a snapshot before resuming)."
+          ],
+          "complexity": { "time": "O(1) per message", "space": "O(1)" },
+          "codes": [
+            {
+              "language": "cpp",
+              "title": "seqgap.cpp",
+              "source": "#include <string>\n#include <cstdint>\nstruct Handler {\n    uint64_t lastApplied;\n    explicit Handler(uint64_t base) : lastApplied(base) {}\n    // returns: \"apply\", \"duplicate\", or \"gap a..b\"\n    std::string onMessage(uint64_t seq){\n        if (seq <= lastApplied) return \"duplicate\";\n        if (seq == lastApplied + 1){ lastApplied = seq; return \"apply\"; }\n        return \"gap \" + std::to_string(lastApplied + 1) + \"..\" + std::to_string(seq - 1);\n    }\n};"
+            },
+            {
+              "language": "python",
+              "title": "seqgap.py",
+              "source": "class Handler:\n    def __init__(self, base):\n        self.last = base\n\n    def on_message(self, seq):\n        if seq <= self.last:\n            return \"duplicate\"\n        if seq == self.last + 1:\n            self.last = seq\n            return \"apply\"\n        return f\"gap {self.last + 1}..{seq - 1}\"  # do not advance until recovered"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "resources": [
+    { "title": "Nasdaq TotalView-ITCH specification", "note": "The actual binary message layouts — great for building a parser." },
+    { "title": "FIX protocol overview", "note": "Understand tag=value framing and why it's heavier than binary." }
+  ]
+}

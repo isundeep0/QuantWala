@@ -1,0 +1,151 @@
+{
+  "slug": "emergency-fund",
+  "sectionId": "cash-flow",
+  "order": 2,
+  "title": "The Emergency Fund — Your Financial Airbag",
+  "tagline": "How many months you actually need, and exactly where to park it so it beats inflation slightly but stays 100% accessible. Savings account vs liquid fund, settled.",
+  "summary": "Sizing the emergency fund and choosing where to keep it (savings vs liquid funds vs sweep-in FD).",
+  "difficulty": "Beginner",
+  "estMinutes": 13,
+  "tags": ["emergency-fund", "safety", "module-1"],
+  "prereqs": ["budgeting-50-30-20"],
+  "sections": [
+    {
+      "id": "what",
+      "title": "What it is and why it comes before investing",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "An **emergency fund** is a pot of money set aside only for genuine emergencies: a job loss, a medical bill, an urgent trip home, a phone or laptop you need for work dying. It is *not* for a sale, a trip, or a new gadget — those are planned goals, not emergencies.",
+            "It is the **first** financial goal, before any SIP, because it is what keeps your investments invested. Without it, the first shock forces you to either sell investments at a bad time or swipe a credit card at 40% interest. The emergency fund absorbs the shock so your wealth engine keeps running."
+          ]
+        },
+        {
+          "type": "analogy",
+          "title": "The airbag",
+          "text": "You hope to never use it, you don't judge it by its 'returns', and you'd never remove it to save weight. An emergency fund is an airbag for your finances: its entire job is to be there, intact, on the one bad day."
+        }
+      ]
+    },
+    {
+      "id": "size",
+      "title": "How many months? The strict rule",
+      "blocks": [
+        {
+          "type": "callout",
+          "variant": "rule",
+          "title": "Rule of thumb",
+          "text": "Keep 3 to 6 months of essential expenses (your 'needs', not your full income). 3 months if your income is very stable (secure salaried job, family support). 6 months — or more — if your income is variable, you're a sole earner, or your job is insecure."
+        },
+        {
+          "type": "text",
+          "paragraphs": [
+            "Note the base is **monthly needs, not income**. In an emergency you cut wants instantly, so you only need to cover essentials. For Aarav, needs are about **₹15,000/month** (rent, food, transport, phone, misc)."
+          ]
+        },
+        {
+          "type": "formula",
+          "title": "Aarav's target",
+          "expression": "Target  =  Monthly needs  ×  Months of cover",
+          "where": [
+            { "symbol": "Monthly needs", "meaning": "₹15,000 (essentials only)" },
+            { "symbol": "Months", "meaning": "4 months (early-career, single income, no dependents)" }
+          ],
+          "result": "₹15,000 × 4 = **₹60,000**. That's Aarav's emergency-fund goal."
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "₹60,000 from a ₹3,000/month savings habit takes ~20 months. That's fine — build it in stages. A first milestone of even ₹15,000 (one month) already prevents most small crises from becoming credit-card debt. Build the fund *before* starting long-term equity SIPs."
+        }
+      ]
+    },
+    {
+      "id": "where",
+      "title": "Where to park it: the real question",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Two rules govern *where* the emergency fund lives: it must be **100% safe** (no chance of losing capital) and **highly liquid** (reachable within minutes to a day). Returns are a distant third priority — but with a small tweak you can still beat a plain savings account and soften inflation."
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "The realistic parking options (illustrative 2026 rates)",
+          "columns": ["Option", "Typical return", "Access speed", "Verdict"],
+          "rows": [
+            ["Savings account", "~2.7–3.5%", "Instant (debit/UPI)", "Keep ~1 month here for instant access"],
+            ["Sweep-in / auto-FD", "~6–7%", "Instant (auto-breaks FD)", "Great hybrid — savings access, FD-ish rate"],
+            ["Liquid mutual fund", "~6–7%", "Same/next day (T+1); ₹50k instant-redeem on many", "Best home for the bulk of the fund"],
+            ["Equity / stocks", "Volatile", "T+1 but can be down 30%", "NEVER — not safe, defeats the purpose"]
+          ],
+          "caption": "Returns are illustrative and change with rates. The ranking on safety and liquidity is what matters."
+        },
+        {
+          "type": "key",
+          "title": "The recommended split for Aarav",
+          "text": "Keep ~₹15,000 (one month) in his savings account for instant access, and the remaining ~₹45,000 in a liquid fund or sweep-in FD earning ~6–7%. He gets instant money for small shocks, a slightly inflation-beating return on the bulk, and zero risk to capital."
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Why not just chase higher returns?",
+          "text": "An emergency fund in equity or a long lock-in FD fails exactly when you need it: markets can be down 30% on the day you lose your job, and a locked FD charges a penalty to break early. Liquidity and safety beat yield here, every time."
+        },
+        {
+          "type": "callout",
+          "variant": "note",
+          "title": "On liquid funds and inflation",
+          "text": "A liquid fund's ~6–7% won't make you rich and roughly tracks or slightly trails inflation after tax — that's the point. The emergency fund's job is preservation and access, not growth. Your *long-term* money does the growing (Modules 2, 4, 5)."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Emergency fund = 3–6 months of essential expenses (needs, not full income); 6+ if income is unstable.",
+    "Aarav: ₹15,000 needs × 4 months = ₹60,000 target.",
+    "Two non-negotiables: 100% safe and highly liquid. Returns come a distant third.",
+    "Split: ~1 month in savings (instant), the rest in a liquid fund / sweep-in FD at ~6–7%.",
+    "Never park the emergency fund in equity or a locked FD — it fails right when you need it.",
+    "Build the emergency fund before starting long-term equity SIPs."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Application",
+      "difficulty": "Easy",
+      "prompt": "Aarav's monthly take-home is ₹20,000 but his essential expenses are ₹15,000. Should his 4-month emergency fund be ₹80,000 or ₹60,000?",
+      "hint": "What does the fund actually need to cover during an emergency?",
+      "answer": [
+        "₹60,000. The fund is sized on **essential expenses (₹15,000), not income (₹20,000)**. In a real emergency you immediately cut wants and discretionary spending, so you only need to cover needs. ₹15,000 × 4 = ₹60,000. Sizing it on full income would over-park safe money that could otherwise be growing in long-term investments."
+      ],
+      "keyPoints": ["Base on essential expenses, not income", "Wants get cut in an emergency", "₹15,000 × 4 = ₹60,000", "Over-sizing wastes growth potential"]
+    },
+    {
+      "id": "q2",
+      "kind": "Scenario",
+      "difficulty": "Medium",
+      "prompt": "A friend suggests Aarav put his entire ₹60,000 emergency fund into an index fund 'so it at least grows 12%'. Why is this a dangerous idea?",
+      "hint": "When do emergencies and market crashes often coincide?",
+      "answer": [
+        "An emergency fund must be safe and instantly available. Equity index funds can fall 30–50% in a downturn — and downturns often coincide with the very emergencies you'd need the money for (recessions cause layoffs). If Aarav loses his job in a crash, he'd be forced to sell units at a big loss to pay rent.",
+        "The right home is a liquid fund or sweep-in FD: ~6–7%, capital-safe, reachable in a day. The fund's job is preservation and access, not growth — growth is what his *separate* long-term SIPs are for."
+      ],
+      "keyPoints": ["Equity can be down 30%+ exactly when needed", "Emergencies & crashes correlate (layoffs)", "Use liquid fund / sweep-in FD", "Preservation + access > yield for this money"]
+    },
+    {
+      "id": "q3",
+      "kind": "Concept",
+      "difficulty": "Medium",
+      "prompt": "Why split the fund between a savings account and a liquid fund instead of putting it all in one?",
+      "hint": "Trade-off between instant access and a better return.",
+      "answer": [
+        "It balances the two needs. A savings account gives **instant** access (UPI/debit at 2am) but a poor ~3% return. A liquid fund gives a better ~6–7% but redemptions may take until the next day (though many now offer instant redemption up to ₹50,000).",
+        "Keeping about one month in savings covers any sudden, same-minute need, while the bulk sits in the liquid fund earning more and softening inflation. You get the best of both: immediacy for small shocks, better yield on the rest."
+      ],
+      "keyPoints": ["Savings = instant but low yield", "Liquid fund = better yield, ~T+1", "One month instant + rest in liquid fund", "Balances access and return"]
+    }
+  ]
+}

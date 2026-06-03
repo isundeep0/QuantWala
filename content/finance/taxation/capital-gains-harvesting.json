@@ -1,0 +1,135 @@
+{
+  "slug": "capital-gains-harvesting",
+  "sectionId": "taxation",
+  "order": 2,
+  "title": "Capital Gains & Tax Harvesting on Equity",
+  "tagline": "When you sell an investment for a profit, the government wants a share. STCG vs LTCG on equity after the 2024 overhaul, and the legal trick — tax harvesting — that pockets ₹1.25 lakh of gains tax-free every year.",
+  "summary": "STCG vs LTCG on equity (current rules), the ₹1.25 lakh exemption, and how tax harvesting works.",
+  "difficulty": "Advanced",
+  "estMinutes": 14,
+  "tags": ["tax", "capital-gains", "harvesting", "module-6"],
+  "prereqs": ["mutual-funds", "old-vs-new-regime"],
+  "sections": [
+    {
+      "id": "basics",
+      "title": "Capital gains: the basics",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A **capital gain** is the profit when you sell an investment for more than you paid. You're only taxed when you **sell** (realise the gain) — unrealised gains while you hold are not taxed. How much tax depends on **what** you sold and **how long** you held it.",
+            "For **equity** (listed shares and equity mutual funds), the holding-period line is **12 months**, and the rules were overhauled in the July 2024 Budget."
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "Equity capital gains — current rules (FY 2025-26)",
+          "columns": ["", "STCG (held < 12 months)", "LTCG (held ≥ 12 months)"],
+          "rows": [
+            ["Tax rate", "20% (Section 111A)", "12.5% (Section 112A)"],
+            ["Exemption", "None", "First ₹1.25 lakh of LTCG per year is tax-free"],
+            ["Indexation", "Not applicable", "Not available (removed in 2024)"],
+            ["87A rebate", "Not allowed on this", "Not allowed on this"]
+          ],
+          "caption": "STCG rate rose from 15% to 20% and LTCG from 10% to 12.5% in the July 2024 Budget; the LTCG annual exemption is ₹1.25 lakh."
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Why this rewards patience",
+          "text": "Hold equity over 12 months and your gains are taxed at 12.5% with ₹1.25 lakh tax-free; sell within 12 months and you pay 20% on every rupee of gain. The tax code literally pays you to be a long-term investor — which aligns perfectly with the buy-and-hold, goal-based approach in this course."
+        }
+      ]
+    },
+    {
+      "id": "debt",
+      "title": "A quick note on debt funds",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The rules differ by asset. For **debt mutual funds bought after 1 April 2023**, there's no special long-term treatment — gains are added to your income and taxed at your **slab rate** regardless of holding period. So a high earner pays up to 30% on debt-fund gains, while equity gets the gentler 12.5% long-term rate.",
+            "This is a key reason equity (via index funds) is so tax-efficient for long-term wealth, and why the asset you choose interacts with the tax you'll eventually pay."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "note",
+          "text": "Aarav, currently below the tax limit, pays little or nothing on any of this today. But knowing the rules now means his future self structures holdings tax-efficiently from the start — holding equity long-term, and not parking large sums in debt funds once he's in a high slab."
+        }
+      ]
+    },
+    {
+      "id": "harvesting",
+      "title": "Tax harvesting: the ₹1.25 lakh annual freebie",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Here's the insider move. Because the **first ₹1.25 lakh of LTCG each financial year is tax-free**, you can deliberately **sell** enough long-term equity to realise gains up to ₹1.25 lakh, pay zero tax on it, and immediately **rebuy** the same fund. This 'resets' your purchase price (cost basis) higher, so future gains are measured from a higher base — shrinking the taxable gain when you eventually sell for real. This is **LTCG harvesting**."
+          ]
+        },
+        {
+          "type": "steps",
+          "title": "How harvesting works each year",
+          "items": [
+            { "title": "Check your unrealised LTCG", "detail": "Near year-end, see how much long-term gain (units held >12 months) you're sitting on." },
+            { "title": "Sell up to ₹1.25 lakh of gains", "detail": "Redeem enough units that the realised long-term gain is around ₹1.25 lakh — the tax-free ceiling. Tax on this: ₹0." },
+            { "title": "Rebuy the same fund", "detail": "Reinvest immediately. Your holding is restored, but your cost basis is now higher by the harvested amount." },
+            { "title": "Repeat every year", "detail": "Done annually, you keep 'using up' the ₹1.25 lakh exemption you'd otherwise waste, permanently lowering the tax due when you finally sell for a goal." }
+          ]
+        },
+        {
+          "type": "formula",
+          "title": "What harvesting can save",
+          "expression": "Harvested gain × LTCG rate = tax avoided on that slice",
+          "where": [
+            { "symbol": "Harvested gain", "meaning": "up to ₹1,25,000 per year, tax-free" },
+            { "symbol": "LTCG rate", "meaning": "12.5%" }
+          ],
+          "result": "By resetting the basis on ₹1.25 lakh of gains, you avoid paying 12.5% on that slice later — about **₹15,625 of tax saved per year of harvesting**, compounding into a meaningful sum over a long horizon."
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "The fine print",
+          "text": "Watch three things: (1) exit loads and bid-ask/NAV timing — sell/rebuy only where costs are negligible (most index funds are fine); (2) don't trigger STCG by accidentally selling units held <12 months; (3) keep the gain at or just under ₹1.25 lakh so it stays tax-free. Also, the related move 'tax-loss harvesting' means booking losses to offset other gains — useful, but don't sell good investments purely to manufacture a loss."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "You're taxed on capital gains only when you SELL; unrealised gains aren't taxed.",
+    "Equity held <12 months = STCG at 20%; held ≥12 months = LTCG at 12.5%, with the first ₹1.25 lakh/year tax-free.",
+    "STCG rose to 20% and LTCG to 12.5% in the July 2024 Budget; equity LTCG has no indexation.",
+    "Debt funds bought after 1 Apr 2023 are taxed at your slab rate regardless of holding period.",
+    "The tax code rewards patience — long-term equity is taxed far more gently than short-term.",
+    "Tax harvesting: each year sell ~₹1.25 lakh of LTCG (tax-free) and rebuy to reset cost basis, saving ~₹15,625/yr in future tax."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Application",
+      "difficulty": "Medium",
+      "prompt": "Aarav (future self) bought an index fund and is up ₹80,000 after 10 months. He's tempted to sell and 'book the profit'. What's the tax cost of selling now vs waiting two more months?",
+      "hint": "Where's the 12-month line, and what changes when you cross it?",
+      "answer": [
+        "Selling now (held <12 months) makes the ₹80,000 a **short-term** gain taxed at 20% = ₹16,000 tax. Waiting just two more months crosses the 12-month line, making it a **long-term** gain — and since ₹80,000 is under the ₹1.25 lakh annual LTCG exemption, the tax would be **₹0**.",
+        "So impatience here costs ₹16,000 on the same profit. Unless he urgently needs the money, holding past 12 months is dramatically more tax-efficient. This is the tax code rewarding long-term behaviour — exactly what buy-and-hold investing is built around."
+      ],
+      "keyPoints": ["<12 months = STCG 20% → ₹16,000", "≥12 months = LTCG, and ₹80k is under ₹1.25L exemption → ₹0", "Two months' patience saves ₹16,000", "Tax favours long-term holding"]
+    },
+    {
+      "id": "q2",
+      "kind": "Concept",
+      "difficulty": "Hard",
+      "prompt": "Explain tax harvesting in your own words, and why selling-then-immediately-rebuying isn't a pointless round trip.",
+      "hint": "What happens to your cost basis after the rebuy?",
+      "answer": [
+        "Tax harvesting uses the ₹1.25 lakh annual LTCG exemption that would otherwise go to waste. Each year you sell enough long-held equity to realise about ₹1.25 lakh of gains — taxed at ₹0 because it's within the exemption — then immediately rebuy the same fund.",
+        "It isn't pointless because the rebuy **resets your cost basis higher**: future gains are now measured from that higher purchase price, so when you finally sell for a real goal, the taxable gain (and thus the 12.5% tax) is smaller. You're effectively converting ₹1.25 lakh of would-be-taxable gain into tax-free gain every year, saving ~₹15,625 annually that compounds over time. The catch is to keep costs/loads negligible and avoid accidentally booking short-term gains."
+      ],
+      "keyPoints": ["Uses the otherwise-wasted ₹1.25L exemption", "Sell ~₹1.25L LTCG tax-free, then rebuy", "Rebuy raises cost basis → smaller future taxable gain", "Saves ~₹15,625/yr, compounding", "Mind exit loads and the 12-month line"]
+    }
+  ]
+}

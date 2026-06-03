@@ -1,0 +1,121 @@
+{
+  "slug": "your-money-system",
+  "sectionId": "capstone",
+  "order": 1,
+  "title": "Your Money System — Putting It All Together",
+  "tagline": "Six modules, one routine. The order of operations, a monthly checklist you can run on autopilot, and the mindset to keep going. By the end of this page you can run your own finances with confidence.",
+  "summary": "The financial order of operations, a monthly money routine, and a one-page lifetime checklist.",
+  "difficulty": "Beginner",
+  "estMinutes": 12,
+  "tags": ["capstone", "system", "checklist"],
+  "prereqs": ["capital-gains-harvesting"],
+  "sections": [
+    {
+      "id": "waterfall",
+      "title": "The order of operations (the money waterfall)",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Everything in this course collapses into one prioritised sequence. When money arrives, it should flow down these steps in order — each step's surplus fills the next. This single ladder answers 'what should I do with my money?' for the rest of your life."
+          ]
+        },
+        {
+          "type": "steps",
+          "title": "Where each rupee goes, in order",
+          "items": [
+            { "title": "1. Cover your needs", "detail": "Rent, food, transport, utilities, minimum bills. The base of the budget (Module 1)." },
+            { "title": "2. Kill high-interest debt", "detail": "Any credit-card balance or costly loan (~12–40%) is attacked before investing — no investment reliably beats that 'return' (Module 3)." },
+            { "title": "3. Build the emergency fund", "detail": "3–6 months of needs in a liquid fund / sweep-in FD. The airbag that protects everything above and below (Module 1)." },
+            { "title": "4. Insure against catastrophe", "detail": "Cheap term life insurance (if anyone depends on you) and health insurance, so one event can't wipe out your plan." },
+            { "title": "5. Invest for goals, by timeline", "detail": "Short goals → debt/FD; long goals → equity index SIPs; medium goals (like the 2031 car) → balanced + glide path (Modules 2, 4, 5)." },
+            { "title": "6. Optimise tax & enjoy the rest", "detail": "Pick the right regime, hold equity long-term, harvest LTCG (Module 6) — then spend the remainder on a life you enjoy, guilt-free." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "rule",
+          "title": "The whole course in one line",
+          "text": "Spend less than you earn, insure the disasters, invest the difference in low-cost funds matched to your timeline, start early, and let compounding do the rest."
+        }
+      ]
+    },
+    {
+      "id": "routine",
+      "title": "Aarav's monthly money routine",
+      "blocks": [
+        {
+          "type": "steps",
+          "title": "About 30 minutes a month",
+          "items": [
+            { "title": "Salary day (auto)", "detail": "Standing instructions move money to savings/SIPs first — emergency fund top-up, then car SIP, then any long-term SIP. Pay yourself first, automatically." },
+            { "title": "Pay the credit card in FULL", "detail": "Autopay the Total Amount Due (not the minimum). Keep utilisation under 30%. This quietly builds the 750+ CIBIL score." },
+            { "title": "Spend the rest within the budget", "detail": "Needs and wants come out of what's left after savings — by design, not by accident." },
+            { "title": "Quick monthly review", "detail": "Glance at spending vs budget, SIPs that fired, and the emergency-fund balance. Adjust if life changed; otherwise, do nothing — boring is good." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Annual check-ins",
+          "text": "Once a year: step up your SIPs (especially after a raise), re-check Old vs New tax regime, harvest LTCG up to ₹1.25 lakh, pull your free credit report and fix errors, and confirm each goal is on track. Fifteen minutes that compound for decades."
+        }
+      ]
+    },
+    {
+      "id": "mindset",
+      "title": "The mindset to keep going",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Consistency beats brilliance", "detail": "A boring, automated, low-cost plan run for 30 years beats a clever plan you abandon in year two. The system wins because it removes willpower from the equation." },
+            { "term": "Ignore the noise", "detail": "Hot tips, crypto moonshots, and 'guaranteed' returns are how people lose money. Your edge is patience, low costs, and time — not prediction." },
+            { "term": "Income is the accelerator", "detail": "Budgeting optimises a fixed pie; growing your skills and income grows the whole pie. Invest in yourself alongside your SIPs." },
+            { "term": "Wealth buys freedom, not status", "detail": "The goal isn't a flashy lifestyle — it's options: the freedom to handle a crisis, change jobs, or say no. That's what this system quietly builds." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "win",
+          "title": "You're ready",
+          "text": "You now understand budgeting, the emergency fund, compounding, credit and CIBIL, every major asset class, goal-based investing, and taxation — and you've seen each one worked out on real numbers. That's more than most people learn in a lifetime. Start with one automated SIP this month, however small, and let time do the heavy lifting. You can run your own money with confidence."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Money waterfall: needs → kill high-interest debt → emergency fund → insurance → invest by timeline → optimise tax & enjoy.",
+    "The course in one line: spend less than you earn, insure disasters, invest the difference in low-cost funds matched to your timeline, start early, let compounding work.",
+    "Monthly: automate savings first, pay the card in full, spend the rest within budget, quick review.",
+    "Annually: step up SIPs, re-check tax regime, harvest LTCG, check your credit report, review goals.",
+    "Consistency beats brilliance; ignore hot tips; grow income to grow the whole pie.",
+    "Start one automated SIP this month, however small — time is the asset you can't buy back."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Synthesis",
+      "difficulty": "Medium",
+      "prompt": "Aarav suddenly has a ₹10,000 surplus this month. Using the money waterfall, walk through how he should decide where it goes.",
+      "hint": "Go down the priority ladder until you hit the first unmet need.",
+      "answer": [
+        "He runs the waterfall top-down. Needs are already covered. Next: does he have any high-interest debt (card balance, costly loan)? If yes, it gets the ₹10,000 first — nothing beats clearing ~40% interest. If no debt: is the 3–6 month emergency fund fully built? If not, top it up. Then: is he adequately insured (health, and term if anyone depends on him)?",
+        "Only once those are handled does the ₹10,000 go to goal-based investing — likely his car SIP and/or a long-term equity SIP, matched to timelines. Anything beyond that he can spend guilt-free. The ladder removes the guesswork: you fund each level before the next."
+      ],
+      "keyPoints": ["Work the waterfall top-down", "High-interest debt before investing", "Emergency fund before goal investing", "Insurance before optional investing", "Invest by timeline, then enjoy the rest"]
+    },
+    {
+      "id": "q2",
+      "kind": "Reflection",
+      "difficulty": "Easy",
+      "prompt": "If Aarav could only adopt ONE habit from this entire course starting today, which single action gives the biggest long-term payoff, and why?",
+      "hint": "Think about what combines 'pay yourself first' with the power of time.",
+      "answer": [
+        "Automating an investment SIP on salary day — even a small one — starting now. It bundles the course's two most powerful ideas: **pay yourself first** (so saving actually happens) and **starting early** (so compounding has maximum runway). As Module 2 showed, beginning at 22 versus 30 can mean over ₹1.7 crore difference on the same monthly amount.",
+        "Everything else (bigger amounts, optimal funds, tax tweaks) can be improved later, but the years of compounding you start today can never be recovered. One automated SIP, however small, is the highest-leverage first step."
+      ],
+      "keyPoints": ["Automate a SIP on salary day now", "Combines pay-yourself-first + starting early", "Early start can mean ₹1.7 Cr difference", "Lost compounding years can't be recovered", "Amount/fund choices can be improved later"]
+    }
+  ]
+}

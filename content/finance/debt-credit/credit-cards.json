@@ -1,0 +1,138 @@
+{
+  "slug": "credit-cards",
+  "sectionId": "debt-credit",
+  "order": 1,
+  "title": "How Credit Cards Actually Work",
+  "tagline": "Billing cycles, grace periods, and the brutal 'minimum due' trap. Used right, a credit card is free 45-day money and a CIBIL-building machine. Used wrong, it's 40% debt.",
+  "summary": "Billing cycle, grace period, and why paying only the minimum due is a debt trap.",
+  "difficulty": "Beginner",
+  "estMinutes": 14,
+  "tags": ["credit-cards", "debt", "module-3"],
+  "prereqs": ["budgeting-50-30-20"],
+  "sections": [
+    {
+      "id": "model",
+      "title": "The mental model: a short-term loan you control",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A credit card is a **revolving short-term loan**. The bank pays the merchant immediately; you owe the bank. If you repay the full amount by the due date, that loan is **interest-free**. If you don't, the bank charges punishing interest — typically **3–3.75% per month, which is ~36–45% per year.** That single fact decides whether a card is a tool or a trap.",
+            "Three terms run everything: the **billing cycle**, the **grace period**, and the **minimum due**."
+          ]
+        },
+        {
+          "type": "diagram",
+          "direction": "lr",
+          "caption": "Spend early in the cycle and you can get up to ~45–50 interest-free days before payment is due.",
+          "groups": [
+            { "label": "Billing cycle", "nodes": [{ "label": "Statement opens", "sub": "e.g. 1st", "icon": "Calendar", "accent": "#14b8a6" }] },
+            { "label": "~30 days", "nodes": [{ "label": "You spend", "sub": "bank pays merchant", "icon": "CreditCard", "accent": "#0ea5e9" }] },
+            { "label": "Statement", "nodes": [{ "label": "Statement generated", "sub": "e.g. 30th", "icon": "Receipt", "accent": "#8b5cf6" }] },
+            { "label": "Grace ~20 days", "nodes": [{ "label": "Due date", "sub": "pay in full = ₹0 interest", "icon": "ShieldCheck", "accent": "#10b981" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "terms",
+      "title": "The three terms decoded",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Billing cycle", "detail": "The ~30-day window in which your purchases are tallied. All spends from, say, the 1st to the 30th appear on one statement." },
+            { "term": "Grace period", "detail": "The gap between the statement date and the due date (~15–25 days) during which you can pay the full bill with zero interest. A purchase made on day 1 of the cycle effectively gets cycle length + grace ≈ 45–50 interest-free days." },
+            { "term": "Total Amount Due vs Minimum Amount Due", "detail": "The statement shows both. Total Amount Due is everything you owe. Minimum Amount Due is a small slice (often ~5%) the bank asks for to keep your account 'regular' — paying only this is where people get destroyed." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "rule",
+          "title": "The one rule that keeps a card a tool",
+          "text": "Always pay the FULL statement amount (Total Amount Due) by the due date, every single month. Do this and you never pay a rupee of interest, you build your CIBIL score, and you enjoy ~45 days of free credit. Treat the card like a debit card with a delay."
+        }
+      ]
+    },
+    {
+      "id": "trap",
+      "title": "The minimum-due debt trap",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The 'Minimum Amount Due' line is engineered to feel safe — 'pay just ₹X to stay on track'. But paying only the minimum triggers three things at once that can spiral fast:"
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "You lose the interest-free grace entirely", "detail": "The moment you don't pay in full, interest (~36–45% p.a.) applies to the *whole* unpaid balance, often from the date of each purchase — not just the leftover after the minimum." },
+            { "term": "New purchases get no grace either", "detail": "Until you clear the full balance, fresh spends start accruing interest immediately. The interest-free benefit is switched off." },
+            { "term": "The balance compounds against you", "detail": "Interest is added, then next month's interest is charged on that bigger amount. Compounding — your friend when investing — becomes your enemy here." }
+          ]
+        },
+        {
+          "type": "formula",
+          "title": "How a small slip snowballs",
+          "expression": "Carry ₹50,000 at ~3.5%/month, paying only the minimum",
+          "where": [
+            { "symbol": "Rate", "meaning": "~3.5% per month ≈ 42% per year" },
+            { "symbol": "Minimum due", "meaning": "covers little more than that month's interest" }
+          ],
+          "result": "At ~42% p.a., a ₹50,000 balance accrues roughly **₹1,750 of interest in the first month alone**. Paying only the ~₹2,500 minimum barely dents the principal, so the debt can take *years* to clear and you may repay far more than you borrowed."
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "EMI conversion and cash withdrawals",
+          "text": "Two more traps: (1) Converting a bill to EMI isn't free — it carries interest (often 14–18%+) plus processing fees. (2) Withdrawing CASH on a credit card is the worst move — there's no grace period at all and interest starts from day one, plus a fee. Never use a credit card at an ATM."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "A credit card is a revolving loan; pay in full by the due date and it's interest-free.",
+    "Unpaid balances cost ~3–3.75%/month ≈ 36–45% per year.",
+    "Billing cycle (~30 days) + grace period (~15–25 days) = up to ~45–50 interest-free days.",
+    "Paying only the Minimum Amount Due kills your grace period and triggers interest on the whole balance, including new spends.",
+    "Always pay the Total Amount Due in full — treat the card like a delayed debit card.",
+    "Never withdraw cash on a credit card (no grace, instant interest + fee); EMI conversion isn't free."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Concept",
+      "difficulty": "Medium",
+      "prompt": "Aarav's statement shows Total Amount Due ₹18,000 and Minimum Amount Due ₹900. He pays ₹900 to 'stay safe'. What actually happens?",
+      "hint": "What does paying the minimum do to the grace period and to the remaining balance?",
+      "answer": [
+        "Paying only the ₹900 minimum means he did *not* pay in full, so he forfeits the interest-free grace. Interest (~36–45% p.a.) now applies to the remaining ~₹17,100 — often back-dated to each purchase — and any *new* purchases also start accruing interest immediately with no grace.",
+        "The minimum barely covers the interest, so the principal hardly moves. 'Staying safe' actually flips the card from a free-credit tool into a high-interest loan. The only safe payment is the **full** Total Amount Due."
+      ],
+      "keyPoints": ["Minimum ≠ safe", "Grace period lost; interest on full balance", "New purchases lose grace too", "Minimum barely touches principal", "Only paying in full avoids interest"]
+    },
+    {
+      "id": "q2",
+      "kind": "Application",
+      "difficulty": "Easy",
+      "prompt": "Aarav's billing cycle runs 1st–30th with a due date around the 18th of the next month. To maximise interest-free days on a big planned purchase, when should he buy?",
+      "hint": "Purchases early in a cycle get the longest runway to the due date.",
+      "answer": [
+        "Right at the **start of a new billing cycle** (around the 1st). That purchase sits on the statement that closes on the 30th and isn't due until ~the 18th of the following month — giving roughly 30 days of cycle + ~18 days of grace ≈ 45–48 interest-free days. A purchase made on the 29th, just before the statement closes, gets only the ~18-day grace. Same item, very different free-credit benefit — provided he still pays in full."
+      ],
+      "keyPoints": ["Buy early in the cycle for max free days", "Cycle length + grace ≈ 45–50 days", "Late-cycle buys get only the grace period", "Benefit only holds if paid in full"]
+    },
+    {
+      "id": "q3",
+      "kind": "Concept",
+      "difficulty": "Easy",
+      "prompt": "Why is taking a cash advance (ATM withdrawal) on a credit card considered the single worst way to use it?",
+      "hint": "What protection do normal purchases have that cash advances don't?",
+      "answer": [
+        "Normal purchases enjoy an interest-free grace period if you pay in full. Cash advances have **no grace period at all** — interest starts accruing from the moment of withdrawal at the full ~36–45% p.a. rate — and usually carry an upfront cash-advance fee on top. There's no scenario where it's free, so it's effectively an instant high-interest loan. If you need cash, a credit card is the most expensive possible source."
+      ],
+      "keyPoints": ["No grace period on cash advances", "Interest from day one at ~40% p.a.", "Extra cash-advance fee", "Never use a credit card at an ATM"]
+    }
+  ]
+}

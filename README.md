@@ -33,6 +33,15 @@ Four modules:
   data-driven from `content/kernel-bypass/curriculum.json` and typed by
   `frontend/src/types/kernelBypass.ts`; deliverable/paper progress uses the same
   `localStorage` pattern. Routes: `/kernel-bypass` and `/kernel-bypass/:phaseId`.
+- **Module 5 — Personal Finance & Investing** *(complete, content)*: a from‑scratch
+  personal‑finance masterclass for the Indian market. **17 lessons across 8 sections**
+  (mindset → budgeting & emergency fund → compounding → credit/CIBIL → asset classes →
+  goal‑based investing → taxation → a capstone "money system"). Every lesson follows the
+  same shape — *core concept → strict rule of thumb → a worked example* — and every
+  number is anchored to one beginner persona (22, Bengaluru, ₹20,000/month, saving for a
+  car by 2031). Content‑driven like System Design: drop a JSON file in
+  `content/finance/<sectionId>/` and it appears on the roadmap. Progress (lessons +
+  self‑assessed checks) is `localStorage`‑based via `FinanceProgressContext`.
 
 ---
 

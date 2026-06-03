@@ -7,6 +7,7 @@ import { ProgressProvider } from "./context/ProgressContext.jsx";
 import { SdProgressProvider } from "./context/SdProgressContext.jsx";
 import { HftProgressProvider } from "./context/HftProgressContext.jsx";
 import { KbProgressProvider } from "./context/KbProgressContext.jsx";
+import { FinanceProgressProvider } from "./context/FinanceProgressContext.jsx";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -19,6 +20,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               <KbProgressProvider>
                 <App />
               </KbProgressProvider>
+              <FinanceProgressProvider>
+                <App />
+              </FinanceProgressProvider>
             </HftProgressProvider>
           </SdProgressProvider>
         </ProgressProvider>

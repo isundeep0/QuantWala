@@ -19,7 +19,7 @@ export default function Footer() {
               Algorithms
             </Link>
             <Link to="/cp" className="text-muted hover:text-brand-600">
-              Road to CM
+              Road to GM
             </Link>
             <Link to="/system-design" className="text-muted hover:text-sysd">
               System Design

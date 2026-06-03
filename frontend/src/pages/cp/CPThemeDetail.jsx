@@ -149,7 +149,7 @@ export default function CPThemeDetail() {
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
       <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
-        <Link to="/cp" className="hover:text-brand-500">Road to CM</Link>
+        <Link to="/cp" className="hover:text-brand-500">Road to GM</Link>
         <ChevronRight className="h-3.5 w-3.5" />
         <Link to={`/cp#${phase.id}`} className="hover:text-brand-500">{phase.title}</Link>
       </div>

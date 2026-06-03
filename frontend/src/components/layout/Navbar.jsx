@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn.js";
 
 const LINKS = [
   { to: "/algorithms", label: "Algorithms", icon: Boxes, color: "#3b82f6" },
-  { to: "/cp", label: "Road to CM", icon: Trophy, color: "#a855f7" },
+  { to: "/cp", label: "Road to GM", icon: Trophy, color: "#a855f7" },
   { to: "/system-design", label: "System Design", icon: Network, color: "#f59e0b" },
   { to: "/hft", label: "HFT / Low Latency", icon: Cpu, color: "#10b981" },
   { to: "/kernel-bypass", label: "Kernel Bypass", icon: Zap, color: "#22d3ee" },

@@ -1,4 +1,4 @@
-// Module 4 — "Road to Candidate Master".
+// Module 4 — "Road to Grandmaster".
 //
 // The roadmap content is generated from the LIVE Codeforces problemset by
 // tools/cp-roadmap/build_roadmap.py and written to content/cp/roadmap.json

@@ -159,16 +159,16 @@ export default function CPThemeDetail() {
         <div>
           <div className="flex items-center gap-3">
             <span
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl"
               style={{
-                background: `radial-gradient(120% 120% at 30% 20%, ${accent}45, ${accent}12)`,
-                boxShadow: `inset 0 0 14px ${accent}40, 0 0 12px ${accent}26`,
+                background: `linear-gradient(160deg, ${accent}26, ${accent}0d)`,
+                boxShadow: `inset 0 0 0 1px ${accent}2e`,
                 color: accent,
               }}
             >
-              <IconByName name={theme.icon} className="h-5 w-5" style={{ filter: `drop-shadow(0 0 4px ${accent})` }} />
+              <IconByName name={theme.icon} className="h-5 w-5" />
             </span>
-            <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: accent, textShadow: `0 0 18px ${accent}55` }}>
+            <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: accent }}>
               {theme.title}
             </h1>
           </div>
@@ -184,12 +184,12 @@ export default function CPThemeDetail() {
           </div>
         </div>
         <div className="shrink-0 rounded-2xl surface-sunken px-4 py-3 text-center">
-          <div className="font-mono text-2xl font-bold etched-glow" style={{ "--glow": `${accent}cc`, color: accent }}>
+          <div className="font-mono text-2xl font-bold" style={{ color: accent }}>
             {solved}/{theme.problems.length}
           </div>
           <div className="text-xs text-faint">solved</div>
-          <div className="mt-2 h-1.5 w-24 overflow-hidden rounded-full" style={{ background: "rgb(var(--glass-stroke) / 0.15)" }}>
-            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: accent, boxShadow: `0 0 8px ${accent}` }} />
+          <div className="mt-2 h-1.5 w-24 overflow-hidden rounded-full" style={{ background: "rgb(var(--border))" }}>
+            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: accent }} />
           </div>
         </div>
       </div>

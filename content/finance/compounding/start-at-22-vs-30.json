@@ -1,0 +1,131 @@
+{
+  "slug": "start-at-22-vs-30",
+  "sectionId": "compounding",
+  "order": 2,
+  "title": "The ₹1.7 Crore Mistake: Starting at 22 vs 30",
+  "tagline": "The most expensive decision a young investor makes is waiting. The exact maths of an 8-year delay — same monthly amount, wildly different outcome.",
+  "summary": "A side-by-side calculation showing why an 8-year head start more than doubles the final corpus.",
+  "difficulty": "Beginner",
+  "estMinutes": 12,
+  "tags": ["compounding", "sip", "module-2"],
+  "prereqs": ["compound-interest"],
+  "sections": [
+    {
+      "id": "setup",
+      "title": "The experiment",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Let's settle the 'I'll start investing once I earn more' debate with numbers. Two versions of Aarav both invest **₹3,000/month** into an index fund assumed to return **12% per year**, and both stop at **age 60**.",
+            "The only difference: **Aarav-22 starts now**, at 22. **Aarav-30 waits** eight years and starts at 30. Same monthly amount, same return, same finish line. How different can the result really be?"
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "Same ₹3,000/month, same 12%, finish at 60",
+          "columns": ["", "Aarav-22 (starts at 22)", "Aarav-30 (starts at 30)"],
+          "rows": [
+            ["Years invested", "38 years (456 months)", "30 years (360 months)"],
+            ["Total he puts in", "₹13.68 lakh", "₹10.80 lakh"],
+            ["Corpus at 60", "≈ ₹2.77 crore", "≈ ₹1.05 crore"],
+            ["Difference", "—", "₹1.72 crore less"]
+          ],
+          "caption": "Computed with FV = P × [((1+i)^m − 1)/i], i = 1%/month. Returns assumed, not guaranteed."
+        }
+      ]
+    },
+    {
+      "id": "punchline",
+      "title": "The punchline that should change your behaviour",
+      "blocks": [
+        {
+          "type": "stat",
+          "title": "What 8 extra years bought",
+          "items": [
+            { "value": "₹2.88L", "label": "Extra money Aarav-22 invested (96 × ₹3,000)", "color": "#0ea5e9" },
+            { "value": "₹1.72 Cr", "label": "Extra wealth that produced at 60", "color": "#10b981" },
+            { "value": "≈ 60×", "label": "Return on starting 8 years sooner" }
+          ]
+        },
+        {
+          "type": "text",
+          "paragraphs": [
+            "Read that again. Aarav-22 invested only **₹2.88 lakh more** than Aarav-30 (eight extra years of ₹3,000), yet ended up with **₹1.72 crore more**. Those early instalments had the most time to compound, so each one did the heaviest lifting. The last instalments before 60 barely grow; the first ones at 22 multiply many times over.",
+            "This is the core argument against waiting: you are not just delaying your contributions, you are deleting your **most powerful** compounding years — the early ones that can never be recreated."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "win",
+          "title": "The takeaway",
+          "text": "Starting small beats starting late. ₹3,000/month at 22 crushes ₹3,000/month at 30. If Aarav can only spare ₹1,000 today, he should start with ₹1,000 today — and step it up as income grows (Module 5) — rather than wait for a 'serious' amount."
+        }
+      ]
+    },
+    {
+      "id": "objections",
+      "title": "Handling the real objections",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "'₹3,000 is too little to bother with'", "detail": "It becomes ₹2.77 crore over a career. Amount matters far less than time at your age. Begin now, increase later." },
+            { "term": "'I'll invest properly once I'm earning ₹50k'", "detail": "That's the ₹1.72-crore mistake. The habit and the early years are worth more than the bigger number you'll start with later." },
+            { "term": "'What if 12% doesn't happen?'", "detail": "Even at a conservative 10%, the *relative* gap between starting early and late is just as dramatic. The direction of the lesson is rate-independent." },
+            { "term": "'Markets are scary right now'", "detail": "A SIP turns volatility into an advantage via rupee-cost averaging — you buy more units when prices are low. Time in the market beats timing the market." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "note",
+          "title": "A realism caveat",
+          "text": "12% is an assumption based on long-run Indian equity history, not a promise — real returns vary year to year and could be lower. The point isn't the exact crore figure; it's the unbeatable advantage of starting early, which holds at any reasonable return."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "₹3,000/month at 12% to age 60: starting at 22 → ~₹2.77 Cr; starting at 30 → ~₹1.05 Cr.",
+    "An 8-year delay cost ₹1.72 Cr while saving only ₹2.88 lakh of contributions.",
+    "Early instalments compound the longest, so they do the heaviest lifting.",
+    "Waiting deletes your most powerful compounding years — they can't be recreated.",
+    "Start small now and step up later; starting beats waiting at any reasonable return.",
+    "Time in the market beats timing the market; SIPs turn volatility into an advantage."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Concept",
+      "difficulty": "Medium",
+      "prompt": "Aarav-22 invested only ₹2.88 lakh more than Aarav-30 but ended up with ₹1.72 crore more. Explain in one or two sentences why such a small extra contribution produced such a huge gap.",
+      "hint": "Which instalments have the most years to compound?",
+      "answer": [
+        "Because the extra contributions came at ages 22–30 — the **earliest** instalments, which then compound for the longest time (right up to age 60). Money invested at 22 can roughly double five-plus times by 60 (Rule of 72 at 12% ≈ doubling every 6 years), so each early rupee multiplies far more than a rupee added near the end. The gap isn't from the size of the extra contributions; it's from the decades of compounding those early rupees unlock."
+      ],
+      "keyPoints": ["Early instalments compound longest", "At 12%, money doubles ~every 6 years", "Early rupees multiply many times over", "Gap is from time, not contribution size"]
+    },
+    {
+      "id": "q2",
+      "kind": "Application",
+      "difficulty": "Easy",
+      "prompt": "Aarav says 'I can only spare ₹1,000/month right now, so there's no point starting — I'll wait until I can do ₹5,000.' What's the better move and why?",
+      "hint": "What's more valuable at 22 — a bigger amount or more time?",
+      "answer": [
+        "Start the ₹1,000 SIP today and increase it as income grows (a step-up SIP). At 22, **time is worth more than amount**: a small SIP started now will out-compound a larger SIP started years later. Waiting for the 'serious' ₹5,000 throws away the irreplaceable early compounding years and, just as importantly, the *habit*. You can always raise the amount; you can never get the years back."
+      ],
+      "keyPoints": ["Start the ₹1,000 now", "Time > amount at a young age", "Step up the SIP as income rises", "Building the habit matters as much as the rupees"]
+    },
+    {
+      "id": "q3",
+      "kind": "Critical thinking",
+      "difficulty": "Medium",
+      "prompt": "Does the conclusion 'start early' depend on the 12% assumption being exactly right?",
+      "hint": "Think about whether the early-starter's edge survives a lower return.",
+      "answer": [
+        "No. The exact crore figures depend on the return, but the *relative* advantage of starting early holds at any positive return — at 10%, 8%, even 6%, the early starter still ends up dramatically ahead because their contributions simply compound for more years. Lower returns shrink both corpuses but don't reverse the ranking. So the lesson ('start now') is robust; only the precise number is uncertain. That's the honest, non-hype version."
+      ],
+      "keyPoints": ["Exact corpus depends on return; the edge does not", "Early start wins at any positive rate", "Lower returns shrink both, don't flip the order", "Conclusion is robust, the number is an estimate"]
+    }
+  ]
+}

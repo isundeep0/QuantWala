@@ -1,0 +1,124 @@
+{
+  "slug": "match-vehicle-to-timeline",
+  "sectionId": "goal-investing",
+  "order": 1,
+  "title": "Matching the Investment to the Timeline",
+  "tagline": "The single rule that prevents most beginner disasters: the closer the goal, the safer the asset. Why retirement money and car-in-5-years money must never share a strategy.",
+  "summary": "How time horizon determines asset choice, and the glide-path idea for protecting near-term goals.",
+  "difficulty": "Intermediate",
+  "estMinutes": 12,
+  "tags": ["goal-based", "asset-allocation", "module-5"],
+  "prereqs": ["mutual-funds"],
+  "sections": [
+    {
+      "id": "principle",
+      "title": "The core principle: time decides risk",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Every dilemma like 'should I invest in FD or equity?' has the same answer: **it depends on when you need the money.** Equity has the highest long-term return but swings violently year to year. Given 15+ years, those swings average out and growth dominates. Given 2 years, a single bad year can leave you short exactly when the deadline arrives.",
+            "So you don't pick assets by what's 'best' in the abstract — you pick by **horizon**. Match the volatility of the asset to the time you have to recover from it."
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "Horizon → appropriate asset",
+          "columns": ["Time to goal", "Priority", "Suitable vehicles"],
+          "rows": [
+            ["< 1 year", "Capital safety + liquidity", "Savings, liquid funds, short FD/RD"],
+            ["1–3 years", "Capital protection", "FD/RD, short-duration debt funds"],
+            ["3–5 years", "Balanced growth + protection", "Hybrid funds, mix of index + debt"],
+            ["5–10 years", "Growth (some cushion)", "Mostly equity index, some debt"],
+            ["> 10 years", "Maximum growth", "Equity index funds, ride the volatility"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "rule",
+          "title": "Rule of thumb",
+          "text": "Never put money you'll need within ~3 years into pure equity, and never leave money you won't touch for 15+ years sitting in FDs. The first risks a crash at the finish line; the second guarantees inflation eats your growth."
+        }
+      ]
+    },
+    {
+      "id": "why",
+      "title": "Why short-term equity is so dangerous",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Imagine Aarav puts his entire car down-payment into an equity fund with 18 months to go. The market drops 30% in month 16. He now has two bad choices: sell at a 30% loss and buy a smaller car, or delay the goal and hope for a recovery that may take years. Equity's volatility, harmless over decades, becomes a real threat near a fixed deadline.",
+            "The flip side is just as true: leaving a 30-year retirement corpus in FDs 'to be safe' is its own failure — a guaranteed loss to inflation over that span. Both mistakes come from ignoring the horizon."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Two pots, two strategies",
+          "text": "This is why goals are kept separate. Aarav's emergency fund (always-available), his car fund (5-year, balanced), and any retirement SIP (30-year, equity) are three different pots with three different strategies — never one blended account where the wrong asset endangers the wrong goal."
+        }
+      ]
+    },
+    {
+      "id": "glide",
+      "title": "The glide path: de-risking near the finish",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "For a medium-term goal you can start with more growth and then **gradually shift to safety as the deadline nears** — a 'glide path'. Early on, when there's time to recover, you hold more equity for growth. In the final 1–2 years, you move the accumulated money into safe debt so a late-stage crash can't ruin a goal you've nearly funded."
+          ]
+        },
+        {
+          "type": "steps",
+          "title": "Glide path for a 5-year goal",
+          "items": [
+            { "title": "Years 1–3: tilt to growth", "detail": "Hold a balanced mix (e.g. ~50–60% equity index, rest in debt) so the money compounds while there's time to absorb dips." },
+            { "title": "Year 4: start shifting", "detail": "Begin moving gains from equity into short-duration debt / RD, locking in growth as the deadline approaches." },
+            { "title": "Year 5: mostly safe", "detail": "Have the bulk in debt/FD so the final amount is predictable. You trade a little potential upside for certainty that the goal is funded." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "win",
+          "text": "The glide path captures most of equity's growth in the early years while removing the risk of a finish-line crash. It's the disciplined way to fund a goal like Aarav's 2031 car — which we'll build into a concrete plan in the next lesson."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Pick assets by time horizon, not by what's 'best' in the abstract.",
+    "<3 years: capital protection (FD/RD, debt funds). >10 years: growth (equity index).",
+    "Never put money needed within ~3 years in pure equity; never leave 15+ year money in FDs.",
+    "Short-term equity risks a crash at the finish line; long-term FDs guarantee an inflation loss.",
+    "Keep each goal in its own pot with its own strategy (emergency / car / retirement).",
+    "Use a glide path: more equity early, shift to debt in the final 1–2 years to lock in the goal."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Application",
+      "difficulty": "Medium",
+      "prompt": "Aarav has two goals: a car in 5 years and retirement in ~38 years. A friend says 'just put both in the same aggressive equity fund — equity wins long term.' Why is that wrong?",
+      "hint": "Do both goals have the same time to recover from a crash?",
+      "answer": [
+        "Because the two goals have very different horizons, so they need different risk levels. The 38-year retirement money *should* be in aggressive equity — it has decades to ride out crashes. But the 5-year car money in pure equity is exposed to a finish-line crash: a 30% drop in year 4–5 could leave him unable to buy the car on time.",
+        "The fix is to separate the pots: equity for retirement, a balanced/glide-path mix for the car. Same person, same markets, but the timeline dictates a different strategy for each goal."
+      ],
+      "keyPoints": ["Different horizons → different risk", "38-yr money: aggressive equity is right", "5-yr money in pure equity risks a finish-line crash", "Separate pots, separate strategies"]
+    },
+    {
+      "id": "q2",
+      "kind": "Concept",
+      "difficulty": "Easy",
+      "prompt": "What is a 'glide path' and what problem does it solve for a medium-term goal?",
+      "hint": "How does the asset mix change as the deadline approaches?",
+      "answer": [
+        "A glide path means gradually shifting a goal's money from growth assets (equity) toward safe assets (debt/FD) as the deadline nears. Early on you hold more equity to grow the corpus while there's time to recover from dips; in the final 1–2 years you move into safety so a late crash can't derail a nearly-funded goal.",
+        "It solves the core tension of medium-term goals: you want equity's growth *and* certainty at the finish. The glide path captures most of the growth early, then trades a little upside for protection right when you can least afford a loss."
+      ],
+      "keyPoints": ["Shift equity → debt as deadline nears", "More growth early (time to recover)", "Safety late (protect a near-funded goal)", "Balances growth with finish-line certainty"]
+    }
+  ]
+}

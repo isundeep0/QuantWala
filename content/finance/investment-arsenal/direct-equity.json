@@ -1,0 +1,132 @@
+{
+  "slug": "direct-equity",
+  "sectionId": "investment-arsenal",
+  "order": 3,
+  "title": "Direct Equity — Buying Individual Stocks",
+  "tagline": "Owning a slice of one company directly. The highest potential return and the highest risk — and why it's the wrong place for a beginner to start, but a fine place to learn with a small slice.",
+  "summary": "How stocks work, the concentrated risk, and why beginners should start with index funds.",
+  "difficulty": "Advanced",
+  "estMinutes": 12,
+  "tags": ["stocks", "equity", "risk", "module-4"],
+  "prereqs": ["mutual-funds"],
+  "sections": [
+    {
+      "id": "what",
+      "title": "What a stock is",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A **share (stock)** is a unit of ownership in a single company. Buy one share of a company and you own a microscopic piece of it; if it grows and profits, your share can rise in value (capital gains) and may pay **dividends**. You buy and sell through a **Demat + trading account** with a broker.",
+            "Unlike a mutual fund, there's no manager and no built-in diversification — you are choosing exactly which companies to own and bearing the full, concentrated risk of those choices."
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "The risk/return spectrum so far",
+          "items": [
+            { "value": "FD/RD", "label": "Low risk · ~7% · guaranteed", "color": "#10b981" },
+            { "value": "Index fund", "label": "Medium risk · ~11–12% · diversified", "color": "#f59e0b" },
+            { "value": "Single stock", "label": "High risk · wide range · concentrated", "color": "#ef4444" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "risk",
+      "title": "Why concentration is the danger",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "An index fund spreads your money across 50+ companies, so one company collapsing barely dents you. A single stock has no such cushion: if that one company faces fraud, disruption, or bad management, your investment can fall 50%, 80%, or to zero — permanently. Many once-famous companies have wiped out shareholders entirely.",
+            "Picking winning stocks consistently requires reading financial statements, understanding the business and its competition, and managing your own emotions through wild swings. It is a genuine skill — and even most full-time professionals don't beat a simple index over time (which is exactly why index funds exist)."
+          ]
+        },
+        {
+          "type": "tradeoffs",
+          "title": "Direct equity honestly",
+          "pros": [
+            "Highest potential upside if you pick well",
+            "Full control over exactly what you own",
+            "No fund expense ratio (just small brokerage/charges)",
+            "A real way to learn how businesses and markets work"
+          ],
+          "cons": [
+            "Concentrated risk — a single bad company can wipe out the position",
+            "Requires real research, time, and temperament",
+            "Easy to let emotions drive panic-selling and FOMO-buying",
+            "Most people (and most pros) underperform the index trying this"
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Beware the hype",
+          "text": "'Multibagger' tips on social media, Telegram groups, and 'guaranteed' intraday calls are how beginners lose money fastest. Intraday and F&O (futures & options) trading is closer to gambling than investing — SEBI's own data shows the vast majority of individual F&O traders lose money. Avoid entirely while learning."
+        }
+      ]
+    },
+    {
+      "id": "approach",
+      "title": "A sane approach for a beginner",
+      "blocks": [
+        {
+          "type": "callout",
+          "variant": "rule",
+          "title": "Rule of thumb",
+          "text": "Build your core wealth with low-cost index funds first. Only once that's solid, you may use a SMALL 'satellite' slice — say 5–10% of your investments — to learn direct stock-picking with money you can afford to see fall. Never make single stocks your foundation."
+        },
+        {
+          "type": "steps",
+          "title": "If Aarav wants to learn stocks responsibly",
+          "items": [
+            { "title": "Get the foundation first", "detail": "Emergency fund done, index-fund SIP running. Stocks come after, not instead." },
+            { "title": "Cap it at a small satellite", "detail": "Limit direct stocks to a small fraction of his portfolio so a mistake is a lesson, not a catastrophe." },
+            { "title": "Invest only in businesses he understands", "detail": "Buy a share like buying a piece of a business: profits, debt, competition, management. If he can't explain why he owns it, he shouldn't." },
+            { "title": "Think in years, ignore the noise", "detail": "Long-term ownership of good businesses, not daily trading. Tune out tips, intraday, and F&O." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "text": "There's no shame in never picking individual stocks. A lifetime of disciplined index-fund SIPs will out-perform most active stock-pickers. Direct equity is optional; the index core is what builds the wealth."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "A stock is direct ownership of one company — highest potential return, highest concentrated risk.",
+    "No built-in diversification: a single company can fall to zero permanently.",
+    "Beating the market by picking stocks is a real skill; most individuals and pros fail to do it consistently.",
+    "Avoid social-media 'multibagger' tips, intraday, and F&O — most individual F&O traders lose money.",
+    "Build the core with index funds; use only a small 5–10% satellite to learn stocks with money you can afford to lose.",
+    "Never make single stocks your financial foundation."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Concept",
+      "difficulty": "Medium",
+      "prompt": "Aarav is torn between putting his entire ₹3,000 SIP into one 'hot' stock everyone's talking about, or into a Nifty 50 index fund. For a 22-year-old beginner, which is wiser and why?",
+      "hint": "Compare concentrated risk vs diversification, and skill required.",
+      "answer": [
+        "The index fund. It instantly diversifies across 50 large companies, so no single failure can sink him, and it delivers the market return (~11–12% long-run) without requiring stock-picking skill he doesn't yet have. A single 'hot' stock concentrates all his risk in one bet that could fall 50–80% — and today's hyped stock is often tomorrow's disappointment.",
+        "The wiser path: build the core in index funds, and only later, if interested, carve out a small satellite (5–10%) to learn individual stocks with money he can afford to lose. Foundation first, experiments small."
+      ],
+      "keyPoints": ["Index fund = instant diversification", "Single stock = concentrated, can fall 50–80%", "Beginner lacks stock-picking skill", "Core in index, learn stocks with a small satellite"]
+    },
+    {
+      "id": "q2",
+      "kind": "Critical thinking",
+      "difficulty": "Easy",
+      "prompt": "A Telegram group promises 'guaranteed intraday profits, 3 sure calls daily.' What are the red flags?",
+      "hint": "Think about 'guaranteed', intraday odds, and incentives.",
+      "answer": [
+        "Multiple red flags: (1) **'Guaranteed' profits don't exist** in markets — anyone promising them is lying or scamming. (2) **Intraday trading** is near-gambling; SEBI data shows the large majority of individual intraday/F&O traders lose money. (3) The group's incentive is usually to get you trading (so a broker pays them) or to pump a stock they already own and dump on you.",
+        "The honest takeaway: there are no shortcuts. Disciplined, long-term index investing beats chasing 'sure calls' — which are a reliable way to lose money fast."
+      ],
+      "keyPoints": ["No such thing as guaranteed market profits", "Intraday/F&O: most individuals lose", "Group's incentive conflicts with yours", "Shortcuts are how beginners lose fastest"]
+    }
+  ]
+}

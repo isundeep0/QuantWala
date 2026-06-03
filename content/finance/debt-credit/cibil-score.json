@@ -1,0 +1,133 @@
+{
+  "slug": "cibil-score",
+  "sectionId": "debt-credit",
+  "order": 2,
+  "title": "Building a 750+ CIBIL Score From Scratch",
+  "tagline": "Your financial reputation as a number. What moves it, what wrecks it, and a concrete plan for a 22-year-old with no credit history to reach 750+ before they ever need a loan.",
+  "summary": "What the CIBIL score is, the five factors that drive it, and a from-zero plan to reach 750+.",
+  "difficulty": "Beginner",
+  "estMinutes": 14,
+  "tags": ["cibil", "credit-score", "module-3"],
+  "prereqs": ["credit-cards"],
+  "sections": [
+    {
+      "id": "what",
+      "title": "What a CIBIL score is and why it matters",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "A **CIBIL score** is a 3-digit number from **300 to 900** that summarises how reliably you repay borrowed money. Lenders pull it before approving any loan or credit card. It's your financial reputation, quantified.",
+            "It matters long before you 'need' it. When Aarav eventually wants a car loan (his 2031 goal) or a home loan, the score decides two things: **whether** he's approved, and at **what interest rate**. A 780 score might get a car loan at 9%, while a 650 score gets 13% or a rejection — over a multi-lakh loan, that gap is tens of thousands of rupees."
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "The score bands",
+          "items": [
+            { "value": "300–649", "label": "Poor / risky — likely rejected or charged high rates", "color": "#ef4444" },
+            { "value": "650–749", "label": "Fair — approved, but not the best rates", "color": "#f59e0b" },
+            { "value": "750–900", "label": "Good to excellent — best rates and limits", "color": "#10b981" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "myth",
+          "title": "Myth: 'I've never borrowed, so my score must be great'",
+          "text": "Wrong. No credit history means a score of NA/NH ('Not Applicable' / 'No History'), which lenders treat as unknown risk. You have to *build* a track record of responsible borrowing and repaying. A clean slate is not the same as a strong score."
+        }
+      ]
+    },
+    {
+      "id": "factors",
+      "title": "The five things that move your score",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Roughly in order of impact",
+          "items": [
+            { "term": "Payment history (most important)", "detail": "Do you pay on time, in full, every time? A single missed payment can drop your score sharply and stays on the report for years. This one factor dominates." },
+            { "term": "Credit utilisation ratio", "detail": "How much of your available credit limit you use. Keep it under ~30%. On a ₹50,000 limit, try to keep the statement balance below ₹15,000 — high utilisation signals dependence on credit." },
+            { "term": "Age / length of credit history", "detail": "Older accounts help. This is why opening your first card early (and never closing it) is valuable — it ages into an asset." },
+            { "term": "Credit mix", "detail": "A healthy blend of types (e.g. a card + later a small loan) is viewed slightly better than a single type. Minor factor — don't take loans just for this." },
+            { "term": "Hard enquiries", "detail": "Each time you apply for credit, a 'hard enquiry' is logged. Many applications in a short span looks desperate and dings the score. Apply sparingly and deliberately." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "rule",
+          "title": "Rule of thumb",
+          "text": "Pay in full and on time (autopay the full amount), keep utilisation under 30%, keep your oldest card open forever, and don't apply for credit you don't need. Do these four things consistently and 750+ takes care of itself."
+        }
+      ]
+    },
+    {
+      "id": "plan",
+      "title": "Aarav's from-zero plan to 750+",
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Get a 'starter' credit line", "detail": "With a thin file and a ₹20,000 income, a regular unsecured card may be declined. The reliable route is a SECURED credit card against a fixed deposit (you put, say, ₹15,000 in an FD and get a card with a limit near that). It reports to CIBIL exactly like a normal card, and the FD keeps earning interest." },
+            { "title": "Use it for small, regular spends", "detail": "Put one or two routine bills on it — a phone recharge, a subscription, some groceries. The goal is activity, not borrowing. Keep the statement balance well under 30% of the limit." },
+            { "title": "Set up autopay for the FULL amount", "detail": "Automate payment of the Total Amount Due, not the minimum. On-time, in-full payments are the single biggest score driver. Twelve perfect months build a strong foundation." },
+            { "title": "Be patient — scores build over months", "detail": "After ~6 months of clean usage a score appears; after ~12–18 months of perfect behaviour, 750+ is very achievable. There is no overnight hack — consistency is the entire strategy." },
+            { "title": "Check your report free, fix errors", "detail": "You're entitled to a free credit report each year (via CIBIL and other bureaus). Check it for errors — wrong defaults or accounts that aren't yours can unfairly drag your score, and you can dispute them." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "What sabotages a young score",
+          "text": "Missing even one due date, maxing out the card (high utilisation), applying for several cards/loans at once, or closing your only card. Also: being an 'add-on' user of someone else's card usually does NOT build your own history — you need credit in your own name."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "CIBIL score = 300–900; aim for 750+ for the best loan approvals and rates.",
+    "No credit history shows as NA/NH, not a high score — you must build a track record.",
+    "Biggest driver is payment history: pay in full and on time, every time.",
+    "Keep credit utilisation under ~30% of your limit.",
+    "From zero: a secured (FD-backed) card → small regular spends → autopay full amount → patience over 12–18 months.",
+    "Keep your oldest card open, avoid clustering credit applications, and check your free report for errors."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Concept",
+      "difficulty": "Easy",
+      "prompt": "Aarav, 22, has never borrowed anything and assumes his CIBIL score is excellent. Why is that assumption wrong, and what's the fix?",
+      "hint": "What does a lender see when there's no history at all?",
+      "answer": [
+        "With no borrowing history, his score isn't high — it's **NA/NH (no history)**, which lenders read as unknown/unproven risk, not as proven reliability. A strong score is *earned* by demonstrating on-time, in-full repayment over time.",
+        "The fix is to build a track record: get a starter (likely secured/FD-backed) credit card, use it for small regular spends, and autopay the full bill every month. After 12–18 months of clean behaviour, he'll have an actual 750+ score backed by evidence."
+      ],
+      "keyPoints": ["No history = NA/NH, not high", "Lenders see unknown risk", "Score must be earned via repayment record", "Start with a secured card + perfect payments"]
+    },
+    {
+      "id": "q2",
+      "kind": "Application",
+      "difficulty": "Medium",
+      "prompt": "Aarav has a card with a ₹50,000 limit. In one month he spends ₹40,000 (he can pay it all in full) but worries about his score. What's the utilisation issue and how does he handle it?",
+      "hint": "Utilisation is measured against the limit, often at statement time.",
+      "answer": [
+        "Even though he can pay in full, spending ₹40,000 on a ₹50,000 limit is **80% utilisation**, well above the ~30% guideline. The statement may report that high balance to CIBIL before he pays, temporarily denting his score by signalling heavy reliance on credit.",
+        "Two fixes: (1) make a part-payment *before* the statement date so the reported balance stays under ~₹15,000 (30%), or (2) spread spending or request a higher limit so the same spending is a smaller fraction of available credit. And of course, still pay the full amount by the due date."
+      ],
+      "keyPoints": ["₹40k/₹50k = 80% utilisation, too high", "Reported at statement date", "Pre-pay before statement to lower reported balance", "Or raise the limit / spread spend", "Still pay full by due date"]
+    },
+    {
+      "id": "q3",
+      "kind": "Critical thinking",
+      "difficulty": "Medium",
+      "prompt": "Aarav reasons: 'I'll keep my CIBIL spotless by never getting a credit card at all.' Why might this backfire when he applies for a car loan in 2031?",
+      "hint": "What does the lender have to base their decision on?",
+      "answer": [
+        "Avoiding all credit means he reaches 2031 with no credit history — NA/NH — so the car-loan lender has zero evidence of how he repays. That often leads to rejection or a higher interest rate, because unproven borrowers are treated as risky. Ironically, the 'safe' path of never borrowing leaves him *worse* positioned than someone who responsibly used a card for years.",
+        "The smarter play is to build the score deliberately and early with a low-risk secured card, so that by 2031 he has a long, clean history and qualifies for the best loan rate exactly when he needs it."
+      ],
+      "keyPoints": ["No card → no history → NA/NH in 2031", "Lender has no repayment evidence", "Leads to rejection or higher rate", "Responsible early use beats total avoidance", "Build the history before you need the loan"]
+    }
+  ]
+}

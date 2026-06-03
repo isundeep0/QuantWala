@@ -117,7 +117,7 @@ export default function AlgorithmDetail() {
       {/* Header */}
       <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: accent, textShadow: `0 0 18px ${accent}55` }}>
+          <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: accent }}>
             {algo.title}
           </h1>
           {algo.tagline && <p className="mt-1.5 max-w-2xl text-muted">{algo.tagline}</p>}
@@ -162,7 +162,7 @@ export default function AlgorithmDetail() {
               key={s.key}
               onClick={() => setActive(i)}
               className="relative flex flex-1 min-w-[110px] items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors"
-              style={isActive ? { backgroundColor: accent, color: "#fff", boxShadow: `0 0 18px ${accent}77` } : undefined}
+              style={isActive ? { backgroundColor: accent, color: "#fff" } : undefined}
             >
               <Icon className="h-4 w-4" />
               <span className="hidden sm:inline">{s.label}</span>

@@ -25,16 +25,13 @@ function Logo() {
             strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{ filter: "drop-shadow(0 0 4px rgba(96,165,250,0.8))" }}
           />
           <circle cx="18" cy="6" r="1.9" fill="#34d399" stroke="#fff" strokeWidth="1.1" />
         </svg>
       </span>
       <span className="text-[17px] font-extrabold tracking-tight">
-        <span className="lit-text">Quant</span>
-        <span className="text-brand-500" style={{ filter: "drop-shadow(0 0 8px rgba(59,130,246,0.55))" }}>
-          Wala
-        </span>
+        <span>Quant</span>
+        <span className="text-brand-500 dark:text-brand-400">Wala</span>
       </span>
     </Link>
   );
@@ -47,11 +44,11 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 px-3 pt-3 sm:px-4">
-      {/* Serpentine glass band */}
-      <nav className="glass glass-sheen animate-iris mx-auto flex h-14 max-w-7xl items-center gap-3 rounded-2xl px-3 sm:px-5">
+      {/* Glass band */}
+      <nav className="glass mx-auto flex h-14 max-w-7xl items-center gap-3 rounded-2xl px-3 sm:px-5">
         <Logo />
 
-        <div className="ml-3 hidden items-center gap-1 md:flex">
+        <div className="ml-3 hidden items-center gap-0.5 md:flex">
           {LINKS.map((l) => {
             const Icon = l.icon;
             const active =
@@ -70,44 +67,28 @@ export default function Navbar() {
                   <motion.span
                     layoutId="nav-glass-active"
                     className="absolute inset-0 -z-10 rounded-xl"
-                    style={{
-                      background: `radial-gradient(120% 140% at 50% 120%, ${l.color}38, transparent 70%)`,
-                      boxShadow: `inset 0 0 0 1px ${l.color}55, 0 0 18px ${l.color}33`,
-                    }}
-                    transition={{ type: "spring", stiffness: 320, damping: 30 }}
+                    style={{ background: `${l.color}1f`, boxShadow: `inset 0 0 0 1px ${l.color}33` }}
+                    transition={{ type: "spring", stiffness: 380, damping: 32 }}
                   />
                 )}
-                <Icon
-                  className="h-4 w-4"
-                  style={{
-                    color: active ? l.color : undefined,
-                    filter: active ? `drop-shadow(0 0 5px ${l.color})` : undefined,
-                  }}
-                />
-                <span style={active ? { textShadow: `0 0 10px ${l.color}66` } : undefined}>{l.label}</span>
-                {active && (
-                  <motion.span
-                    className="absolute -bottom-px left-1/2 h-1 w-1 -translate-x-1/2 rounded-full"
-                    style={{ backgroundColor: l.color, boxShadow: `0 0 8px ${l.color}` }}
-                    animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.6, 1] }}
-                    transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                  />
-                )}
+                <Icon className="h-4 w-4" style={{ color: active ? l.color : undefined }} />
+                <span>{l.label}</span>
               </NavLink>
             );
           })}
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          {/* Progress orb */}
+          {/* Progress chip */}
           <Link
             to="/algorithms"
-            className="glass-orb hidden h-9 items-center gap-2 rounded-full pl-1.5 pr-3 sm:flex"
+            className="hidden h-9 items-center gap-2 rounded-full border pl-1.5 pr-3 transition-colors hover:surface-sunken sm:flex"
+            style={{ borderColor: "rgb(var(--border-strong))" }}
             title={`${completedCount} algorithms complete`}
           >
-            <span className="relative grid h-6 w-6 place-items-center">
+            <span className="grid h-6 w-6 place-items-center">
               <svg viewBox="0 0 36 36" className="h-6 w-6 -rotate-90">
-                <circle cx="18" cy="18" r="15" fill="none" stroke="rgb(var(--glass-stroke) / 0.15)" strokeWidth="4" />
+                <circle cx="18" cy="18" r="15" fill="none" stroke="rgb(var(--border-strong))" strokeWidth="4" />
                 <circle
                   cx="18"
                   cy="18"
@@ -118,17 +99,10 @@ export default function Navbar() {
                   strokeLinecap="round"
                   strokeDasharray={2 * Math.PI * 15}
                   strokeDashoffset={2 * Math.PI * 15 * (1 - overallPercent / 100)}
-                  style={{ filter: "drop-shadow(0 0 4px #3b82f6)" }}
                 />
               </svg>
-              <span
-                className="animate-swirl absolute inset-1 rounded-full opacity-60"
-                style={{ background: "conic-gradient(from 0deg, transparent, #3b82f6aa, transparent)", filter: "blur(2px)" }}
-              />
             </span>
-            <span className="etched-glow font-mono text-xs font-semibold" style={{ "--glow": "#3b82f6aa" }}>
-              {overallPercent}%
-            </span>
+            <span className="font-mono text-xs font-semibold text-muted">{overallPercent}%</span>
           </Link>
 
           <ThemeToggle />

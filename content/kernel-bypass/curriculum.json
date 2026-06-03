@@ -1,0 +1,953 @@
+{
+  "id": "kernel-bypass",
+  "moduleCode": "MODULE 05",
+  "title": "Kernel Bypass & Ultra-Low Latency",
+  "subtitle": "From OS internals to DPDK, SPDK, eBPF/XDP, and the research frontier.",
+  "description": "Master the hardware-software boundary. Journey from standard OS internals and network stacks to DPDK, SPDK, eBPF, and cutting-edge zero-copy research. Build systems that process millions of packets per second.",
+  "color": "#22d3ee",
+  "accent": "#a855f7",
+  "icon": "Cpu",
+  "outcomes": [
+    "Explain exactly where time and jitter go in the standard Linux receive path — interrupts, copies, context switches, and the scheduler.",
+    "Reason about zero-copy from first principles (sendfile, mmap, splice) and why a copy is sometimes cheaper than avoiding it.",
+    "Build a working DPDK poll-mode RX loop and an SPDK user-space NVMe path, and benchmark them against the kernel.",
+    "Write a verifier-safe eBPF/XDP program that drops or rewrites packets at the driver layer.",
+    "Read and critique modern systems papers (Arrakis, IX, Shenango, Caladan, Junction) and place them on the latency/efficiency map.",
+    "Choose the right tool — DPDK vs AF_XDP vs Onload vs a dataplane OS — for a given latency, throughput, and operability budget."
+  ],
+  "readingProtocol": {
+    "title": "How to read these papers without drowning",
+    "intro": "Systems papers look intimidating because people try to read them front-to-back like a novel. Don't. Use Keshav's three-pass method: each pass goes deeper and you decide after each one whether to continue. Every paper in this module ships a per-paper reading guide that maps onto these passes.",
+    "steps": [
+      {
+        "title": "Pass 1 — The 5-minute bird's eye",
+        "detail": "Read the title, abstract, and introduction; read the section/sub-section headings; read the conclusion. Now answer: what problem does it attack, what's the key idea, and what did they actually measure? If it isn't relevant, stop here — that's a feature, not a failure."
+      },
+      {
+        "title": "Pass 2 — The 1-hour grasp",
+        "detail": "Read it more carefully but ignore proofs and fine detail. Study the figures, graphs, and the system diagram — a good paper's evaluation graphs tell the story. Mark terms you don't know and references you should chase. You should now be able to summarise the paper to a peer with supporting evidence."
+      },
+      {
+        "title": "Pass 3 — The deep, virtual re-implementation",
+        "detail": "Re-implement the paper in your head (or on paper): make the same assumptions and recreate the result. This exposes hidden assumptions and the paper's real innovations and flaws. Only do this for the papers you truly need to master — for this module, that's the dataplane-OS line (Arrakis → IX → Shenango → Caladan → Junction)."
+      }
+    ],
+    "reference": {
+      "kind": "paper",
+      "title": "How to Read a Paper",
+      "authors": "S. Keshav",
+      "venue": "ACM SIGCOMM CCR",
+      "year": 2007,
+      "url": "https://web.stanford.edu/class/ee384m/Handouts/HowtoReadPaper.pdf",
+      "note": "The three-pass method, in two pages. Read this first; reread it whenever a paper feels overwhelming."
+    }
+  },
+  "phases": [
+    {
+      "id": "bottleneck",
+      "index": 1,
+      "title": "The Bottleneck",
+      "tagline": "Standard OS internals — and why the kernel is the slow part.",
+      "objective": "Understand why the standard Linux kernel is too slow for modern high-throughput hardware. Before you bypass the OS, you must be able to name every step it takes on a packet's behalf and price each one in nanoseconds.",
+      "level": "Beginner",
+      "color": "#38bdf8",
+      "icon": "Network",
+      "estHours": 40,
+      "topics": [
+        {
+          "id": "linux-network-stack",
+          "title": "The Linux Network Stack",
+          "summary": "Trace a packet from the wire to your application and back: sockets, the TCP/IP state machine, sk_buff, the qdisc layer, and the system calls that glue user space to the kernel.",
+          "keyIdeas": [
+            "A read()/recv() is a system call: a mode switch into the kernel, not a function call.",
+            "Data lives in sk_buff (skb) structures and is copied at least twice (NIC→kernel, kernel→user) on the standard path.",
+            "TCP is a state machine in the kernel; sockets are file descriptors over it, multiplexed by epoll.",
+            "The stack is general and correct first, fast second — that generality is exactly the overhead you'll later remove."
+          ],
+          "deliverables": [
+            {
+              "id": "bn-stack-trace",
+              "type": "experiment",
+              "title": "Trace a single packet with ftrace/perf",
+              "detail": "Send one UDP datagram to a local server and capture the kernel call path with `perf trace` and `ftrace` (function_graph). Identify the NIC IRQ, the softirq (NET_RX), IP/UDP processing, the socket-buffer copy, and the wakeup of your blocked thread.",
+              "outcome": "An annotated diagram of the receive path with each stage labelled, plus a rough ns budget per stage.",
+              "difficulty": "Beginner",
+              "estHours": 4
+            },
+            {
+              "id": "bn-stack-echo",
+              "type": "build",
+              "title": "Write a blocking + epoll UDP echo server",
+              "detail": "Implement the same UDP echo server twice — once one-thread-per-connection blocking, once with a single epoll loop. Measure round-trip latency at 1, 100, and 10k connections.",
+              "outcome": "Concrete numbers showing where the blocking model falls over and why epoll scales — the motivation for everything that follows.",
+              "difficulty": "Beginner",
+              "estHours": 6
+            }
+          ]
+        },
+        {
+          "id": "interrupts-vs-polling",
+          "title": "Interrupts vs. Polling",
+          "summary": "How the CPU learns a packet arrived: hardware IRQs, softirqs, NAPI's interrupt-coalescing-then-poll hybrid, and the true cost of a context switch.",
+          "keyIdeas": [
+            "Interrupts are great at low load (no wasted cycles) and terrible at high load (interrupt storms, cache thrash).",
+            "NAPI flips to polling under load — the kernel's own admission that interrupts don't scale.",
+            "A context switch costs hundreds of ns to microseconds once you count cache and TLB pollution, not just the register save/restore.",
+            "Busy-polling trades a whole core for predictable, jitter-free latency — the central bargain of kernel bypass."
+          ],
+          "deliverables": [
+            {
+              "id": "bn-irq-count",
+              "type": "experiment",
+              "title": "Watch interrupts collapse into polling under load",
+              "detail": "Use a packet generator to ramp load and watch `/proc/interrupts` and `softirqs`. Observe NAPI switching from per-packet IRQs to polling, and correlate with CPU softirq time in `mpstat`.",
+              "outcome": "A plot of IRQ rate vs offered load showing the NAPI transition, with a one-paragraph explanation.",
+              "difficulty": "Intermediate",
+              "estHours": 4
+            },
+            {
+              "id": "bn-ctxsw-cost",
+              "type": "benchmark",
+              "title": "Measure the real cost of a context switch",
+              "detail": "Write a microbenchmark (two threads ping-ponging over a pipe, pinned vs unpinned) and measure context-switch latency. Then add a working set that evicts the L1/L2 cache between switches and measure again.",
+              "outcome": "Two numbers — bare switch vs cache-polluting switch — that justify pinning and busy-polling.",
+              "difficulty": "Intermediate",
+              "estHours": 5
+            }
+          ]
+        },
+        {
+          "id": "memory-management",
+          "title": "Memory Management",
+          "summary": "User space vs kernel space, virtual memory and page tables, the TLB, and why huge pages matter the moment you start moving millions of packets.",
+          "keyIdeas": [
+            "Every memory access goes through virtual→physical translation; the TLB caches those translations and a miss is a page-table walk.",
+            "4 KiB pages mean a small TLB covers tiny working sets; 2 MiB/1 GiB huge pages cover far more, slashing TLB misses for big buffer pools.",
+            "User/kernel separation exists for protection, and crossing it (copyin/copyout) is a real cost the fast path will avoid.",
+            "DMA-able memory must be physically contiguous and pinned — which is why bypass frameworks pre-allocate huge-page pools."
+          ],
+          "deliverables": [
+            {
+              "id": "bn-tlb-miss",
+              "type": "benchmark",
+              "title": "Make the TLB miss visible",
+              "detail": "Stride through a large array at page granularity with 4 KiB vs 2 MiB (hugetlbfs/THP) pages. Use `perf stat -e dTLB-load-misses` to count misses and compare bandwidth.",
+              "outcome": "A measured speedup from huge pages plus a TLB-miss count delta — the reason DPDK mandates hugepages.",
+              "difficulty": "Intermediate",
+              "estHours": 5
+            },
+            {
+              "id": "bn-mmap-vmem",
+              "type": "writeup",
+              "title": "Diagram the address-space split",
+              "detail": "Read OSTEP's virtualization chapters and produce a one-pager: process virtual address space, the kernel's half, how mmap maps files/devices, and where pinned DMA memory sits.",
+              "outcome": "A reference diagram you'll reuse when you map NIC queues into user space in Phase 2.",
+              "difficulty": "Beginner",
+              "estHours": 4
+            }
+          ]
+        },
+        {
+          "id": "dma-fundamentals",
+          "title": "Direct Memory Access (DMA)",
+          "summary": "How the NIC and NVMe device move data into RAM without the CPU copying it — descriptor rings, the IOMMU, doorbells, and PCIe transactions.",
+          "keyIdeas": [
+            "DMA lets a device read/write host memory directly; the CPU only manages descriptors and doorbells, not the bytes.",
+            "Descriptor rings (RX/TX) are the shared contract between driver and device — the same structure DPDK/SPDK expose to user space.",
+            "The IOMMU (VT-d) gives devices a safe, virtualized view of memory — what makes user-space DMA safe via VFIO.",
+            "PCIe latency and MMIO doorbell writes are part of your latency budget; batching amortizes them."
+          ],
+          "deliverables": [
+            {
+              "id": "bn-dma-model",
+              "type": "writeup",
+              "title": "Model an RX descriptor ring",
+              "detail": "Write pseudo-code for a NIC RX ring: how the driver posts empty buffers, how the device DMAs a frame and advances the head, and how the driver reaps completed descriptors. Note where copies do and don't happen.",
+              "outcome": "A mental model of the exact data structure you'll poll directly in DPDK.",
+              "difficulty": "Intermediate",
+              "estHours": 4
+            },
+            {
+              "id": "bn-pcie-read",
+              "type": "reading",
+              "title": "Understand PCIe as a latency source",
+              "detail": "Read the SIGCOMM '18 'Understanding PCIe performance for end host networking' paper (Pass 1 + 2). Summarise why DDIO, posted vs non-posted transactions, and descriptor batching matter for 100GbE.",
+              "outcome": "A note on PCIe-induced latency you can cite when reasoning about NIC choices.",
+              "difficulty": "Advanced",
+              "estHours": 4
+            }
+          ]
+        }
+      ],
+      "references": [
+        {
+          "kind": "book",
+          "title": "Operating Systems: Three Easy Pieces (OSTEP)",
+          "authors": "Remzi & Andrea Arpaci-Dusseau",
+          "venue": "Arpaci-Dusseau Books (free online)",
+          "year": 2018,
+          "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/",
+          "locator": "Virtualization (Address Spaces, Paging, TLBs) + I/O Devices (Ch. 36) & HDDs (Ch. 37)",
+          "note": "The canonical, free, and genuinely readable OS textbook. Read the paging/TLB and I/O-device chapters before anything else."
+        },
+        {
+          "kind": "book",
+          "title": "Computer Networking: A Top-Down Approach",
+          "authors": "Kurose & Ross",
+          "venue": "Pearson",
+          "year": 2021,
+          "url": "https://gaia.cs.umass.edu/kurose_ross/index.php",
+          "locator": "Ch. 3 (Transport / TCP & UDP) and Ch. 4 (Network layer)",
+          "note": "Builds the TCP/IP mental model the kernel stack implements. The author site has free interactive material and Wireshark labs."
+        },
+        {
+          "kind": "docs",
+          "title": "Linux Kernel Networking documentation",
+          "venue": "kernel.org",
+          "url": "https://docs.kernel.org/networking/index.html",
+          "note": "Primary source for NAPI, the qdisc layer, and the socket stack."
+        },
+        {
+          "kind": "book",
+          "title": "The Linux Programming Interface",
+          "authors": "Michael Kerrisk",
+          "venue": "No Starch Press",
+          "year": 2010,
+          "url": "https://man7.org/tlpi/",
+          "locator": "Sockets, epoll, mmap, and signals chapters",
+          "note": "The reference for the syscall API surface you'll be measuring and, later, bypassing."
+        }
+      ],
+      "papers": [
+        {
+          "id": "pcie-end-host",
+          "title": "Understanding PCIe Performance for End Host Networking",
+          "authors": "Neugebauer, Antichi, Zazo, Audzevich, López-Buedo, Moore",
+          "venue": "ACM SIGCOMM",
+          "year": 2018,
+          "url": "https://dl.acm.org/doi/10.1145/3230543.3230560",
+          "difficulty": "Advanced",
+          "tldr": "PCIe — not just the NIC or the CPU — is a first-class bottleneck for 100GbE; descriptor strategy, DDIO, and IOMMU all shape achievable throughput and latency.",
+          "whyRead": "Kernel bypass lives or dies on the PCIe/DMA layer. This paper gives you the vocabulary (posted/non-posted, DDIO, descriptor batching) to reason about the hardware floor below all the software tricks.",
+          "readingGuide": [
+            "Pass 1: read the intro and the model — get the claim that PCIe round-trips and descriptor handling cap throughput.",
+            "Pass 2: study the latency-vs-transfer-size graphs and the IOMMU/DDIO sections; note how small DMA transfers waste PCIe bandwidth.",
+            "Skip the pcie-bench tooling internals on a first read; come back if you build your own measurement harness."
+          ],
+          "prerequisites": ["DMA descriptor rings", "Basic PCIe terminology"],
+          "tags": ["pcie", "dma", "hardware"]
+        }
+      ],
+      "milestone": "Produce a single annotated 'anatomy of a receive' diagram with a ns budget for every stage of the standard Linux path — and be able to defend each number from your own measurements."
+    },
+    {
+      "id": "concept",
+      "index": 2,
+      "title": "The Concept of Kernel Bypass",
+      "tagline": "Zero-copy, user-space NICs, and the trade-offs you accept.",
+      "objective": "Learn the theoretical mechanisms of bypassing the OS layer entirely — and, just as important, what you give up: CPU pinning, 100% core utilisation from busy-polling, and the loss of the kernel's security and observability tooling.",
+      "level": "Intermediate",
+      "color": "#22d3ee",
+      "icon": "Zap",
+      "estHours": 30,
+      "topics": [
+        {
+          "id": "zero-copy",
+          "title": "Zero-Copy Networking",
+          "summary": "Eliminate the copies and the syscalls: sendfile, mmap, splice/vmsplice, and MSG_ZEROCOPY. Understand when a copy is actually cheaper than the machinery to avoid it.",
+          "keyIdeas": [
+            "sendfile()/splice() move bytes between descriptors inside the kernel, never touching user space.",
+            "mmap maps a file or device region into your address space so reads/writes skip copyin/copyout.",
+            "MSG_ZEROCOPY pins user pages for the NIC to DMA from — great for large sends, with completion notifications you must handle.",
+            "Zero-copy isn't free: page pinning, TLB shootdowns, and bookkeeping mean small transfers are often faster with a plain copy."
+          ],
+          "deliverables": [
+            {
+              "id": "cc-sendfile-bench",
+              "type": "benchmark",
+              "title": "read+write vs sendfile vs mmap",
+              "detail": "Serve a large file three ways: read()+write(), sendfile(), and mmap()+write(). Measure throughput, CPU time, and copies (via `perf` and bytes-copied counters). Repeat for a 4 KiB payload to find the crossover.",
+              "outcome": "A crossover chart showing where zero-copy wins and where it loses to a simple copy.",
+              "difficulty": "Intermediate",
+              "estHours": 6
+            },
+            {
+              "id": "cc-msg-zerocopy",
+              "type": "experiment",
+              "title": "Drive MSG_ZEROCOPY end to end",
+              "detail": "Add SO_ZEROCOPY to a TCP sender, send with MSG_ZEROCOPY, and correctly drain the error-queue completion notifications. Verify zero-copy actually engaged via the notification flags.",
+              "outcome": "A working zero-copy sender and a clear understanding of the completion/ownership contract.",
+              "difficulty": "Advanced",
+              "estHours": 6
+            }
+          ]
+        },
+        {
+          "id": "userspace-networking",
+          "title": "User-Space Networking",
+          "summary": "Map NIC queues directly into application memory so packets arrive in your process with no kernel on the data path. VFIO/IOMMU, poll-mode drivers, and user-space TCP stacks.",
+          "keyIdeas": [
+            "Bind the NIC to a user-space driver (VFIO) and the IOMMU keeps device DMA confined to your pinned buffers — safe bypass.",
+            "Your process polls the RX ring directly; there is no IRQ, no softirq, no copy, and no syscall on the hot path.",
+            "You now own everything above raw frames: Ethernet/ARP, IP/UDP, and TCP if you need it (mTCP, TLDK, or a homegrown stack).",
+            "Transparent acceleration (Onload, VMA) keeps the BSD socket API but runs it in a user-space library — less rewrite, same idea."
+          ],
+          "deliverables": [
+            {
+              "id": "cc-vfio-bind",
+              "type": "build",
+              "title": "Bind a NIC to VFIO and map its rings",
+              "detail": "On a spare/virtual NIC, load vfio-pci, bind the device, and (using DPDK's EAL or raw VFIO) map the BARs and a hugepage RX buffer pool. Confirm the kernel no longer sees the interface.",
+              "outcome": "A NIC under your process's exclusive control — the literal act of bypassing the kernel.",
+              "difficulty": "Advanced",
+              "estHours": 6
+            },
+            {
+              "id": "cc-mtcp-read",
+              "type": "reading",
+              "title": "Study a real user-space TCP stack",
+              "detail": "Read the mTCP (NSDI '14) paper (Pass 1 + 2). Map each of its scaling techniques (per-core stacks, batching, lock-free queues) back to a kernel bottleneck you measured in Phase 1.",
+              "outcome": "A side-by-side of 'kernel pain point → mTCP fix' that frames why user-space stacks exist.",
+              "difficulty": "Advanced",
+              "estHours": 4
+            }
+          ]
+        },
+        {
+          "id": "tradeoffs",
+          "title": "The Trade-offs",
+          "summary": "Bypass is not a free lunch. CPU pinning and isolation, a core burning at 100% on a busy-poll loop, no tcpdump/iptables/netstat, and reimplementing reliability yourself.",
+          "keyIdeas": [
+            "Busy-polling pins a core at 100% forever — you trade power and a core for predictable sub-µs latency.",
+            "You lose the kernel's toolbox: no iptables, no standard tcpdump, no socket stats — you build your own observability.",
+            "Isolation matters: isolcpus/nohz_full/IRQ affinity keep the OS off your polling core, or jitter creeps back in.",
+            "Operability cost is real — bypass is for the genuinely latency-critical path; control/admin traffic stays on the normal stack."
+          ],
+          "deliverables": [
+            {
+              "id": "cc-isolation",
+              "type": "experiment",
+              "title": "Isolate a core and prove it's quiet",
+              "detail": "Configure isolcpus + nohz_full + rcu_nocbs and move IRQs off a target core. Run a tight busy-poll loop pinned there and use `perf` / scheduler tracepoints to show near-zero involuntary context switches.",
+              "outcome": "A measurably 'silent' core and a checklist of every knob that affects jitter.",
+              "difficulty": "Advanced",
+              "estHours": 5
+            },
+            {
+              "id": "cc-tradeoff-memo",
+              "type": "writeup",
+              "title": "Write the bypass decision memo",
+              "detail": "Draft a one-page memo: for a given service, argue whether to bypass at all, which path to bypass, the core/power budget, and how you'll replace lost observability.",
+              "outcome": "A reusable decision framework you'll apply again in Phase 5.",
+              "difficulty": "Intermediate",
+              "estHours": 3
+            }
+          ]
+        }
+      ],
+      "references": [
+        {
+          "kind": "docs",
+          "title": "Linux MSG_ZEROCOPY",
+          "venue": "kernel.org",
+          "url": "https://docs.kernel.org/networking/msg_zerocopy.html",
+          "note": "The official contract for copy-avoidance on sends, including the completion-notification you must drain."
+        },
+        {
+          "kind": "docs",
+          "title": "VFIO — Virtual Function I/O",
+          "venue": "kernel.org",
+          "url": "https://docs.kernel.org/driver-api/vfio.html",
+          "note": "How user space safely owns a device via the IOMMU — the foundation of safe kernel bypass."
+        },
+        {
+          "kind": "spec",
+          "title": "sendfile(2) / splice(2) man pages",
+          "venue": "man7.org",
+          "url": "https://man7.org/linux/man-pages/man2/sendfile.2.html",
+          "note": "Primary source for the in-kernel zero-copy primitives."
+        }
+      ],
+      "papers": [
+        {
+          "id": "mtcp",
+          "title": "mTCP: A Highly Scalable User-level TCP Stack for Multicore Systems",
+          "authors": "Jeong, Woo, Stephens, Lin, Maeng, Lee, Han, et al.",
+          "venue": "USENIX NSDI",
+          "year": 2014,
+          "url": "https://www.usenix.org/conference/nsdi14/technical-sessions/presentation/jeong",
+          "difficulty": "Advanced",
+          "tldr": "A user-level TCP stack on top of packet I/O engines that scales nearly linearly across cores by eliminating shared state, batching syscalls, and using lock-free per-core queues.",
+          "whyRead": "It's the cleanest demonstration that the kernel TCP stack — not TCP itself — is the scaling bottleneck, and the bridge between 'raw packets' (DPDK) and 'I still want sockets'.",
+          "readingGuide": [
+            "Pass 1: abstract + intro + the bottleneck breakdown (§2) — the list of kernel inefficiencies maps onto Phase 1.",
+            "Pass 2: the design (per-core stack, event batching, mTCP socket API) and the throughput/scaling graphs.",
+            "Note for later: contrast mTCP's 'keep the socket API' with DPDK's 'give me raw frames'."
+          ],
+          "prerequisites": ["TCP basics", "epoll", "Why per-core/share-nothing scales"],
+          "tags": ["tcp", "user-space", "scaling"]
+        }
+      ],
+      "milestone": "Take a NIC away from the kernel with VFIO, prove your polling core is jitter-free, and write the one-page memo that decides when bypass is actually worth it."
+    },
+    {
+      "id": "frameworks",
+      "index": 3,
+      "title": "The Industry-Standard Frameworks",
+      "tagline": "Hands-on DPDK & SPDK in C/C++ and Go.",
+      "objective": "Engineer real systems with the kits the industry actually ships: DPDK for the network dataplane and SPDK for storage. You'll write a poll-mode RX loop, manage memory pools and lockless rings, and drive an NVMe SSD from user space.",
+      "level": "Advanced",
+      "color": "#a855f7",
+      "icon": "Boxes",
+      "estHours": 60,
+      "topics": [
+        {
+          "id": "dpdk",
+          "title": "DPDK — Data Plane Development Kit",
+          "summary": "The de-facto framework for user-space packet processing: the Environment Abstraction Layer (EAL), mempools, lockless rings (rte_ring), and poll-mode drivers (PMDs).",
+          "keyIdeas": [
+            "EAL abstracts hugepages, cores (lcores), and PCI devices so your app gets a clean, portable runtime.",
+            "Packets live in rte_mbuf objects allocated from a pre-sized rte_mempool — no malloc on the hot path, ever.",
+            "rte_ring is a lockless MPSC/SPSC FIFO — the standard hand-off between pipeline stages and cores.",
+            "A PMD polls the NIC's RX queues in a tight loop (rte_eth_rx_burst), processing packets in bursts to amortize overhead."
+          ],
+          "deliverables": [
+            {
+              "id": "fw-dpdk-rxloop",
+              "type": "build",
+              "title": "Build a DPDK burst RX loop",
+              "detail": "Starting from DPDK's skeleton/l2fwd example, initialise EAL, create an mbuf mempool, configure one RX/TX queue, and run a burst poll loop that counts packets-per-second on a pinned lcore.",
+              "outcome": "A working PMD app you can point a traffic generator at and watch hit millions of pps.",
+              "difficulty": "Advanced",
+              "estHours": 10
+            },
+            {
+              "id": "fw-dpdk-ring",
+              "type": "build",
+              "title": "Two-stage pipeline over rte_ring",
+              "detail": "Split RX (parse) from processing using an rte_ring SPSC queue across two pinned lcores. Add per-stage latency histograms and a back-pressure/drop policy when the ring fills.",
+              "outcome": "A multi-core pipeline and first-hand feel for lockless hand-off and back-pressure.",
+              "difficulty": "Advanced",
+              "estHours": 10
+            },
+            {
+              "id": "fw-dpdk-bench",
+              "type": "benchmark",
+              "title": "DPDK vs kernel sockets shootout",
+              "detail": "Compare your DPDK RX loop against an AF_PACKET/recvmmsg kernel receiver at increasing packet rates. Plot throughput and the latency tail (p50/p99/p99.9).",
+              "outcome": "Hard numbers — the throughput gap and, crucially, the tail-latency gap — to anchor every future trade-off discussion.",
+              "difficulty": "Advanced",
+              "estHours": 8
+            }
+          ]
+        },
+        {
+          "id": "spdk",
+          "title": "SPDK — Storage Performance Development Kit",
+          "summary": "DPDK's ideas applied to storage: NVMe fundamentals, bypassing the VFS and block layer, and a user-space, poll-mode, lockless NVMe driver.",
+          "keyIdeas": [
+            "NVMe is built around many deep submission/completion queue pairs — a perfect match for lockless, per-core, poll-mode I/O.",
+            "SPDK maps the NVMe device into user space (via VFIO/UIO) and polls completions — no interrupts, no kernel block layer.",
+            "Bypassing the VFS means you also give up the page cache, filesystems, and the kernel's I/O scheduler — you own caching and layout.",
+            "The SPDK app framework (reactors, pollers, lockless message passing) mirrors DPDK's lcore/ring model."
+          ],
+          "deliverables": [
+            {
+              "id": "fw-spdk-hello",
+              "type": "build",
+              "title": "Drive an NVMe device with SPDK",
+              "detail": "Run SPDK's `hello_nvme` / `perf` against a real or emulated (QEMU NVMe) device: attach the controller, allocate I/O queue pairs, submit read/write requests, and poll for completions.",
+              "outcome": "Bytes read from an SSD entirely in user space, with the kernel block layer untouched.",
+              "difficulty": "Advanced",
+              "estHours": 8
+            },
+            {
+              "id": "fw-spdk-vs-vfs",
+              "type": "benchmark",
+              "title": "SPDK vs the kernel block stack",
+              "detail": "Benchmark random 4 KiB reads at high queue depth with SPDK vs `fio` over the kernel (libaio/io_uring). Compare IOPS, CPU efficiency (IOPS/core), and latency tails.",
+              "outcome": "A storage-side analogue of the DPDK shootout, showing where polling + bypass pays off for I/O.",
+              "difficulty": "Advanced",
+              "estHours": 8
+            }
+          ]
+        },
+        {
+          "id": "bindings",
+          "title": "Beyond C: Go & Rust Bindings",
+          "summary": "Most production glue isn't pure C. See how AF_XDP and DPDK get used from Go (and Rust) so you can place this work in a modern service stack.",
+          "keyIdeas": [
+            "AF_XDP has clean Go libraries (e.g. asavie/xdp) — a gentler on-ramp than full DPDK with most of the win.",
+            "DPDK from Go is typically via cgo wrappers; the cost is the cgo boundary, which you must keep off the hot path.",
+            "Rust's ownership model maps unusually well to packet buffers and lifetimes (see redbpf / aya for eBPF, and DPDK bindings).",
+            "Pick the language at the boundary, not the hot path — the polling core stays tight and predictable regardless."
+          ],
+          "deliverables": [
+            {
+              "id": "fw-go-afxdp",
+              "type": "build",
+              "title": "An AF_XDP receiver in Go",
+              "detail": "Use a Go AF_XDP library to bind a queue, set up a UMEM, and receive frames in user space. Compare lines-of-code and latency against your C DPDK loop.",
+              "outcome": "A pragmatic feel for the AF_XDP-in-Go sweet spot vs full DPDK in C.",
+              "difficulty": "Advanced",
+              "estHours": 6
+            }
+          ]
+        }
+      ],
+      "references": [
+        {
+          "kind": "docs",
+          "title": "DPDK Programmer's Guide",
+          "venue": "doc.dpdk.org (Intel/Linux Foundation)",
+          "url": "https://doc.dpdk.org/guides/prog_guide/",
+          "note": "The official guide to the EAL, mempools, rte_ring, and PMDs. Pair it with the Getting Started guide and the sample-app walkthroughs."
+        },
+        {
+          "kind": "docs",
+          "title": "DPDK Sample Applications (l2fwd, l3fwd, skeleton)",
+          "venue": "doc.dpdk.org",
+          "url": "https://doc.dpdk.org/guides/sample_app_ug/",
+          "note": "Your starting points for the RX-loop and pipeline deliverables."
+        },
+        {
+          "kind": "docs",
+          "title": "SPDK Architecture & Getting Started",
+          "venue": "spdk.io",
+          "url": "https://spdk.io/doc/",
+          "note": "The architecture guide, NVMe driver docs, and the app framework (reactors/pollers) you'll mirror."
+        },
+        {
+          "kind": "spec",
+          "title": "NVM Express Base Specification",
+          "venue": "nvmexpress.org",
+          "url": "https://nvmexpress.org/specifications/",
+          "note": "Primary source for submission/completion queues and the command set SPDK drives directly."
+        }
+      ],
+      "papers": [
+        {
+          "id": "ix",
+          "title": "IX: A Protected Dataplane Operating System for High Throughput and Low Latency",
+          "authors": "Belay, Prekas, Klimovic, Grossman, Kozyrakis, Bugnion",
+          "venue": "USENIX OSDI",
+          "year": 2014,
+          "url": "https://www.usenix.org/conference/osdi14/technical-sessions/presentation/belay",
+          "difficulty": "Advanced",
+          "tldr": "Separate the control plane from the dataplane: run a protected, run-to-completion dataplane (built on DPDK-style polling) that delivers both high throughput and low tail latency without sacrificing protection.",
+          "whyRead": "It's the conceptual bridge from 'a framework like DPDK' to 'an operating system designed around bypass', and it introduces the control/dataplane split you'll see again in Arrakis and beyond.",
+          "readingGuide": [
+            "Pass 1: abstract + intro + the design principles list (run-to-completion, adaptive batching, zero-copy API).",
+            "Pass 2: the dataplane architecture figure and the throughput/latency graphs vs Linux and mTCP.",
+            "Connect it: IX uses DPDK-like polling underneath — you'll have built that loop, so the OS layer should now feel concrete."
+          ],
+          "prerequisites": ["DPDK polling model", "Run-to-completion vs pipelined designs"],
+          "tags": ["dataplane-os", "tail-latency", "throughput"]
+        }
+      ],
+      "milestone": "Ship a DPDK pipeline that sustains millions of packets per second across two pinned cores, plus an SPDK NVMe path — and present both as benchmark plots against their kernel equivalents (throughput and p99.9 tail)."
+    },
+    {
+      "id": "ebpf-xdp",
+      "index": 4,
+      "title": "The Modern Alternative — eBPF & XDP",
+      "tagline": "Bypass-like speed while keeping the kernel in the loop.",
+      "objective": "Achieve near-bypass speeds without giving up the kernel. Learn eBPF, drop and rewrite packets at the driver layer with XDP, and understand the verifier that makes running your code inside the kernel safe.",
+      "level": "Advanced",
+      "color": "#34d399",
+      "icon": "Shield",
+      "estHours": 35,
+      "topics": [
+        {
+          "id": "ebpf-intro",
+          "title": "Introduction to eBPF",
+          "summary": "The in-kernel virtual machine that lets you run sandboxed programs at hooks throughout the kernel: maps for state, helper functions, tail calls, and the toolchain (libbpf, BTF, CO-RE).",
+          "keyIdeas": [
+            "eBPF programs are event-driven: they attach to a hook (XDP, tracepoint, kprobe, socket) and run when it fires.",
+            "Maps are the shared memory between eBPF and user space — arrays, hashes, ring buffers, per-CPU variants.",
+            "CO-RE (Compile Once, Run Everywhere) + BTF let one binary run across kernels without recompiling against headers.",
+            "eBPF descends from the classic BPF packet filter (McCanne & Jacobson, 1993) — same idea, vastly more general."
+          ],
+          "deliverables": [
+            {
+              "id": "eb-first-prog",
+              "type": "build",
+              "title": "Your first eBPF program with libbpf + CO-RE",
+              "detail": "Write a tracepoint or kprobe eBPF program (e.g. count execve calls) using libbpf and a BPF ring buffer, and read events from a user-space loader. Use bpftool to inspect the loaded program and maps.",
+              "outcome": "A complete load→attach→map→read loop and fluency with the modern eBPF toolchain.",
+              "difficulty": "Intermediate",
+              "estHours": 6
+            }
+          ]
+        },
+        {
+          "id": "xdp",
+          "title": "XDP — eXpress Data Path",
+          "summary": "Run eBPF at the earliest possible point — inside the NIC driver, before an sk_buff is even allocated — to DROP, PASS, TX, or REDIRECT packets at line rate.",
+          "keyIdeas": [
+            "XDP runs before the kernel network stack, on the raw DMA'd frame — that's why it can drop tens of millions of pps per core.",
+            "Return codes (XDP_DROP/PASS/TX/REDIRECT/ABORTED) decide a packet's fate; REDIRECT into AF_XDP gives you zero-copy to user space.",
+            "Native (driver) XDP beats generic (skb) XDP — driver support matters for performance.",
+            "XDP is the foundation of modern DDoS scrubbers and software load balancers (Cilium, Katran)."
+          ],
+          "deliverables": [
+            {
+              "id": "eb-xdp-drop",
+              "type": "build",
+              "title": "Line-rate XDP packet filter",
+              "detail": "Write an XDP program that parses Ethernet/IP/UDP and XDP_DROPs traffic to a blocked port while passing the rest. Keep per-source-IP drop counts in a BPF hash map and read them live.",
+              "outcome": "A working in-kernel packet filter and a feel for how cheap a drop is at the driver layer.",
+              "difficulty": "Advanced",
+              "estHours": 8
+            },
+            {
+              "id": "eb-xdp-afxdp",
+              "type": "build",
+              "title": "XDP_REDIRECT into AF_XDP (zero-copy)",
+              "detail": "Use XDP_REDIRECT to steer a flow into an AF_XDP socket, set up a UMEM, and receive those frames zero-copy in user space — DPDK-like speed on a mainline kernel.",
+              "outcome": "Zero-copy user-space receive without leaving the kernel ecosystem — the 'best of both worlds' demo.",
+              "difficulty": "Advanced",
+              "estHours": 8
+            },
+            {
+              "id": "eb-xdp-bench",
+              "type": "benchmark",
+              "title": "XDP_DROP vs iptables vs DPDK drop",
+              "detail": "Benchmark drop rate (pps/core) for XDP_DROP, an iptables DROP rule, and a DPDK loop that frees every packet. Plot all three and explain the ordering.",
+              "outcome": "A latency/throughput placement of XDP between the kernel stack and full bypass.",
+              "difficulty": "Advanced",
+              "estHours": 6
+            }
+          ]
+        },
+        {
+          "id": "verifier",
+          "title": "Writing Safe Kernel Code — the eBPF Verifier",
+          "summary": "Why you can run your code in the kernel at all: the verifier proves termination and memory safety before load. Learn to read its errors and write code it can prove safe.",
+          "keyIdeas": [
+            "The verifier does static analysis: bounded loops (or none historically), no out-of-bounds access, no uninitialised reads — it must prove safety for every path.",
+            "Every packet pointer access needs an explicit bounds check against data_end, or the verifier rejects it.",
+            "The instruction-count and complexity limits shape how you structure programs (tail calls, bpf-to-bpf functions).",
+            "Reading verifier rejection logs is a core skill — the error points at the exact path and register that failed."
+          ],
+          "deliverables": [
+            {
+              "id": "eb-verifier-fix",
+              "type": "experiment",
+              "title": "Make the verifier reject you — then fix it",
+              "detail": "Deliberately write an XDP program with a missing bounds check and an unbounded loop. Read the verifier log, then fix each issue (explicit data_end checks, bounded loop). Document what the log was telling you.",
+              "outcome": "Comfort reading and resolving verifier errors — the thing that blocks most newcomers.",
+              "difficulty": "Advanced",
+              "estHours": 5
+            }
+          ]
+        }
+      ],
+      "references": [
+        {
+          "kind": "book",
+          "title": "Learning eBPF",
+          "authors": "Liz Rice",
+          "venue": "O'Reilly (free PDF via Isovalent)",
+          "year": 2023,
+          "url": "https://isovalent.com/books/learning-ebpf/",
+          "note": "The friendliest end-to-end intro to eBPF, with runnable examples. The companion repo is the fastest way to get hands-on."
+        },
+        {
+          "kind": "docs",
+          "title": "ebpf.io — what is eBPF & the ecosystem",
+          "venue": "ebpf.io",
+          "url": "https://ebpf.io/what-is-ebpf/",
+          "note": "The canonical conceptual overview and a map of the tooling (libbpf, bpftrace, Cilium)."
+        },
+        {
+          "kind": "docs",
+          "title": "Kernel BPF & XDP documentation",
+          "venue": "kernel.org / docs.kernel.org",
+          "url": "https://docs.kernel.org/bpf/index.html",
+          "note": "Primary source for the verifier, program/map types, and AF_XDP (https://docs.kernel.org/networking/af_xdp.html)."
+        },
+        {
+          "kind": "code",
+          "title": "xdp-tutorial",
+          "venue": "xdp-project (GitHub)",
+          "url": "https://github.com/xdp-project/xdp-tutorial",
+          "note": "A hands-on, graded tutorial that takes you from a first XDP program to AF_XDP zero-copy redirect."
+        }
+      ],
+      "papers": [
+        {
+          "id": "xdp-paper",
+          "title": "The eXpress Data Path: Fast Programmable Packet Processing in the Operating System Kernel",
+          "authors": "Høiland-Jørgensen, Brouer, Borkmann, Fastabend, Herbert, Ahern, Miller",
+          "venue": "ACM CoNEXT",
+          "year": 2018,
+          "url": "https://dl.acm.org/doi/10.1145/3281411.3281443",
+          "difficulty": "Advanced",
+          "tldr": "XDP adds a programmable, eBPF-based fast path inside the kernel that reaches tens of millions of pps per core — competitive with DPDK — while keeping the kernel's stack, tooling, and security for everything it doesn't handle.",
+          "whyRead": "This is the definitive argument for the 'keep the kernel' alternative to bypass. It quantifies the trade-off you've been building intuition for and explains the cooperation model between XDP and the stack.",
+          "readingGuide": [
+            "Pass 1: abstract + intro + the design overview — get the 'integrated, not bypass' thesis.",
+            "Pass 2: the architecture figure (where XDP sits vs the stack) and the throughput graphs vs DPDK and the Linux stack.",
+            "Focus on §5 evaluation: note where XDP matches DPDK and where it doesn't, and why that's an acceptable trade for operability."
+          ],
+          "prerequisites": ["eBPF basics", "The DPDK polling model (Phase 3)", "The standard receive path (Phase 1)"],
+          "tags": ["xdp", "ebpf", "kernel"]
+        },
+        {
+          "id": "bpf-1993",
+          "title": "The BSD Packet Filter: A New Architecture for User-level Packet Capture",
+          "authors": "McCanne & Jacobson",
+          "venue": "USENIX Winter",
+          "year": 1993,
+          "url": "https://www.tcpdump.org/papers/bpf-usenix93.pdf",
+          "difficulty": "Intermediate",
+          "tldr": "A tiny in-kernel register VM that runs user-supplied filter programs to capture only the packets you want — the direct ancestor of eBPF.",
+          "whyRead": "Short, classic, and clarifying: it shows the 30-year-old idea (run a safe little program in the kernel near the data) that eBPF generalised. Great Pass-1/Pass-2 warm-up.",
+          "readingGuide": [
+            "Pass 1: the whole paper is short — read the abstract, the model, and the performance section.",
+            "Pass 2: focus on the filter VM design; map it to today's eBPF instruction model and verifier."
+          ],
+          "prerequisites": ["Basic packet structure"],
+          "tags": ["bpf", "history", "filtering"]
+        }
+      ],
+      "milestone": "Demonstrate three packet fates at the driver layer — DROP at line rate, REDIRECT zero-copy into AF_XDP, and a verifier-safe rewrite — and place XDP on your latency/throughput map between the kernel stack and full DPDK bypass."
+    },
+    {
+      "id": "research",
+      "index": 5,
+      "title": "Research & Innovation",
+      "tagline": "Hardware offload, unikernels, and the dataplane-OS frontier.",
+      "objective": "Explore the bleeding edge of academia and hardware-software co-design: pushing logic onto SmartNICs and FPGAs, collapsing the app and OS into a unikernel, and the line of research making kernel bypass practical, efficient, and even cloud-native.",
+      "level": "Innovator",
+      "color": "#f472b6",
+      "icon": "FlaskConical",
+      "estHours": 50,
+      "topics": [
+        {
+          "id": "hardware-offload",
+          "title": "Hardware Offloading — SmartNICs & FPGAs",
+          "summary": "Move application and network logic off the CPU entirely: SmartNICs/DPUs, FPGA NICs, and the question of what belongs in silicon vs software.",
+          "keyIdeas": [
+            "A DPU/SmartNIC is a programmable computer on the NIC — offload packet processing, virtualization, and even parts of your app.",
+            "FPGAs give deterministic, sub-microsecond, line-rate logic — the reason they dominate the most latency-sensitive HFT paths.",
+            "The trade-off is flexibility vs determinism vs development cost: software is malleable, FPGA logic is fast but rigid and slow to build.",
+            "Co-design means deciding the hardware/software split deliberately, not by default — the central skill of this phase."
+          ],
+          "deliverables": [
+            {
+              "id": "rs-offload-survey",
+              "type": "writeup",
+              "title": "Map the offload spectrum",
+              "detail": "Survey CPU-software → DPDK → SmartNIC/DPU → FPGA for one concrete task (e.g. market-data feed decode or a stateful firewall). For each, estimate latency, flexibility, and engineering cost, and recommend a choice with justification.",
+              "outcome": "A decision matrix for hardware/software co-design you can defend in a design review.",
+              "difficulty": "Innovator",
+              "estHours": 8
+            }
+          ]
+        },
+        {
+          "id": "unikernels",
+          "title": "Unikernels — OSv & MirageOS",
+          "summary": "Compile the application and just-enough OS into a single, single-address-space image: no user/kernel boundary, no unused drivers, tiny attack surface, millisecond boot.",
+          "keyIdeas": [
+            "A unikernel links your app against library OS components into one image that runs directly on a hypervisor.",
+            "Single address space + single 'process' eliminates syscall and context-switch overhead by construction.",
+            "MirageOS (OCaml) emphasises type-safety and a tiny TCB; OSv targets running existing apps unmodified with better performance.",
+            "The trade-off: extreme specialisation and small TCB vs the loss of general-purpose tooling, multi-process, and easy debugging."
+          ],
+          "deliverables": [
+            {
+              "id": "rs-unikernel-build",
+              "type": "build",
+              "title": "Boot a unikernel",
+              "detail": "Build and boot a minimal MirageOS or OSv unikernel (e.g. a static HTTP responder) on a hypervisor. Measure image size and boot time, and contrast with a container running the same service.",
+              "outcome": "A booted unikernel and concrete size/boot/latency numbers vs a container.",
+              "difficulty": "Innovator",
+              "estHours": 10
+            },
+            {
+              "id": "rs-unikernel-read",
+              "type": "reading",
+              "title": "Read the unikernel manifesto",
+              "detail": "Read 'Unikernels: Library Operating Systems for the Cloud' (ASPLOS '13) (Pass 1 + 2) and the OSv ATC '14 paper (Pass 1). Contrast the type-safe, specialise-everything vision with OSv's run-existing-apps pragmatism.",
+              "outcome": "A clear articulation of the two unikernel philosophies and where each fits.",
+              "difficulty": "Innovator",
+              "estHours": 5
+            }
+          ]
+        },
+        {
+          "id": "dataplane-os",
+          "title": "The Dataplane-OS Research Line",
+          "summary": "The arc of modern research making bypass practical: Arrakis and IX split control/dataplane; Shenango and Caladan reclaim the wasted cores; Junction makes it cloud-native and dense.",
+          "keyIdeas": [
+            "Arrakis & IX (OSDI '14): take the kernel off the data path while keeping protection — the dataplane-OS thesis.",
+            "Shenango (NSDI '19) & Caladan (OSDI '20): busy-polling wastes cores; fine-grained, microsecond-scale core reallocation reclaims them while preserving tail latency.",
+            "Snap (SOSP '19): Google's userspace networking as a maintainable, upgradable microkernel-style service in production.",
+            "Junction (NSDI '24): make kernel bypass practical and dense in the cloud — thousands of bypass instances per machine with strong isolation."
+          ],
+          "deliverables": [
+            {
+              "id": "rs-dataplane-timeline",
+              "type": "writeup",
+              "title": "Build the dataplane-OS timeline",
+              "detail": "Create an annotated timeline (Arrakis/IX → mTCP → Shenango → Caladan → Snap → Junction). For each, capture the problem it attacked, its key mechanism, and the trade-off it improved (latency, efficiency, density, or operability).",
+              "outcome": "A one-page map of the field you can use to place any new paper you encounter.",
+              "difficulty": "Innovator",
+              "estHours": 6
+            },
+            {
+              "id": "rs-junction-deep",
+              "type": "reading",
+              "title": "Deep-read Junction (3-pass)",
+              "detail": "Do all three passes on Junction (NSDI '24). In Pass 3, mentally re-implement its approach: how does it pack many kernel-bypass apps on one host with isolation, and what does it borrow from Caladan/Shenango?",
+              "outcome": "Mastery of one frontier paper — and a worked example of the full three-pass method.",
+              "difficulty": "Innovator",
+              "estHours": 8
+            },
+            {
+              "id": "rs-capstone",
+              "type": "build",
+              "title": "Capstone: design + prototype a bypass system",
+              "detail": "Pick a problem (a multicast feed handler, an L4 load balancer, a key-value cache datapath) and design it end-to-end choosing among DPDK / AF_XDP+XDP / a dataplane-OS approach. Prototype the hot path, benchmark it, and write it up with the trade-offs and a paper reference for each major decision.",
+              "outcome": "A working prototype + a short design paper — proof you can take a low-latency system from research to running code.",
+              "difficulty": "Innovator",
+              "estHours": 20
+            }
+          ]
+        }
+      ],
+      "references": [
+        {
+          "kind": "docs",
+          "title": "MirageOS — a unikernel framework",
+          "venue": "mirage.io",
+          "url": "https://mirage.io/",
+          "note": "Docs and tutorials for building OCaml unikernels — primary source for the unikernel deliverable."
+        },
+        {
+          "kind": "docs",
+          "title": "OSv — the operating system for the cloud",
+          "venue": "osv.io / GitHub",
+          "url": "https://github.com/cloudius-systems/osv",
+          "note": "Run existing Linux apps as a unikernel; good for a size/boot comparison against containers."
+        },
+        {
+          "kind": "course",
+          "title": "MIT 6.S081 / Stanford CS240 reading lists",
+          "venue": "University course pages",
+          "url": "https://pdos.csail.mit.edu/6.828/",
+          "note": "Graduate OS reading lists are an excellent, curated path into the dataplane-OS literature."
+        }
+      ],
+      "papers": [
+        {
+          "id": "junction",
+          "title": "Making Kernel Bypass Practical for the Cloud with Junction",
+          "authors": "Fried, Chaudhry, Saurav, Choi, Zhao, Belay, et al.",
+          "venue": "USENIX NSDI",
+          "year": 2024,
+          "url": "https://www.usenix.org/conference/nsdi24/presentation/fried",
+          "difficulty": "Innovator",
+          "tldr": "A library-OS / kernel-bypass system that packs an order of magnitude more bypass instances onto a host than prior systems while keeping low tail latency and strong isolation — bringing bypass into multi-tenant cloud reality.",
+          "whyRead": "The current frontier of 'bypass for everyone, not just one app per box'. It synthesises the whole module's arc: dataplane OS + efficient core management + cloud-grade density and isolation.",
+          "readingGuide": [
+            "Pass 1: abstract + intro + the density/isolation problem statement — why prior bypass didn't fit the cloud.",
+            "Pass 2: the system architecture and the evaluation graphs (instances/host, tail latency, isolation).",
+            "Pass 3: re-implement mentally — how does scheduling, memory, and the bypass runtime combine to hit density without wrecking tails? Lean on your Caladan/Shenango reading."
+          ],
+          "prerequisites": ["Dataplane-OS concept (IX/Arrakis)", "Core-reallocation idea (Shenango/Caladan)", "Why busy-polling wastes cores"],
+          "tags": ["dataplane-os", "cloud", "frontier"]
+        },
+        {
+          "id": "arrakis",
+          "title": "Arrakis: The Operating System Is the Control Plane",
+          "authors": "Peter, Li, Zhang, Ports, Woos, Krishnamurthy, Anderson, Roscoe",
+          "venue": "USENIX OSDI",
+          "year": 2014,
+          "url": "https://www.usenix.org/conference/osdi14/technical-sessions/presentation/peter",
+          "difficulty": "Advanced",
+          "tldr": "Use hardware virtualization (SR-IOV, IOMMU) so applications do I/O directly while the OS only sets up and enforces policy on the control plane — bypass with protection, by design.",
+          "whyRead": "The cleanest statement of the control/dataplane split that underpins the whole modern line. Read alongside IX as the two foundational dataplane-OS papers.",
+          "readingGuide": [
+            "Pass 1: abstract + intro + the 'control plane vs data plane' framing.",
+            "Pass 2: how SR-IOV/IOMMU enforce protection without the kernel on the data path; the latency results vs Linux."
+          ],
+          "prerequisites": ["IOMMU/VFIO (Phase 2)", "DMA (Phase 1)"],
+          "tags": ["dataplane-os", "protection", "foundational"]
+        },
+        {
+          "id": "shenango",
+          "title": "Shenango: Achieving High CPU Efficiency for Latency-sensitive Datacenter Workloads",
+          "authors": "Ousterhout, Fried, Behrens, Belay, Balakrishnan",
+          "venue": "USENIX NSDI",
+          "year": 2019,
+          "url": "https://www.usenix.org/conference/nsdi19/presentation/ousterhout",
+          "difficulty": "Advanced",
+          "tldr": "Reallocate cores between apps at ~5 µs granularity so you keep busy-polling's low tail latency without permanently burning cores — efficiency and latency, not one or the other.",
+          "whyRead": "It directly attacks the biggest cost of bypass you measured in Phase 2 (a core pinned at 100%). The IOKernel + fast core-reallocation idea is the seed for Caladan and Junction.",
+          "readingGuide": [
+            "Pass 1: abstract + intro + the efficiency-vs-latency tension it resolves.",
+            "Pass 2: the IOKernel design and the core-reallocation mechanism; the tail-latency-under-load graphs."
+          ],
+          "prerequisites": ["Busy-polling trade-off (Phase 2)", "Tail latency"],
+          "tags": ["efficiency", "scheduling", "tail-latency"]
+        },
+        {
+          "id": "caladan",
+          "title": "Caladan: Mitigating Interference at Microsecond Timescales",
+          "authors": "Fried, Ruan, Ousterhout, Belay",
+          "venue": "USENIX OSDI",
+          "year": 2020,
+          "url": "https://www.usenix.org/conference/osdi20/presentation/fried",
+          "difficulty": "Innovator",
+          "tldr": "Detect and react to resource interference (cache, memory bandwidth, hyperthreads) at microsecond timescales to protect tail latency while sharing a machine — a successor to Shenango.",
+          "whyRead": "Shows how far the 'reclaim the wasted cores' idea can be pushed and is a direct prerequisite to understanding Junction's density story.",
+          "readingGuide": [
+            "Pass 1: abstract + intro + what interference it targets beyond just core counts.",
+            "Pass 2: the control-loop design and interference-detection signals; the isolation/latency results."
+          ],
+          "prerequisites": ["Shenango", "Cache/memory-bandwidth interference"],
+          "tags": ["interference", "scheduling", "frontier"]
+        },
+        {
+          "id": "snap",
+          "title": "Snap: A Microkernel Approach to Host Networking",
+          "authors": "Marty, de Kruijf, Adriaens, Alfeld, Bauer, et al. (Google)",
+          "venue": "ACM SOSP",
+          "year": 2019,
+          "url": "https://dl.acm.org/doi/10.1145/3341301.3359657",
+          "difficulty": "Advanced",
+          "tldr": "Google's production userspace networking system: a microkernel-style, upgradable network service that delivers high performance while remaining operable and frequently deployable at scale.",
+          "whyRead": "The reality check — what userspace networking looks like when it has to run in production for years, not just win a benchmark. It foregrounds operability, the trade-off bypass usually ignores.",
+          "readingGuide": [
+            "Pass 1: abstract + intro + the 'why a microkernel approach' motivation (upgradability, operability).",
+            "Pass 2: the architecture (engines, transport) and how it gets performance without sacrificing deployability."
+          ],
+          "prerequisites": ["User-space networking (Phase 2)", "The operability trade-off"],
+          "tags": ["production", "google", "operability"]
+        },
+        {
+          "id": "unikernels-asplos",
+          "title": "Unikernels: Library Operating Systems for the Cloud",
+          "authors": "Madhavapeddy, Mortier, Rotsos, Scott, Singh, Gazagnaire, Smith, Hand, Crowcroft",
+          "venue": "ACM ASPLOS",
+          "year": 2013,
+          "url": "https://dl.acm.org/doi/10.1145/2451116.2451167",
+          "difficulty": "Advanced",
+          "tldr": "Compile applications with only the OS libraries they need into specialised, single-address-space VM images — tiny, fast-booting, and with a minimal attack surface.",
+          "whyRead": "The founding vision for unikernels and the MirageOS approach. Pairs directly with your unikernel build deliverable.",
+          "readingGuide": [
+            "Pass 1: abstract + intro + the specialise-everything argument.",
+            "Pass 2: the architecture and the size/boot/performance evaluation; note the security (TCB) angle."
+          ],
+          "prerequisites": ["User/kernel boundary (Phase 1)", "Basic virtualization"],
+          "tags": ["unikernel", "foundational", "security"]
+        }
+      ],
+      "milestone": "Deliver a capstone: design and prototype a low-latency system, choosing deliberately among DPDK / XDP+AF_XDP / dataplane-OS approaches, benchmark the hot path, and defend every major decision with a citation to the research you've read."
+    }
+  ]
+}

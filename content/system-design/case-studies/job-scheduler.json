@@ -1,0 +1,176 @@
+{
+  "slug": "job-scheduler",
+  "sectionId": "case-studies",
+  "order": 19,
+  "title": "Design a Distributed Job Scheduler (Cron at Scale)",
+  "tagline": "Run millions of scheduled and delayed tasks reliably, exactly when they're due — and exactly once.",
+  "summary": "Scheduling, worker pools, at-least-once execution, idempotency, retries.",
+  "difficulty": "Advanced",
+  "estMinutes": 28,
+  "tags": ["case-study", "must-know"],
+  "prereqs": ["message-queues", "idempotency", "resilience-patterns"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Clarify requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Schedule a job to run at a specific time, after a delay, or on a recurring cron schedule.",
+            "Execute the job (run code / call a service) when it's due.",
+            "Retry failed jobs; report status (pending, running, succeeded, failed).",
+            "Cancel or reschedule pending jobs."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Reliable — a scheduled job must not be silently dropped.",
+            "Scalable — millions of scheduled jobs and high execution throughput.",
+            "Reasonably timely — jobs fire close to their due time (seconds of slack usually fine).",
+            "At-least-once execution with no double-effects (so jobs must be idempotent)."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Two pillars to state up front: (1) decouple *scheduling* (deciding what's due) from *execution* (running it) via a queue, and (2) since distributed systems can't cheaply guarantee exactly-once, design for at-least-once + idempotent jobs. These shape everything."
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "2. High-level design",
+      "blocks": [
+        {
+          "type": "diagram",
+          "caption": "A scheduler promotes due jobs onto a queue; a worker pool executes them.",
+          "direction": "lr",
+          "groups": [
+            { "label": "API", "nodes": [{ "label": "Job API", "sub": "submit/cancel", "icon": "Server", "accent": "#0ea5e9" }] },
+            { "label": "Store", "nodes": [{ "label": "Job store", "sub": "DB indexed by next_run_time", "icon": "Database", "accent": "#10b981" }] },
+            { "label": "Scheduler", "nodes": [{ "label": "Scheduler", "sub": "poll due jobs", "icon": "Clock", "accent": "#d97706" }] },
+            { "label": "Queue", "nodes": [{ "label": "Ready queue", "sub": "due jobs", "icon": "ListOrdered", "accent": "#8b5cf6" }] },
+            { "label": "Run", "nodes": [{ "label": "Worker pool", "sub": "execute + ack", "icon": "Boxes", "accent": "#f59e0b" }] }
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Submit", "detail": "The Job API writes a job record to the durable job store with its next_run_time (and recurrence rule if cron). Status = PENDING." },
+            { "title": "Schedule (find due jobs)", "detail": "A scheduler component repeatedly queries the store for jobs whose next_run_time ≤ now (an index on next_run_time makes this cheap), and pushes them onto a ready queue. Marks them QUEUED so they aren't picked up twice." },
+            { "title": "Execute", "detail": "Workers pull from the ready queue, run the job, and ack on success (→ SUCCEEDED). For recurring jobs, compute and persist the next_run_time so it fires again." },
+            { "title": "Retry / fail", "detail": "On failure, retry with exponential backoff up to a limit; after that, mark FAILED and send to a dead-letter queue for inspection." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Why a queue between scheduler and workers",
+          "text": "The scheduler only decides *what's due* and hands it off; workers do the heavy *execution*. The queue decouples them, smooths bursts (many jobs due at once), and lets you scale workers independently. The scheduler stays lightweight; throughput scales with worker count."
+        }
+      ]
+    },
+    {
+      "id": "timing",
+      "title": "3. Finding due jobs efficiently",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Index by next_run_time", "detail": "Store jobs in a DB with an index on next_run_time so 'give me everything due now' is a fast range query, not a full scan. The scheduler polls this on a short interval." },
+            { "term": "Two-tier for far-future jobs", "detail": "A job scheduled for next month shouldn't sit in a hot ready queue. Keep it in the durable store; only promote to the in-memory/ready layer as its time approaches (e.g., a time-bucketed wheel or a 'pull jobs due in the next N minutes' window). This keeps the active set small." },
+            { "term": "Timing precision vs cost", "detail": "Polling every second gives ~1s precision cheaply. Sub-second precision needs tighter loops or timer wheels — clarify the requirement; most schedulers tolerate seconds of slack." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Don't poll the whole table constantly",
+          "text": "Scanning all jobs every tick doesn't scale to millions. Use an index/range query on due time plus a near-future window so each poll touches only the small set of jobs about to fire."
+        }
+      ]
+    },
+    {
+      "id": "reliability",
+      "title": "4. Reliability: exactly-once is a trap",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The hardest part is guaranteeing each job runs — and ideally once. True exactly-once execution is effectively impossible: a worker can crash *after* running the job but *before* acking, so the system can't tell whether it ran. The pragmatic answer is at-least-once execution plus idempotent jobs."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "At-least-once via visibility timeout", "detail": "When a worker takes a job, it becomes invisible to others for a lease/visibility timeout. If the worker finishes and acks, the job is done. If the worker crashes (no ack before the lease expires), the job becomes visible again and another worker re-runs it. This guarantees no job is lost — at the cost of possible re-execution." },
+            { "term": "Idempotent jobs", "detail": "Because re-execution can happen, jobs must be safe to run twice. Use an idempotency key / execution id so the side effect (send email, charge card) is deduplicated. This converts at-least-once *execution* into exactly-once *effect*." },
+            { "term": "No single point of failure", "detail": "Run multiple scheduler instances with leader election (or partition the job space across them) so the scheduler itself isn't a SPOF. The durable store + queue persist state, so a crashed component recovers without losing jobs." },
+            { "term": "Avoid duplicate scheduling", "detail": "If multiple schedulers poll, use a lock/lease or atomic 'claim' (conditional update marking a job QUEUED) so two schedulers don't enqueue the same job twice. (Even so, idempotency is the backstop.)" }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "text": "Senior framing: state plainly that exactly-once execution is unattainable in a distributed system (the post-run, pre-ack crash window), so you design for at-least-once + idempotency, with visibility timeouts/leases for liveness, leader election to remove the scheduler SPOF, and a DLQ for poison jobs. This is the same delivery-guarantee reasoning as message queues, applied to execution."
+        }
+      ]
+    },
+    {
+      "id": "extras",
+      "title": "5. Recurrence, fairness & monitoring",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Recurring (cron) jobs", "detail": "On successful execution, parse the cron expression to compute the next next_run_time and persist it. The job re-enters the normal due-time flow — recurrence is just rescheduling-on-completion." },
+            { "term": "Fairness / isolation", "detail": "One tenant's flood of jobs shouldn't starve others. Use per-tenant queues or rate limits, and bulkhead worker pools so a slow job type doesn't block fast ones." },
+            { "term": "Backpressure", "detail": "If jobs are due faster than workers can run them, they buffer in the durable store/queue (delayed, not dropped). Monitor the backlog and scale workers." },
+            { "term": "Observability", "detail": "Track scheduling lag (actual fire time − scheduled time), execution success/failure rates, retry counts, and queue depth — the key health signals." }
+          ]
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Decouple scheduling (what's due) from execution (running it) with a queue; scale workers independently.",
+    "Store jobs in a DB indexed by next_run_time; poll a range query for due jobs, not a full scan.",
+    "Two-tier: keep far-future jobs in durable store; promote to the ready/active layer only as their time nears.",
+    "Exactly-once execution is impossible (crash after run, before ack) → design for at-least-once + idempotent jobs.",
+    "Visibility timeout / lease: a crashed worker's job reappears for retry → no lost jobs (at cost of possible re-run).",
+    "Idempotency key per execution converts at-least-once execution into exactly-once effect; retries use exponential backoff; DLQ for poison jobs.",
+    "Multiple schedulers with leader election/partitioning (no SPOF); atomic 'claim' to avoid double-enqueue; monitor scheduling lag + backlog."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Hard",
+      "prompt": "Why can't you guarantee a scheduled job runs exactly once, and how do you make at-least-once execution safe in practice?",
+      "hint": "Consider a worker crashing at the worst possible moment.",
+      "answer": [
+        "Exactly-once execution is impossible because of an unavoidable crash window: a worker can successfully run the job (send the email, charge the card) and then crash *before* it records/acks that completion. The scheduler now has no way to know whether the job ran. It has two choices and both can be wrong: if it assumes 'ran' and skips a retry, but the worker had actually crashed *before* running, the job never executes (lost work); if it assumes 'didn't run' and retries, but the worker had actually completed, the job runs twice. Since you can't atomically perform an external side effect and durably record its completion as one indivisible step across machines, you can't eliminate this window — so true exactly-once is unattainable.",
+        "The pragmatic, correct design is at-least-once execution plus idempotent jobs. For liveness/no-loss, use a visibility timeout (lease): when a worker claims a job it becomes invisible to others; if the worker acks, done; if it crashes and the lease expires, the job reappears and another worker re-runs it — guaranteeing no job is silently lost. To make the possible re-execution safe, every job carries an idempotency/execution key, and side effects dedup on it (e.g., 'have I already sent the email for execution X?'), so running twice produces the effect once. That converts at-least-once *execution* into exactly-once *effect*, which is the achievable and correct guarantee. I'd add retries with backoff, a DLQ for jobs that keep failing, and leader election so the scheduler isn't a single point of failure."
+      ],
+      "keyPoints": ["Crash window: worker runs the job then dies before acking → can't tell if it ran", "Can't atomically do an external side effect + durably record completion → exactly-once impossible", "At-least-once via visibility timeout/lease → no lost jobs, possible re-run", "Idempotency key → exactly-once effect; plus backoff retries, DLQ, leader election"],
+      "followUps": ["How does the visibility-timeout mechanism here mirror how a message queue handles a crashed consumer?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Design",
+      "difficulty": "Medium",
+      "prompt": "You have millions of jobs, most scheduled days or weeks in the future. How does the scheduler find the few that are due right now without scanning everything?",
+      "hint": "Indexing + a near-future active window.",
+      "answer": [
+        "The key is to never scan the full job set on each tick. Store jobs in a database with an index on next_run_time, so 'find jobs where next_run_time ≤ now' is an efficient range query touching only the small set that's actually due, not all millions. The scheduler polls this range query on a short interval (say every second), enqueues the due jobs onto the ready queue, and marks them QUEUED (via an atomic conditional update) so they aren't picked up again.",
+        "To keep even that efficient at huge scale, use a two-tier approach so far-future jobs don't sit in any hot/active structure. The durable store holds everything, but only jobs due within a near-future window (e.g., the next few minutes) are promoted into the in-memory/active layer — a time-bucketed structure or timer wheel — where precise firing happens. A job scheduled for next month simply waits in the store and gets pulled into the active window when its time approaches. This bounds the 'active set' the scheduler works with to roughly 'jobs due soon' regardless of how many are scheduled far out, so the system scales to millions of jobs while keeping each poll cheap and timely. For recurring jobs, on completion we compute the next next_run_time and write it back, and it re-enters this same flow."
+      ],
+      "keyPoints": ["Index on next_run_time → range query for due jobs, not a full scan", "Poll on a short interval; atomically mark claimed jobs QUEUED to avoid double-enqueue", "Two-tier: durable store holds all; promote only near-future jobs to the active layer/timer wheel", "Bounds the active set to 'jobs due soon' → scales to millions; recurrence = reschedule on completion"],
+      "followUps": ["How would you shard the job store and schedulers so a single scheduler isn't a bottleneck or SPOF?"]
+    }
+  ]
+}

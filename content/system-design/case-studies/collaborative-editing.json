@@ -1,0 +1,181 @@
+{
+  "slug": "collaborative-editing",
+  "sectionId": "case-studies",
+  "order": 16,
+  "title": "Design Collaborative Document Editing (Google Docs)",
+  "tagline": "Many people typing in the same document at once — and everyone converges to the identical result.",
+  "summary": "Real-time concurrency, Operational Transform vs CRDTs, presence.",
+  "difficulty": "Advanced",
+  "estMinutes": 30,
+  "tags": ["case-study", "must-know"],
+  "prereqs": ["realtime-communication", "consistency-models", "consensus-and-coordination"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Clarify requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Multiple users edit the same document simultaneously and see each other's changes in near real time.",
+            "All users' views converge to the exact same final document (no divergence).",
+            "Show presence — who's online and where their cursor is.",
+            "Persist the document and its history; support offline edits that merge on reconnect."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Low latency — keystrokes should appear almost instantly for everyone.",
+            "Strong convergence (eventual consistency that always reaches an identical state).",
+            "High availability; conflicts must resolve automatically without data loss.",
+            "Scales to documents with many concurrent editors."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "The entire problem reduces to one question: when two people edit the same spot at the same time, how does everyone end up with the same document? The answer is a conflict-resolution algorithm — Operational Transformation (OT) or CRDTs. Name this immediately."
+        }
+      ]
+    },
+    {
+      "id": "the-problem",
+      "title": "2. Why naive approaches fail",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Imagine the document is 'cat'. User A inserts 'X' at position 0 (→ 'Xcat'); at the same time User B inserts 'Y' at position 3 (→ 'catY'). If we just broadcast raw operations and apply them in different orders on different clients, positions shift underneath each other and users diverge — one sees 'XcatY', another 'XcaYt'. Last-writer-wins is even worse: it throws away one person's edit entirely.",
+            "We need operations that, when applied in any order by any client, *converge* to the same result while preserving everyone's intent. That's the job of OT or CRDTs."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "text": "Don't propose 'lock the document while editing' (kills collaboration) or 'last-writer-wins' (silently destroys edits). Interviewers want concurrent, lossless, convergent editing."
+        }
+      ]
+    },
+    {
+      "id": "ot-vs-crdt",
+      "title": "3. The two solutions: OT vs CRDT",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Operational Transformation (OT)", "detail": "Represent edits as operations (insert/delete at a position). When a concurrent op arrives, *transform* it against the ops already applied so its position is adjusted to account for them. In the example, B's 'insert Y at 3' is transformed to 'insert Y at 4' after A's insert at 0, so both clients converge to 'XcatY'. Typically coordinated through a central server that orders operations. This is what Google Docs uses." },
+            { "term": "Conflict-free Replicated Data Types (CRDTs)", "detail": "Design the data structure so concurrent operations are *commutative* by construction — applying them in any order yields the same state, no transformation needed. For text, each character gets a unique, totally-ordered identifier (often fractional/dense positions) so inserts never truly collide. Great for peer-to-peer / offline-first; the cost is metadata overhead per character." }
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "OT vs CRDT",
+          "columns": ["", "Operational Transformation", "CRDT"],
+          "rows": [
+            ["Idea", "Transform ops against concurrent ops", "Commutative ops via unique element IDs"],
+            ["Coordination", "Usually needs a central server to order ops", "Works peer-to-peer, no central authority required"],
+            ["Complexity", "Transformation functions are notoriously tricky to get right", "Simpler convergence logic, but per-element metadata grows"],
+            ["Best for", "Centralized real-time editors (Google Docs)", "Offline-first / distributed / P2P apps"]
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Both guarantee convergence",
+          "text": "OT and CRDTs solve the same problem (concurrent edits converging) with opposite strategies: OT adjusts operations to fit; CRDTs make operations inherently order-independent. Knowing both — and that Google Docs uses OT while many newer collaborative tools use CRDTs — is the depth signal."
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "4. High-level design",
+      "blocks": [
+        {
+          "type": "diagram",
+          "caption": "Clients connect over WebSockets to a document server that orders and broadcasts transformed operations.",
+          "groups": [
+            { "label": "Editors", "nodes": [{ "label": "Clients", "sub": "local edits + cursors", "icon": "Smartphone", "accent": "#0ea5e9" }] },
+            { "label": "Realtime", "nodes": [{ "label": "WebSocket gateway", "icon": "Share2", "accent": "#ef4444" }] },
+            { "label": "Logic", "nodes": [{ "label": "Document Service", "sub": "OT: order + transform ops", "icon": "Workflow", "accent": "#8b5cf6" }, { "label": "Presence Service", "sub": "cursors / who's online" }] },
+            { "label": "Store", "nodes": [{ "label": "Op log + snapshots", "icon": "Database", "accent": "#10b981" }] }
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Local-first apply", "detail": "A client applies its own edit instantly to its local copy (so typing feels zero-latency), then sends the operation to the server." },
+            { "title": "Server orders & transforms", "detail": "The Document Service assigns a global order to incoming ops, transforms each against concurrent ops it has already sequenced (OT), and broadcasts the transformed op to all other clients over WebSockets." },
+            { "title": "Clients reconcile", "detail": "Each client transforms the incoming op against any unacknowledged local ops and applies it, converging to the server's canonical state." },
+            { "title": "Persist", "detail": "Append ops to a durable log and periodically snapshot the full document so you don't replay the entire history on load. Old ops can be compacted past a snapshot." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "note",
+          "title": "Per-document single-writer ordering",
+          "text": "A clean way to avoid cross-server races is to route all ops for a given document to a single owning server/actor (consistent-hash by docId). That server is the authority that orders ops for that doc, sidestepping distributed coordination for the hot path."
+        }
+      ]
+    },
+    {
+      "id": "extras",
+      "title": "5. Presence, offline & scaling",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Presence & cursors", "detail": "Cursor positions and 'who's here' are ephemeral, high-frequency, and tolerant of loss — broadcast them over the same WebSocket channel but don't persist them durably. They're separate from the document's op stream." },
+            { "term": "Offline editing", "detail": "Queue local ops while offline; on reconnect, send them and transform against everything that happened in the meantime. CRDTs shine here because offline ops merge cleanly without a central ordering authority." },
+            { "term": "Snapshots for fast load", "detail": "Loading a doc by replaying millions of ops is too slow — store periodic snapshots and only replay ops since the last snapshot." },
+            { "term": "Scaling", "detail": "Shard documents across servers by docId (each doc is independent). The connection/WebSocket tier scales horizontally; a doc's hot path is owned by one server, so a single doc's concurrency is bounded by that server (rarely an issue — even busy docs have tens, not millions, of simultaneous editors)." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "text": "Senior framing: separate the three concerns cleanly — (1) the convergence algorithm (OT/CRDT) is the core correctness problem; (2) real-time transport (WebSockets) + per-doc ordering is the delivery problem; (3) persistence via op-log + snapshots is the durability problem. Muddling these is the common failure; separating them is the win."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Core problem: concurrent edits to the same text must converge to an identical document while preserving intent.",
+    "Don't lock the doc (kills collaboration) or use last-writer-wins (destroys edits) — use OT or CRDTs.",
+    "OT: transform each op against concurrent ops to fix positions; usually needs a central ordering server (Google Docs).",
+    "CRDT: give each element a unique ordered ID so ops are commutative by construction; great for offline/P2P, more per-element metadata.",
+    "Local-first: apply your edit instantly, then sync; server orders + transforms + broadcasts over WebSockets.",
+    "Persist an append-only op log + periodic snapshots (replaying all ops on load is too slow).",
+    "Route all ops for a doc to one owning server (consistent-hash by docId) for clean ordering; presence/cursors are ephemeral, not persisted."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Hard",
+      "prompt": "Two users simultaneously edit 'cat': A inserts 'X' at position 0, B inserts 'Y' at position 3. Walk through how Operational Transformation makes both converge to the same result.",
+      "hint": "B's position must be adjusted to account for A's insertion.",
+      "answer": [
+        "Both edits are concurrent and were composed against the same base, 'cat'. A's op is insert('X', 0) → locally A sees 'Xcat'. B's op is insert('Y', 3) → locally B sees 'catY'. If we naively applied each other's raw ops, they'd diverge, because A inserting 'X' at the front shifts every later character right by one — so B's 'position 3' no longer points where B intended once A's edit is applied.",
+        "OT fixes this by *transforming* an incoming op against the ops already applied before it. Suppose the server orders A's op first. When B's op (insert 'Y' at 3) arrives, it's transformed against A's insert at position 0: since A added one character at or before B's position, B's index is shifted +1, becoming insert('Y', 4). Now apply to 'Xcat' at index 4 → 'XcatY'. On B's side, when A's op (insert 'X' at 0) arrives, it's transformed against B's already-applied local insert — A's position 0 is at/before B's insert so it's unaffected — giving 'XcatY' as well. Both clients (and the server) converge to the identical 'XcatY', and crucially *both* edits are preserved — nobody's keystroke is lost. The transformation function is exactly the 'adjust an operation's parameters to account for concurrent operations' logic, and getting it right for every insert/delete combination is the famously tricky core of OT."
+      ],
+      "keyPoints": ["A's front insert shifts later positions — naive apply diverges", "OT transforms B's op against A's: position 3 → 4 to account for the insert", "Both clients converge to identical 'XcatY' with both edits preserved", "Transformation = adjust op parameters vs concurrent ops; the tricky core of OT"],
+      "followUps": ["How does a CRDT achieve the same convergence without any transformation step?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Trade-off",
+      "difficulty": "Medium",
+      "prompt": "When would you choose a CRDT over Operational Transformation for a collaborative app?",
+      "hint": "Think about centralization, offline support, and where the complexity lives.",
+      "answer": [
+        "I'd choose a CRDT when the application is offline-first, decentralized, or peer-to-peer — situations where there isn't (or shouldn't be) a single central server authoritatively ordering every operation. OT typically relies on a central server to assign a global order to ops and transform them; that's fine for a hosted editor like Google Docs but awkward when clients must merge edits directly, sync after long offline periods, or operate across peers with no coordinator. CRDTs make operations commutative by construction (each element carries a unique, totally-ordered identifier), so edits merge to the same state regardless of the order they arrive in and with no central transformation step — which is exactly what offline and P2P need.",
+        "The trade-off is overhead: CRDTs attach metadata (a unique id, sometimes tombstones for deletes) to each element, so memory/storage grows and you may need garbage collection of tombstones. OT keeps the document representation lean but pushes the complexity into transformation functions that are notoriously hard to implement correctly for every operation pair. So the decision is roughly: centralized, real-time, server-mediated editor with a lean model → OT; offline-first / distributed / collaborative-without-a-central-authority → CRDT, accepting the per-element metadata cost. Both guarantee convergence; they just put the complexity and the constraints in different places."
+      ],
+      "keyPoints": ["CRDT for offline-first / decentralized / P2P — no central ordering authority needed", "CRDT ops are commutative by construction → merge in any order, no transform step", "Trade-off: per-element metadata/tombstone overhead + GC", "OT for centralized real-time editors (lean model, but tricky transform functions)"],
+      "followUps": ["How do CRDTs handle deletes, and why are tombstones needed?"]
+    }
+  ]
+}

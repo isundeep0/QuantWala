@@ -10,6 +10,7 @@ import {
   Target,
   ListChecks,
   BookOpen,
+  BookOpenText,
   Hash,
 } from "lucide-react";
 import {
@@ -22,6 +23,7 @@ import {
 import { useSdProgress } from "@/context/SdProgressContext.jsx";
 import BlockRenderer from "@/components/system-design/BlockRenderer.jsx";
 import PracticeSet from "@/components/system-design/PracticeSet.jsx";
+import Reader from "@/components/reader/Reader.jsx";
 import { formatInline } from "@/lib/inline.jsx";
 
 function useScrollSpy(ids) {
@@ -52,6 +54,33 @@ export default function SystemDesignLesson() {
   const lesson = getSdLesson(topicId);
   const { isComplete, setLessonComplete } = useSdProgress();
   const topRef = useRef(null);
+  const [readerOpen, setReaderOpen] = useState(false);
+
+  // Static reading content for Reader mode — memoised so its element identity
+  // is stable across re-renders (keeps injected highlight marks intact).
+  const readerBody = useMemo(() => {
+    if (!lesson) return null;
+    return (
+      <>
+        {(lesson.sections || []).map((s) => (
+          <section key={s.id} className="reader-section">
+            <h2 className="mb-4 font-bold tracking-tight">{s.title}</h2>
+            <BlockRenderer blocks={s.blocks} />
+          </section>
+        ))}
+        {lesson.cheatsheet?.length > 0 && (
+          <section className="reader-section">
+            <h2 className="mb-4 font-bold tracking-tight">Interview cheat sheet</h2>
+            <ul className="list-disc space-y-2.5 pl-5">
+              {lesson.cheatsheet.map((c, i) => (
+                <li key={i}>{formatInline(c)}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </>
+    );
+  }, [lesson]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -160,18 +189,40 @@ export default function SystemDesignLesson() {
             </div>
           )}
         </div>
-        <button
-          onClick={() => setLessonComplete(lesson.slug, !complete)}
-          className="btn shrink-0 border"
-          style={
-            complete
-              ? { backgroundColor: "#10b981", color: "#fff", borderColor: "#10b981" }
-              : { borderColor: "rgb(var(--border-strong))" }
-          }
-        >
-          <Check className="h-4 w-4" /> {complete ? "Completed" : "Mark complete"}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            onClick={() => setReaderOpen(true)}
+            className="btn border"
+            style={{ borderColor: `${accent}55`, color: accent, backgroundColor: `${accent}12` }}
+            title="Open a distraction-free, paginated reading view"
+          >
+            <BookOpenText className="h-4 w-4" /> Reader mode
+          </button>
+          <button
+            onClick={() => setLessonComplete(lesson.slug, !complete)}
+            className="btn border"
+            style={
+              complete
+                ? { backgroundColor: "#10b981", color: "#fff", borderColor: "#10b981" }
+                : { borderColor: "rgb(var(--border-strong))" }
+            }
+          >
+            <Check className="h-4 w-4" /> {complete ? "Completed" : "Mark complete"}
+          </button>
+        </div>
       </div>
+
+      {readerOpen && (
+        <Reader
+          title={lesson.title}
+          subtitle={section?.title}
+          accent={accent}
+          storageKey={`sd:${lesson.slug}`}
+          onClose={() => setReaderOpen(false)}
+        >
+          {readerBody}
+        </Reader>
+      )}
 
       <div className="mt-8 gap-10 lg:flex lg:items-start">
         {/* TOC */}

@@ -1,0 +1,181 @@
+{
+  "slug": "stock-exchange",
+  "sectionId": "case-studies",
+  "order": 21,
+  "title": "Design a Stock Exchange / Trading System",
+  "tagline": "Match buy and sell orders fairly, deterministically, and fast — where microseconds and correctness both matter.",
+  "summary": "Order book, matching engine, sequencing, low latency, durability.",
+  "difficulty": "Advanced",
+  "estMinutes": 32,
+  "tags": ["case-study", "must-know", "low-latency"],
+  "prereqs": ["distributed-message-queue", "idempotency", "resilience-patterns"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Clarify requirements",
+      "blocks": [
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Accept buy/sell orders (limit and market) for symbols.",
+            "Match orders fairly per price-time priority and execute trades.",
+            "Maintain the order book; broadcast market data (quotes, trades) to participants.",
+            "Cancel/modify resting orders; report fills."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "Correctness & fairness — deterministic price-time priority; no lost or duplicated orders.",
+            "Very low and predictable latency (tail latency matters as much as average).",
+            "High throughput — millions of orders/sec at peak.",
+            "Strong durability & auditability — every order/trade must be recorded (regulation)."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "Unusual but key insight: the matching engine is intentionally a *single-threaded, in-memory, sequenced* component. You scale around it (sequencing, sharding by symbol, replication) rather than parallelizing the match itself — because determinism and fairness beat raw parallelism here."
+        }
+      ]
+    },
+    {
+      "id": "order-book",
+      "title": "2. The order book & matching engine",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "The heart of an exchange is the matching engine, which maintains an order book per symbol: resting buy orders (bids) and sell orders (asks), each sorted by price, and within a price level by time of arrival (price-time priority)."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Data structure", "detail": "Per symbol: bids sorted high→low, asks sorted low→high (price levels), each price level a FIFO queue of orders. An incoming order matches against the best opposite price; partial fills leave the remainder resting." },
+            { "term": "Price-time priority", "detail": "Best price wins; ties broken by earliest arrival. This determinism is the fairness guarantee and must be exactly reproducible." },
+            { "term": "In-memory & single-threaded per symbol", "detail": "The engine runs in memory for speed and processes orders for a symbol on a single thread in a fixed sequence. This makes matching deterministic (same input order → same trades) and avoids lock contention — counter-intuitively, single-threaded is *faster and safer* here than multi-threaded locking." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Determinism is the whole point",
+          "text": "Because matching is single-threaded over a strictly sequenced input, you can replay the exact same order stream and get the exact same trades — essential for recovery, auditing, and consistency across replicas. Parallelism would sacrifice this determinism for little gain, since a single thread can match millions of simple operations per second in memory."
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "3. High-level design",
+      "blocks": [
+        {
+          "type": "diagram",
+          "caption": "Orders are validated, sequenced into a single ordered stream, then matched deterministically.",
+          "direction": "lr",
+          "groups": [
+            { "label": "Clients", "nodes": [{ "label": "Order gateway", "sub": "validate, risk check", "icon": "Server", "accent": "#0ea5e9" }] },
+            { "label": "Sequence", "nodes": [{ "label": "Sequencer", "sub": "assign global order #", "icon": "ListOrdered", "accent": "#d97706" }] },
+            { "label": "Match", "nodes": [{ "label": "Matching engine", "sub": "per-symbol, in-memory", "icon": "Workflow", "accent": "#8b5cf6" }] },
+            { "label": "Out", "nodes": [{ "label": "Trades + market data", "sub": "fan-out", "icon": "Share2", "accent": "#10b981" }, { "label": "Durable log", "sub": "event journal", "icon": "Database", "accent": "#f59e0b" }] }
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            { "title": "Gateway: validate & risk-check", "detail": "Order gateways authenticate, validate, and run pre-trade risk checks (limits, funds). This scales horizontally and protects the engine from bad input." },
+            { "title": "Sequence", "detail": "All valid orders pass through a sequencer that assigns a strict global order number and writes them to a durable event log *before* matching. This single ordered stream is the source of truth." },
+            { "title": "Match", "detail": "The matching engine consumes the sequenced stream in order, updates the in-memory order book, and produces trades — deterministically." },
+            { "title": "Publish & persist", "detail": "Resulting trades and order-book updates are journaled durably and fanned out as market data to participants; downstream systems handle clearing/settlement asynchronously." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "note",
+          "title": "Sequence-then-match enables replay recovery",
+          "text": "Because every order is durably journaled in sequence before matching, a crashed engine recovers by replaying the log from the last snapshot — reconstructing the exact order book. Hot-standby replicas consume the same sequenced stream and stay in lockstep, ready to take over."
+        }
+      ]
+    },
+    {
+      "id": "latency",
+      "title": "4. Low-latency engineering",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Keep it in memory", "detail": "The order book lives in RAM; no disk on the hot path. Durability comes from the sequenced event journal (often written by a separate path / replicas), not from synchronous disk writes blocking the match." },
+            { "term": "Minimize hops & copies", "detail": "Every network hop and serialization adds latency. Co-locate components, use efficient binary protocols, and avoid unnecessary queuing on the critical path. (This is where the HFT/low-latency discipline applies.)" },
+            { "term": "Tail latency matters", "detail": "Traders care about p99/p99.9, not just average — a rare 10 ms stall can be costly. Avoid GC pauses (pre-allocate, avoid garbage), lock contention, and unpredictable syscalls; favor mechanical-sympathy techniques (cache-friendly structures, busy-spin where appropriate)." },
+            { "term": "Shard by symbol", "detail": "Different symbols are independent, so run separate engine instances per symbol (or symbol group). This scales throughput horizontally while each symbol keeps its own deterministic single-threaded match." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Durability vs latency tension",
+          "text": "You must journal every order durably (regulation, recovery) yet can't let a synchronous disk write stall the match. The resolution: write to the durable log via a fast sequential append / replicate to in-memory replicas, acknowledge after the sequenced log is safely recorded, and keep the matching path itself memory-only. Discussing this tension is a strong signal."
+        }
+      ]
+    },
+    {
+      "id": "correctness",
+      "title": "5. Correctness, recovery & fairness",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Exactly-once via sequencing + idempotency", "detail": "Each order has a unique client id; the gateway/sequencer dedups so a retried submission isn't matched twice. The sequenced log is the single authority on order of events." },
+            { "term": "Recovery", "detail": "Periodic order-book snapshots + the event journal allow fast recovery: load the latest snapshot, replay subsequent sequenced events, and you're back to the exact state. Hot standbys do this continuously for instant failover." },
+            { "term": "Fairness & audit", "detail": "Deterministic price-time matching over a single sequenced stream gives a fully auditable, reproducible record — every trade traceable to the exact ordered inputs that produced it. Regulators require this." },
+            { "term": "Clearing/settlement is separate", "detail": "Matching (fast, real-time) is decoupled from clearing and settlement (the actual transfer of money/securities), which happen asynchronously downstream with their own consistency/transaction guarantees." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "text": "Senior framing: the design philosophy here inverts the usual 'parallelize everything' instinct — a single sequenced stream feeding a deterministic, in-memory, single-threaded matcher, with scale via symbol sharding and durability via a replayable journal + hot standbys. Recognizing *why* determinism and predictable tail latency outrank parallelism is the senior insight."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "Matching engine = per-symbol in-memory order book (bids high→low, asks low→high; FIFO within a price level) with price-time priority.",
+    "Single-threaded, deterministic matching over a strictly sequenced input — determinism > parallelism here (replay, audit, lockstep replicas).",
+    "Flow: gateway (validate + risk) → sequencer (global order # + durable journal) → matcher → publish trades/market data.",
+    "Sequence-then-match: journal every order in order before matching → crash recovery via snapshot + replay; hot standbys stay in lockstep.",
+    "Low latency: in-memory hot path, minimize hops/copies, control tail latency (avoid GC pauses, lock contention); shard by symbol to scale.",
+    "Durability vs latency: append to a fast sequential/replicated log off the matching path; never block the match on a sync disk write.",
+    "Exactly-once via unique order ids + sequencing dedup; clearing/settlement decoupled and asynchronous downstream."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Hard",
+      "prompt": "Why is the matching engine deliberately single-threaded and in-memory instead of a parallelized, multi-threaded design?",
+      "hint": "What property do you gain that parallelism would destroy, and is throughput actually the bottleneck?",
+      "answer": [
+        "Because the property that matters most — deterministic, fair, reproducible matching — is exactly what parallelism would destroy. An exchange must apply strict price-time priority: best price first, ties broken by earliest arrival. If you matched orders concurrently across threads, the interleaving would be nondeterministic, the time-priority ordering would be ambiguous, and you'd need locks around the shared order book that reintroduce serialization anyway (and add latency and complexity). By processing a single, strictly sequenced stream of orders on one thread, the engine guarantees that the same input sequence always yields the same trades. That determinism is what makes the system auditable (regulators can verify every trade from the inputs), recoverable (replay the sequenced log to reconstruct the exact order book), and consistent across hot-standby replicas (they consume the same stream and stay in lockstep).",
+        "And critically, throughput isn't actually the constraint that would force parallelism: matching is mostly simple comparisons and queue operations on in-memory data structures, so a single thread can process millions of orders per second with very low, predictable latency — no disk, no locks, no cross-thread coordination on the hot path. When you do need more aggregate capacity, you scale *horizontally by symbol* (independent engines per symbol or symbol group), each still single-threaded and deterministic, rather than parallelizing within a symbol. So the design intentionally trades intra-symbol parallelism (which buys little and costs determinism) for a fast, deterministic core — the opposite of the usual 'parallelize everything' instinct, and the right call for a fairness- and latency-critical system."
+      ],
+      "keyPoints": ["Determinism/fairness (price-time priority) is paramount — parallelism makes it nondeterministic", "Locks around a shared book reintroduce serialization + latency anyway", "Determinism enables audit, replay recovery, and lockstep replicas", "A single in-memory thread already does millions/sec; scale horizontally by symbol instead"],
+      "followUps": ["How does the single sequenced stream make crash recovery and replica failover work?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Trade-off",
+      "difficulty": "Hard",
+      "prompt": "You must durably record every order for recovery and regulation, but a synchronous disk write would wreck your latency. How do you reconcile durability with low latency?",
+      "hint": "Separate the durability path from the matching path; sequence-then-match.",
+      "answer": [
+        "The reconciliation is to keep the matching path entirely in memory while moving durability onto a fast, separate path that doesn't block the match. Concretely, every incoming order first goes through a sequencer that assigns a global order number and appends it to a durable event journal — but that append is a *sequential* write (sequential I/O is dramatically faster than random) and/or is satisfied by replicating the sequenced record to in-memory replicas, so it completes in microseconds rather than waiting on a slow random disk write. The order is acknowledged as durable once it's safely in the sequenced log/replicas, and only then (or concurrently) does the in-memory matching engine consume it. The matcher itself never performs a synchronous disk write on its critical path — it just updates RAM data structures and emits trades, which are themselves journaled via the same fast append mechanism.",
+        "This 'sequence-then-match' split gives you both guarantees: durability and auditability come from the replayable, ordered journal (you can reconstruct the exact order book from a snapshot plus replayed events, and regulators get a complete record), while latency stays low because the hot matching path is memory-only with no blocking I/O. Hot-standby replicas consume the same sequenced stream so failover is instant and lossless. The general principle — record durably via fast sequential append/replication off the critical path, acknowledge after the log is safe, and keep the latency-sensitive computation in memory — is how you avoid the false choice between 'durable' and 'fast.'"
+      ],
+      "keyPoints": ["Sequence-then-match: durable sequential-append/replicated journal, separate from the match", "Sequential I/O / in-memory replication is microseconds — not a blocking random disk write", "Matching path is memory-only; ack durability once the sequenced log is safe", "Journal enables snapshot+replay recovery, audit, and lockstep hot standbys"],
+      "followUps": ["What goes into a snapshot, and how often would you take one to bound recovery time?"]
+    }
+  ]
+}

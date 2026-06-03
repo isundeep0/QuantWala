@@ -1,0 +1,191 @@
+{
+  "slug": "distributed-message-queue",
+  "sectionId": "case-studies",
+  "order": 15,
+  "title": "Design a Distributed Message Queue (Kafka-style)",
+  "tagline": "The durable, partitioned log that decouples producers from consumers and powers half of modern infrastructure.",
+  "summary": "Partitioned append-only log, offsets, replication, consumer groups, delivery guarantees.",
+  "difficulty": "Advanced",
+  "estMinutes": 32,
+  "tags": ["case-study", "must-know"],
+  "prereqs": ["message-queues", "replication", "consensus-and-coordination"],
+  "sections": [
+    {
+      "id": "requirements",
+      "title": "1. Clarify requirements",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Here you're designing the queue itself, not using one. The goal is a durable, horizontally scalable messaging system that lets producers publish messages and many consumers read them independently — the substrate behind event streaming, logging, and async pipelines."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Functional",
+          "items": [
+            "Producers publish messages to a named topic.",
+            "Consumers subscribe and read messages, tracking their own position.",
+            "Messages are retained for a configurable window (replay is possible).",
+            "Support both queue (work-sharing) and pub/sub (broadcast) semantics."
+          ]
+        },
+        {
+          "type": "bullets",
+          "title": "Non-functional",
+          "items": [
+            "High throughput — millions of messages/sec.",
+            "Durable — an acknowledged message must survive broker crashes.",
+            "Horizontally scalable — add brokers to grow capacity.",
+            "Ordered within a partition; at-least-once delivery as the default guarantee."
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "interview",
+          "text": "The single idea that unlocks this entire design: a topic is a partitioned, append-only commit log, and consumers track an offset into it. Once you frame it as 'a distributed log, not a mailbox where messages are deleted on read', everything else follows."
+        }
+      ]
+    },
+    {
+      "id": "log",
+      "title": "2. The core abstraction: a partitioned log",
+      "blocks": [
+        {
+          "type": "text",
+          "paragraphs": [
+            "Unlike a traditional queue where a message is removed once consumed, a log-based queue is an ordered, append-only sequence of messages. Reading doesn't delete; it just advances a pointer. This decouples producers from consumers and enables replay."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Topic → partitions", "detail": "A topic is split into N partitions. Each partition is an independent append-only log living on a broker. Partitioning is what gives horizontal scale — throughput grows with partition count, since partitions are read/written in parallel." },
+            { "term": "Offset", "detail": "Each message in a partition gets a monotonically increasing offset. A consumer's position is just the offset it has read up to — stored by the consumer (or the broker on its behalf). To replay, rewind the offset." },
+            { "term": "Ordering guarantee", "detail": "Order is guaranteed only *within* a partition, not across the whole topic. To keep related messages ordered (e.g., all events for one user), the producer routes them to the same partition via a partition key (hash(key) % N)." },
+            { "term": "Sequential disk writes", "detail": "Because the log is append-only, writes are sequential — which is dramatically faster than random I/O and lets a single broker sustain very high throughput even on disk. This is the performance trick behind Kafka." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "insight",
+          "title": "Why append-only is the whole game",
+          "text": "Append-only sequential writes are ~orders of magnitude faster than random writes, the log is trivially replicable (just copy the byte stream), and consumers reading at different speeds don't interfere because each just tracks its own offset. One data structure solves durability, throughput, and multi-consumer fan-out at once."
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "3. High-level design",
+      "blocks": [
+        {
+          "type": "diagram",
+          "caption": "Producers write to partition leaders; followers replicate; consumer groups read in parallel.",
+          "direction": "lr",
+          "groups": [
+            { "label": "Producers", "nodes": [{ "label": "Producers", "sub": "key → partition", "icon": "Server", "accent": "#0ea5e9" }] },
+            { "label": "Cluster", "nodes": [{ "label": "Broker 1", "sub": "P0 (leader), P1 (follower)", "icon": "Database", "accent": "#d97706" }, { "label": "Broker 2", "sub": "P1 (leader), P0 (follower)" }] },
+            { "label": "Coordination", "nodes": [{ "label": "Metadata / coordinator", "sub": "ZooKeeper / KRaft", "icon": "Settings", "accent": "#8b5cf6" }] },
+            { "label": "Consumers", "nodes": [{ "label": "Consumer group A", "sub": "1 consumer / partition", "icon": "Boxes", "accent": "#10b981" }, { "label": "Consumer group B", "sub": "independent offsets" }] }
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Brokers", "detail": "Stateless-ish servers that each host a subset of partitions. Adding brokers and rebalancing partitions across them scales the cluster." },
+            { "term": "Coordination service", "detail": "A consensus-backed component (ZooKeeper, or Kafka's KRaft/Raft) tracks cluster membership, which broker leads each partition, and triggers leader election when a broker dies. This is the brain that keeps the cluster consistent." },
+            { "term": "Producers", "detail": "Choose a partition (by key or round-robin) and append to that partition's leader. They can require acks from replicas for durability." },
+            { "term": "Consumer groups", "detail": "Consumers join a group; the cluster assigns each partition to exactly one consumer in the group (work-sharing/queue semantics). Different groups each get the full stream independently (pub/sub). Adding consumers up to the partition count scales consumption." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "replication",
+      "title": "4. Replication & durability",
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Leader–follower per partition", "detail": "Each partition has one leader (handles reads/writes) and R-1 followers on other brokers that replicate the leader's log. If the leader's broker dies, the coordinator promotes an in-sync follower to leader — no data loss, brief unavailability." },
+            { "term": "In-sync replicas (ISR) & acks", "detail": "Producers choose durability: ack=1 (leader only — fast, risks loss if leader dies before replication) vs ack=all (wait for all in-sync replicas — durable, higher latency). This is the throughput-vs-durability knob." },
+            { "term": "Commit point", "detail": "A message is only readable by consumers once it's committed (replicated to the ISR). This prevents consumers from reading data that could be lost on a leader failover." },
+            { "term": "Retention", "detail": "Messages persist for a time/size window regardless of consumption (e.g., 7 days), enabling replay and multiple independent consumers. Old segments are deleted or compacted." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "Ordering vs parallelism is a real trade-off",
+          "text": "More partitions = more parallelism and throughput, but ordering only holds within a partition. If you need strict global ordering you're limited to one partition (no parallelism). The usual answer: partition by a key so order is preserved *per key* (per user, per account), which is almost always what you actually need."
+        }
+      ]
+    },
+    {
+      "id": "delivery",
+      "title": "5. Delivery guarantees",
+      "blocks": [
+        {
+          "type": "compare",
+          "title": "The three delivery semantics",
+          "columns": ["Guarantee", "How", "Trade-off"],
+          "rows": [
+            ["At-most-once", "Consumer commits offset *before* processing", "No duplicates, but messages can be lost if it crashes mid-process"],
+            ["At-least-once (default)", "Consumer commits offset *after* processing", "Never lost, but a crash before commit causes reprocessing → duplicates"],
+            ["Exactly-once (effect)", "At-least-once + idempotent consumer (dedup on a key) or transactional writes", "Strongest, but requires idempotency / transactions on the consumer side"]
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            { "term": "Why at-least-once is the default", "detail": "Losing data is usually worse than processing it twice, so commit the offset only after successfully processing. Then make consumers idempotent to neutralize the duplicates." },
+            { "term": "Dead-letter handling", "detail": "A message that repeatedly fails processing shouldn't block the partition forever. Route it to a dead-letter topic after N retries for later inspection." },
+            { "term": "Backpressure", "detail": "If consumers fall behind, messages buffer in the durable log (bounded by retention) rather than being dropped — the queue absorbs load spikes. Monitor consumer lag (latest offset − committed offset) as the key health metric." }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "senior",
+          "text": "Senior framing: 'exactly-once delivery' over a network is impossible; what we provide is exactly-once *effect* = at-least-once delivery + idempotent processing (or transactional offset+output commits). Saying this, plus monitoring consumer lag and using a DLQ, signals you've operated these systems, not just read about them."
+        }
+      ]
+    }
+  ],
+  "cheatsheet": [
+    "A topic is a partitioned, append-only commit log; consumers track an offset and reads don't delete (enables replay + multi-consumer).",
+    "Partitions give horizontal scale (parallel reads/writes); ordering holds only within a partition → partition by key for per-key order.",
+    "Append-only sequential disk writes are the throughput trick — far faster than random I/O and trivially replicable.",
+    "Each partition: leader + followers; producer acks (1 vs all) trade durability for latency; messages readable only once committed to ISR.",
+    "Coordinator (ZooKeeper/Raft) tracks membership + partition leadership and runs leader election on broker failure.",
+    "Consumer groups: one consumer per partition within a group (queue); different groups each get the full stream (pub/sub).",
+    "Default = at-least-once (commit offset after processing) + idempotent consumers → exactly-once effect; use a DLQ and monitor consumer lag."
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "Conceptual",
+      "difficulty": "Hard",
+      "prompt": "How does a partitioned log give you both high throughput AND message ordering, and what's the catch?",
+      "hint": "Where is order guaranteed, and how does partitioning interact with it?",
+      "answer": [
+        "Throughput comes from partitioning: a topic is split into N independent append-only logs (partitions) spread across brokers, and they're written and read fully in parallel. Within each partition, the broker only ever appends to the end of the log, so writes are sequential disk I/O — orders of magnitude faster than random writes — letting even a single partition sustain huge throughput, and N partitions multiply that. Consumers also parallelize: in a consumer group, each partition is handled by a different consumer, so consumption scales with partition count too.",
+        "Ordering is guaranteed *within a single partition* — every message gets a monotonically increasing offset and is delivered in offset order. The catch is that there is no ordering guarantee *across* partitions. So if you naively round-robin messages across partitions for max parallelism, you lose any notion of global order. The standard resolution: route related messages to the same partition using a partition key — e.g., `hash(userId) % N` — so all events for a given user land in one partition and stay strictly ordered relative to each other, while different users spread across partitions for parallelism. You trade *global* ordering (which would force a single partition and kill parallelism) for *per-key* ordering, which is almost always what the business actually requires."
+      ],
+      "keyPoints": ["Throughput: N partitions = parallel append-only logs; sequential writes are fast", "Order guaranteed only within a partition (by offset), not across the topic", "Partition by key (hash(key)%N) → per-key ordering + cross-key parallelism", "Catch: strict global ordering forces a single partition, eliminating parallelism"],
+      "followUps": ["What happens to ordering and consumer assignment when you add a partition to an existing topic?"]
+    },
+    {
+      "id": "q2",
+      "kind": "Trade-off",
+      "difficulty": "Medium",
+      "prompt": "A consumer crashes right after processing a message but before committing its offset. What happens, and how do you make it correct?",
+      "hint": "This is the at-least-once duplicate scenario.",
+      "answer": [
+        "With the default at-least-once setup (commit the offset *after* processing), the message was processed but the offset wasn't advanced. When the consumer restarts, it resumes from the last committed offset and reprocesses that message — a duplicate. We deliberately accept this because the alternative, committing the offset *before* processing (at-most-once), would mean a crash mid-processing loses the message entirely, and losing data is usually worse than doing work twice.",
+        "To make it correct, we make the consumer idempotent so reprocessing has no harmful effect. Concretely: dedup on a unique message/idempotency key (track processed keys, or use a UNIQUE constraint so a duplicate insert is a no-op), or make the operation naturally idempotent (e.g., 'set status = paid' rather than 'increment balance'). For stronger guarantees, use transactional processing where the offset commit and the output write happen atomically in one transaction, so either both occur or neither — giving exactly-once *effect*. The principle to state explicitly: exactly-once *delivery* over a network is impossible; you achieve exactly-once *effect* by combining at-least-once delivery with idempotent (or transactional) consumers. Operationally, you'd also cap retries and route persistently-failing messages to a dead-letter topic so one poison message can't block the partition."
+      ],
+      "keyPoints": ["At-least-once: offset committed after processing → crash causes reprocessing (duplicate)", "Chosen because losing data is worse than doing work twice", "Fix: idempotent consumer (dedup key / UNIQUE / naturally idempotent op)", "Exactly-once effect = at-least-once + idempotency or transactional offset+output commit; DLQ for poison messages"],
+      "followUps": ["How would transactional 'read-process-write' across topics achieve exactly-once end to end?"]
+    }
+  ]
+}
